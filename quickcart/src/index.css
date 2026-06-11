@@ -1618,11 +1618,29 @@ body {
 }
 .plp-cartwrap .cartbar { pointer-events: auto; }
 
+/* ---------- Perf: offscreen sections skip layout + paint ---------- */
+.cv {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+}
+
+/* ---------- Page entrances (native-feel push/slide) ---------- */
+.plp { animation: pagein .26s cubic-bezier(.32, .72, .25, 1); }
+@keyframes pagein {
+  from { transform: translateX(7%); opacity: .5; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.sheet { animation: sheetin .24s cubic-bezier(.32, .72, .25, 1); }
+@keyframes sheetin {
+  from { transform: translateY(4%); opacity: .5; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 /* ---------- Reduced motion: respect the OS setting ---------- */
 @media (prefers-reduced-motion: reduce) {
   .cloud, .star, .drop, .flake, .gust, .leafy, .fogband,
   .timer-chip, .timer-dot, .lbv-bar::after, .coin-pop, .spark,
-  .day-dot.today, .lb-card.go .lb-av, .cardin, .bsheet {
+  .day-dot.today, .lb-card.go .lb-av, .cardin, .bsheet, .plp, .sheet {
     animation: none !important;
   }
   .lbv-bar, .cartbar, .loc-row, .tabs-t, .rewards-strip, .bar-fill {

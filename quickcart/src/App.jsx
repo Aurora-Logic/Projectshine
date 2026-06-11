@@ -126,6 +126,16 @@ function sparkle(e) {
 const scrollToId = (id) =>
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
+/* Defer heavy content by one frame so page/sheet entrances animate jank-free */
+function useNextFrame() {
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setReady(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+  return ready
+}
+
 /* Image with blur-up fade-in (gray well → photo) */
 const Img = memo(function Img(props) {
   const [loaded, setLoaded] = useState(false)
@@ -501,8 +511,8 @@ function Shelf({ title, items, onChange, extra, band, light, id, sub, onSeeAll }
       </div>
     </>
   )
-  if (band) return <div className={band} id={id}>{inner}</div>
-  return <Box pt="5" id={id}>{inner}</Box>
+  if (band) return <div className={`${band} cv`} id={id}>{inner}</div>
+  return <Box pt="5" id={id} className="cv">{inner}</Box>
 }
 
 /* ---------------- Category listing page (PLP) ---------------- */
@@ -607,6 +617,7 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
   }, [inCat, b, spec, deals, sort])
 
   const railImg = (PLP_RAIL.find(r => r[1] === cat) || PLP_RAIL[0])[0]
+  const pageReady = useNextFrame()
   const gridKey = `${cat}|${b}|${spec}|${deals}|${sort}`
   const summary = [
     `${products.length} item${products.length === 1 ? '' : 's'}`,
@@ -710,7 +721,11 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
             <Text size="1" color="gray">{summary}</Text>
           </Box>
 
-          {products.length > 0 ? (
+          {!pageReady ? (
+            <Grid columns="2" gapX="3" gapY="4" pt="1">
+              {[0, 1, 2, 3].map(i => <div className="skel" key={`pk${i}`} />)}
+            </Grid>
+          ) : products.length > 0 ? (
             <Grid columns="2" gapX="3" gapY="4" pt="1" key={gridKey}>
               {cells.map((c, i) =>
                 c.merchIdx != null ? (
@@ -891,7 +906,14 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
 function SearchSheet({ sheet, onClose, onChange }) {
   const [q, setQ] = useState(sheet?.query || '')
   const [b, setB] = useState('ALL')
+  const [pageReady, setPageReady] = useState(false)
   useEffect(() => { setQ(sheet?.query || ''); setB('ALL') }, [sheet])
+  useEffect(() => {
+    setPageReady(false)
+    if (!sheet) return
+    const id = requestAnimationFrame(() => setPageReady(true))
+    return () => cancelAnimationFrame(id)
+  }, [sheet])
   if (!sheet) return null
 
   const ql = q.trim().toLowerCase()
@@ -933,7 +955,9 @@ function SearchSheet({ sheet, onClose, onChange }) {
         </Text>
       </Box>
       <Grid columns="3" gapX="3" gapY="4" px="4" pt="3" pb="9">
-        {shown.map(p => <ProductCard key={`s-${p.id}`} p={p} grid onChange={onChange} />)}
+        {pageReady
+          ? shown.map(p => <ProductCard key={`s-${p.id}`} p={p} grid onChange={onChange} />)
+          : [0, 1, 2, 3, 4, 5].map(i => <div className="skel" key={`sk${i}`} />)}
       </Grid>
     </div>
   )
@@ -1572,14 +1596,11 @@ export default function App() {
   const [simSkin, setSimSkin] = useState(null)
   const simEnabled = window.location.hash === '#sim'
   const sky = sim ?? fetchedSky
-  // Campaign takeover: ~1 in 3 app-opens get a campaign header instead of the weather sky
+  // Campaign takeover ONLY when explicitly scheduled (hash preview / future campaign flag).
+  // Default is always weather + time of day — consistent across opens.
   const campaign = useMemo(() => {
     const m = window.location.hash.match(/^#campaign-(\d)$/)
-    if (m && CAMPAIGN_HEADERS[+m[1]]) return CAMPAIGN_HEADERS[+m[1]]
-    if (window.location.hash.startsWith('#theme-') || window.location.hash === '#sim') return null
-    return Math.random() < 0.33
-      ? CAMPAIGN_HEADERS[Math.floor(Math.random() * CAMPAIGN_HEADERS.length)]
-      : null
+    return m && CAMPAIGN_HEADERS[+m[1]] ? CAMPAIGN_HEADERS[+m[1]] : null
   }, [])
   const T = (campaign && !sim) ? campaign : SKY[sky.dp][sky.cond]
   // Quiz edition rotates daily, independent of weather — novelty is the hook
