@@ -1404,9 +1404,8 @@ function BrandDay({ onShop }) {
     <Box px="4" pt="5">
       <div className="bday">
         <div className="bday-top">
+          <Img className="bday-img" src={img(BRAND_DAY.ph, 720)} alt={BRAND_DAY.name} loading="lazy" />
           <span className="bday-badge">{BRAND_DAY.badge}</span>
-          <span className="bday-ad">Ad</span>
-          <Img className="bday-img" src={img(BRAND_DAY.ph, 560)} alt={BRAND_DAY.name} loading="lazy" />
         </div>
         <Flex className="bday-foot" align="center" gap="3">
           <span className="lgchip" style={{ padding: '5px 7px' }}>
@@ -1754,32 +1753,14 @@ export default function App() {
           />
         )}
 
+        {/* engagement break #1: timed quiz right after the urgency band */}
+        <QuizCard onWin={addCoins} onFinish={markPlayed} skin={quizSkin} />
+
         {brand === 'ALL' && <ComboDeals onChange={changeCart} />}
 
         {brand === 'ALL' && (
           <BrandDay onShop={() => setSheet({ items: FEED_POOL, query: BRAND_DAY.query, title: 'Brand of the day' })} />
         )}
-
-        <QuizCard onWin={addCoins} onFinish={markPlayed} skin={quizSkin} />
-
-        <GameRow onSpin={() => setWheelOpen(true)} onWin={addCoins} />
-
-        <Leaderboard coins={coins} />
-
-        <QuizDialog
-          open={quizOpen} onOpenChange={setQuizOpen}
-          onWin={addCoins} onFinish={markPlayed} skin={quizSkin}
-        />
-        <SpinDialog open={wheelOpen} onOpenChange={setWheelOpen} onWin={addCoins} />
-
-        {simEnabled && (
-          <DevSimulator
-            dp={sky.dp} cond={sky.cond} onChange={setSim}
-            skinName={quizSkin.name} onSkin={setSimSkin}
-          />
-        )}
-
-        {brand === 'ALL' && <ClearanceStore />}
 
         {bf(NEW_EBCO).length > 0 && (
           <Shelf
@@ -1787,6 +1768,11 @@ export default function App() {
             onSeeAll={() => setSheet({ items: bf(NEW_EBCO), title: 'New from Ebco' })}
           />
         )}
+
+        {/* engagement break #2: daily spin + streak check-in mid-page */}
+        <GameRow onSpin={() => setWheelOpen(true)} onWin={addCoins} />
+
+        {brand === 'ALL' && <ClearanceStore />}
 
         {bf(WORKSMART).length > 0 && (
           <Shelf
@@ -1802,6 +1788,9 @@ export default function App() {
           />
         )}
 
+        {/* engagement break #3: the status race, deep enough to reward scrolling */}
+        <Leaderboard coins={coins} />
+
         {bf(ZIPCO_PEKO).length > 0 && (
           <Shelf
             title="Zipco & Peka corner" items={bf(ZIPCO_PEKO)} onChange={changeCart} band="band-pink"
@@ -1810,6 +1799,19 @@ export default function App() {
         )}
 
         <EndlessFeed onChange={changeCart} pool={pool} />
+
+        <QuizDialog
+          open={quizOpen} onOpenChange={setQuizOpen}
+          onWin={addCoins} onFinish={markPlayed} skin={quizSkin}
+        />
+        <SpinDialog open={wheelOpen} onOpenChange={setWheelOpen} onWin={addCoins} />
+
+        {simEnabled && (
+          <DevSimulator
+            dp={sky.dp} cond={sky.cond} onChange={setSim}
+            skinName={quizSkin.name} onSkin={setSimSkin}
+          />
+        )}
 
         {plp && (
           <CategoryPage
