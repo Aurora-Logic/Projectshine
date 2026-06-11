@@ -1,0 +1,1866 @@
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Theme, Box, Flex, Grid, Text, Heading, Button, IconButton, TextField, Dialog,
+} from '@radix-ui/themes'
+import {
+  MagnifyingGlassIcon, ChevronDownIcon, ChevronRightIcon, ChevronUpIcon, PersonIcon,
+  LightningBoltIcon, StarFilledIcon, MinusIcon, PlusIcon, TimerIcon, Cross2Icon,
+  HomeIcon, DashboardIcon, CounterClockwiseClockIcon, RocketIcon, ArrowLeftIcon,
+  MixerHorizontalIcon, GearIcon,
+} from '@radix-ui/react-icons'
+import {
+  FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
+  FEED_POOL, CATEGORIES, BANNERS, COMBOS, CLEARANCE_TILES, QUIZ, COINS_PER_CORRECT,
+  LEADERS, SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
+  BRAND_DAY, CAMPAIGN_HEADERS,
+} from './data.js'
+import './App.css'
+
+const img = (id, w = 480) =>
+  `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=60`
+
+const DAY = new Date().toDateString()
+
+/* ---------- Adaptive sky: daypart (4) × condition (7) = 28 themes ---------- */
+
+function daypart() {
+  const h = new Date().getHours()
+  if (h >= 5 && h < 7) return 'dawn'
+  if (h >= 7 && h < 11) return 'morning'
+  if (h >= 11 && h < 14) return 'noon'
+  if (h >= 14 && h < 17) return 'afternoon'
+  if (h >= 17 && h < 20) return 'sunset'
+  return 'night'
+}
+
+function condition(code, windKmh) {
+  if (code == null) return 'clear'
+  if (code >= 95) return 'storm'
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snow'
+  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'rain'
+  if (code >= 45 && code <= 48) return 'fog'
+  if (windKmh != null && windKmh >= 24) return 'wind'
+  if (code === 3) return 'cloudy'
+  if (code >= 1 && code <= 2) return 'partly'
+  return 'clear'
+}
+
+function useSkyTheme() {
+  const [sky, setSky] = useState(() => {
+    const m = window.location.hash.match(/#theme-(dawn|morning|noon|afternoon|sunset|night)-(\w+)/)
+    if (m && SKY[m[1]]?.[m[2]]) return { dp: m[1], cond: m[2] }
+    return { dp: daypart(), cond: 'clear' }
+  })
+
+  useEffect(() => {
+    if (window.location.hash.startsWith('#theme-')) return
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords
+          const r = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=weather_code,wind_speed_10m`,
+          )
+          const j = await r.json()
+          setSky({
+            dp: daypart(),
+            cond: condition(j.current?.weather_code, j.current?.wind_speed_10m),
+          })
+        } catch { /* stay on time-based theme */ }
+      },
+      () => { /* permission denied → time-based theme */ },
+      { timeout: 5000 },
+    )
+  }, [])
+
+  return sky
+}
+
+/* Dev tool: open the app with #sim — flips skies (48 combos) AND quiz editions live */
+function DevSimulator({ dp, cond, onChange, skinName, onSkin }) {
+  return (
+    <div className="sim-panel">
+      <Text size="1" weight="bold" color="gray">SKY — daypart</Text>
+      <div className="sim-chips">
+        {Object.keys(SKY).map(d => (
+          <button key={d} className={`sim-chip ${d === dp ? 'on' : ''}`} onClick={() => onChange({ dp: d, cond })}>
+            {d}
+          </button>
+        ))}
+      </div>
+      <Text size="1" weight="bold" color="gray" style={{ display: 'block', marginTop: 10 }}>SKY — condition</Text>
+      <div className="sim-chips">
+        {Object.keys(SKY.morning).map(c => (
+          <button key={c} className={`sim-chip ${c === cond ? 'on' : ''}`} onClick={() => onChange({ dp, cond: c })}>
+            {c}
+          </button>
+        ))}
+      </div>
+      <Text size="1" weight="bold" color="gray" style={{ display: 'block', marginTop: 10 }}>QUIZ — edition</Text>
+      <div className="sim-chips">
+        {QUIZ_SKINS.map(s => (
+          <button key={s.name} className={`sim-chip ${s.name === skinName ? 'on' : ''}`} onClick={() => onSkin(s)}>
+            {s.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function sparkle(e) {
+  for (let i = 0; i < 6; i++) {
+    const s = document.createElement('span')
+    s.className = 'spark'
+    s.style.background = ['#12A594', '#FFD43B', '#7CCEC2'][i % 3]
+    s.style.left = `${e.clientX}px`
+    s.style.top = `${e.clientY}px`
+    s.style.setProperty('--dx', `${Math.random() * 90 - 45}px`)
+    s.style.setProperty('--dy', `${-25 - Math.random() * 60}px`)
+    document.body.appendChild(s)
+    setTimeout(() => s.remove(), 550)
+  }
+}
+
+const scrollToId = (id) =>
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+/* Image with blur-up fade-in (gray well → photo) */
+const Img = memo(function Img(props) {
+  const [loaded, setLoaded] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => { if (ref.current?.complete) setLoaded(true) }, [])
+  return (
+    <img
+      decoding="async"
+      {...props} ref={ref} onLoad={() => setLoaded(true)}
+      className={`${props.className || ''} fadeimg ${loaded ? 'in' : ''}`}
+    />
+  )
+})
+
+const BRAND_KEYS = ['ALL', 'ebco', 'zipco', 'peka', 'worksmart', 'livsmart']
+
+/* ---------------- Header (seasonal monsoon skin) ---------------- */
+
+const NIGHT_STARS = [
+  [8, 18], [20, 52], [34, 26], [48, 65], [60, 14], [72, 48],
+  [85, 28], [15, 80], [55, 86], [90, 70], [40, 92], [78, 88],
+]
+
+const SkyLayer = memo(function SkyLayer({ dp, cond, inDialog }) {
+  const clouds = (n, op) => Array.from({ length: n }, (_, i) => (
+    <div
+      key={i} className="cloud"
+      style={{
+        width: 90 + i * 45, height: 24 + i * 8, top: 8 + i * 30, left: `${-15 + i * 22}%`,
+        animationDuration: `${70 + i * 35}s`, animationDelay: `${-i * 25}s`, opacity: op,
+      }}
+    />
+  ))
+  const falling = (n, cls, base, step) => Array.from({ length: n }, (_, i) => (
+    <span
+      key={i} className={cls}
+      style={{
+        left: `${(i * 7.3 + 3) % 100}%`,
+        animationDuration: `${base + (i % 5) * step}s`,
+        animationDelay: `${(i % 7) * 0.4}s`,
+      }}
+    />
+  ))
+  const stars = (
+    <>
+      {/* in dialogs the title owns the top edge — park the moon bottom-right instead */}
+      <div className="moon" style={inDialog ? { top: 'auto', bottom: 16, right: 16 } : undefined} />
+      {NIGHT_STARS.map(([x, y], i) => (
+        <span key={i} className="star" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${(i % 6) * 0.45}s` }} />
+      ))}
+    </>
+  )
+  const broken = (n) => Array.from({ length: n }, (_, i) => (
+    <div
+      key={`b${i}`} className="cloud broken"
+      style={{
+        width: 70 + i * 34, height: 18 + i * 7, top: 12 + i * 28, left: `${5 + i * 28}%`,
+        animationDuration: `${52 + i * 24}s`, animationDelay: `${-i * 19}s`,
+      }}
+    />
+  ))
+  const isDay = dp !== 'night'
+  const warmGlow = dp === 'dawn' || dp === 'morning'
+  const sunny = cond === 'clear' || cond === 'partly'
+  return (
+    <div className="sky-layer" aria-hidden="true">
+      {sunny && dp === 'night' && stars}
+      {sunny && isDay && dp !== 'sunset' && (
+        <div
+          className="sun-glow"
+          style={warmGlow ? { background: 'radial-gradient(circle, rgba(255,196,120,.6), rgba(255,196,120,0) 70%)' } : undefined}
+        />
+      )}
+      {sunny && dp === 'sunset' && (
+        <div className="sun-glow" style={{ background: 'radial-gradient(circle, rgba(255,170,90,.55), rgba(255,170,90,0) 70%)', top: 'auto', bottom: -70, right: 50 }} />
+      )}
+      {cond === 'clear' && isDay && clouds(2, .5)}
+      {cond === 'partly' && broken(dp === 'night' ? 2 : 3)}
+      {cond === 'cloudy' && clouds(4, .8)}
+      {(cond === 'rain' || cond === 'storm') && <>
+        {clouds(cond === 'storm' ? 4 : 3, .55)}
+        {falling(cond === 'storm' ? 20 : 14, 'drop', 0.9, 0.18)}
+      </>}
+      {cond === 'snow' && falling(12, 'flake', 3, 0.8)}
+      {cond === 'fog' && [0, 1, 2].map(i => (
+        <div key={i} className="fogband" style={{ top: 18 + i * 44, animationDuration: `${7 + i * 3}s`, opacity: .8 - i * .15 }} />
+      ))}
+      {cond === 'wind' && <>
+        {[0, 1, 2, 3, 4].map(i => (
+          <span key={i} className="gust" style={{ top: 16 + i * 32, animationDuration: `${2.2 + (i % 3) * 0.7}s`, animationDelay: `${i * 0.5}s` }} />
+        ))}
+        <span className="leafy" style={{ top: 30, animationDuration: '7s' }}>🍃</span>
+        <span className="leafy" style={{ top: 80, animationDuration: '9s', animationDelay: '2.5s' }}>🍃</span>
+      </>}
+    </div>
+  )
+})
+
+function CartGlyph(props) {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="9" cy="20" r="1.6" />
+      <circle cx="17.5" cy="20" r="1.6" />
+      <path d="M2.5 3.5h2.6l2.5 12h10.3l2.6-8.8H6.1" />
+    </svg>
+  )
+}
+
+function TopBar({ compact, coins, weather, dp, cond, brand, onBrand, onSearch, cartCount }) {
+  const [hint, setHint] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setHint(h => (h + 1) % SEARCH_HINTS.length), 2500)
+    return () => clearInterval(t)
+  }, [])
+
+  return (
+    <div className={`topbar ${compact ? 'compact' : ''}`}>
+      <SkyLayer dp={dp} cond={cond} />
+      <Flex align="center" gap="3" className="loc-row" mb="3">
+        <Box flexGrow="1" style={{ cursor: 'pointer', minWidth: 0 }}>
+          <Flex align="center" gap="2">
+            <Text size="2" weight="bold" truncate style={{ color: '#fff' }}>Home · HSR Layout</Text>
+            <ChevronDownIcon width={14} height={14} color="#fff" style={{ flex: 'none' }} />
+          </Flex>
+          <Text size="1" truncate as="div" style={{ color: 'rgba(255,255,255,.72)' }}>
+            304, Maple Heights · {weather.icon}
+          </Text>
+        </Box>
+        <div className="avatar" aria-label="Cart">
+          <CartGlyph />
+          {cartCount > 0 && <span className="cart-badge">{cartCount > 9 ? '9+' : cartCount}</span>}
+        </div>
+        <div className="avatar"><PersonIcon width={19} height={19} /></div>
+      </Flex>
+
+      <TextField.Root
+        size="3" radius="full" placeholder={SEARCH_HINTS[hint]} readOnly
+        onClick={onSearch} onFocus={(e) => { e.target.blur(); onSearch() }}
+        style={{ background: '#fff', boxShadow: '0 3px 10px rgba(0,0,0,.2)', cursor: 'pointer' }}
+      >
+        <TextField.Slot>
+          <MagnifyingGlassIcon width={17} height={17} />
+        </TextField.Slot>
+      </TextField.Root>
+
+      <div className="rewards-strip" onClick={() => scrollToId('quiz')}>
+        <StarFilledIcon width={14} height={14} color="var(--amber-9)" style={{ flex: 'none' }} />
+        <Text size="1" weight="bold" truncate style={{ flex: 1, minWidth: 0 }}>
+          <span className="coin-pop" key={coins}>{coins}</span> coins · 5-day order streak
+        </Text>
+        <Text size="1" weight="bold" color="amber" style={{ flex: 'none' }}>Play quiz, win more</Text>
+        <ChevronRightIcon width={13} height={13} color="var(--amber-11)" style={{ flex: 'none' }} />
+      </div>
+
+      <div className="tabs-t">
+        {HEADER_TABS.map((t, i) => {
+          const key = BRAND_KEYS[i]
+          return (
+            <button key={t.l} className={`tab-t ${key === brand ? 'active' : ''}`} onClick={() => onBrand(key)}>
+              <span className="tab-chip">
+                {t.logo
+                  ? <img src={t.logo} alt={t.l} />
+                  : <DashboardIcon width={16} height={16} color="var(--gray-11)" />}
+              </span>
+              <span className="lb">{t.l}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/* ---------------- Banners ---------------- */
+
+function BannerCarousel({ quizSkin, onGlow }) {
+  const ref = useRef(null)
+  const [idx, setIdx] = useState(0)
+
+  // the header sheet's bottom tint follows the active banner
+  useEffect(() => {
+    const b = BANNERS[idx]
+    if (b && onGlow) onGlow(b.key === 'quiz' ? quizSkin.btn : (b.glow || null))
+  }, [idx, quizSkin, onGlow])
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      const el = ref.current
+      if (!el) return
+      const next = (Math.round(el.scrollLeft / el.clientWidth) + 1) % BANNERS.length
+      el.scrollTo({ left: next * el.clientWidth, behavior: 'smooth' })
+    }, 3800)
+    return () => clearInterval(t)
+  }, [])
+
+  const onScroll = () => {
+    const el = ref.current
+    if (el) setIdx(Math.round(el.scrollLeft / el.clientWidth))
+  }
+
+  return (
+    <Box>
+      <div className="banner-car" ref={ref} onScroll={onScroll}>
+        {BANNERS.map(b => (
+          <div className="banner-slide" key={b.key}>
+            <div className="banner-inner" style={{ background: b.key === 'quiz' ? quizSkin.bg : b.bg }}>
+              <Box flexGrow="1">
+                <Heading size="6" style={{ color: b.dark ? '#2b2200' : '#fff', letterSpacing: '-0.4px', lineHeight: 1.15 }}>
+                  {b.title}
+                </Heading>
+                <Text size="2" weight="medium" as="div" mt="1" style={{ color: b.dark ? '#5c4a00' : 'rgba(255,255,255,.9)' }}>
+                  {b.sub}
+                </Text>
+                <Button
+                  size="2" mt="3" radius="full"
+                  color={b.dark ? 'green' : undefined}
+                  style={{ fontWeight: 700, ...(b.dark ? {} : { background: '#fff', color: 'var(--gray-12)' }) }}
+                  onClick={() => b.anchor && scrollToId(b.anchor)}
+                >
+                  {b.cta}
+                </Button>
+              </Box>
+              <Img className="banner-img" src={img(b.ph, 280)} alt="" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </Box>
+  )
+}
+
+/* ---------------- Shared bits ---------------- */
+
+/* Deal window persists across refreshes; rolls to a new 30-min window when it expires */
+function dealSecsLeft() {
+  const left = Math.floor((Number(localStorage.getItem('qc-deal-end')) - Date.now()) / 1000)
+  if (left > 0) return left
+  localStorage.setItem('qc-deal-end', String(Date.now() + 30 * 60 * 1000))
+  return 30 * 60
+}
+
+function DealTimer() {
+  const [secs, setSecs] = useState(dealSecsLeft)
+  useEffect(() => {
+    const t = setInterval(() => setSecs(dealSecsLeft()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const mm = String(Math.floor(secs / 60)).padStart(2, '0')
+  const ss = String(secs % 60).padStart(2, '0')
+  return (
+    <span className="timer-chip">
+      <span className="timer-dot" /> ENDS IN {mm}:{ss}
+    </span>
+  )
+}
+
+function SectionHead({ title, extra, light, sub, onSeeAll }) {
+  return (
+    <Box px="4" mb="3">
+      <Flex align="center" justify="between">
+        <Flex align="center" gap="3" style={{ minWidth: 0 }}>
+          <Heading size="4" style={{ letterSpacing: '-0.2px', ...(light ? { color: '#fff' } : {}) }}>
+            {title}
+          </Heading>
+          {extra}
+        </Flex>
+        {onSeeAll && (
+          <Text
+            size="2" weight="bold" color={light ? undefined : 'green'} onClick={onSeeAll}
+            style={{ cursor: 'pointer', flex: 'none', ...(light ? { color: 'rgba(255,255,255,.9)' } : {}) }}
+          >
+            See all
+          </Text>
+        )}
+      </Flex>
+      {sub && (
+        <Text size="1" as="div" mt="1" style={light ? { color: 'rgba(255,255,255,.85)' } : { color: 'var(--gray-10)' }}>
+          {sub}
+        </Text>
+      )}
+    </Box>
+  )
+}
+
+function AddControl({ qty, onAdd, onRemove }) {
+  if (qty === 0) {
+    return (
+      <Button
+        className="padd" variant="outline" color="teal" size="2"
+        onClick={onAdd} style={{ fontWeight: 800, margin: 0 }}
+      >
+        ADD
+      </Button>
+    )
+  }
+  return (
+    <Flex className="padd" align="center" justify="between" style={{ background: 'var(--teal-9)' }}>
+      <IconButton size="1" onClick={onRemove} style={{ background: 'transparent', color: '#fff' }}>
+        <MinusIcon />
+      </IconButton>
+      <Text size="2" weight="bold" style={{ color: '#fff' }}>{qty}</Text>
+      <IconButton size="1" onClick={onAdd} style={{ background: 'transparent', color: '#fff' }}>
+        <PlusIcon />
+      </IconButton>
+    </Flex>
+  )
+}
+
+const ProductCard = memo(function ProductCard({ p, grid, onChange }) {
+  const [qty, setQty] = useState(0)
+  const add = (e) => { setQty(q => q + 1); onChange(1, p); sparkle(e) }
+  const remove = () => { setQty(q => q - 1); onChange(-1, p) }
+
+  const oos = p.stock === 0
+  return (
+    <div className={`pcard ${grid ? 'grid' : ''}`}>
+      <div className="pimg-wrap">
+        <Img className={`pimg ${oos ? 'oos' : ''}`} src={img(p.ph, 360)} alt={p.name} loading="lazy" />
+        {p.tag && <span className="pbadge">{p.tag}</span>}
+        <AddControl qty={qty} onAdd={add} onRemove={remove} />
+      </div>
+      {p.usual && <span className="usual-pill">YOUR USUAL</span>}
+      <Text size="2" weight="bold" as="div" mt={p.usual ? '1' : '3'} className="clamp2" style={{ fontSize: 13, lineHeight: 1.3, minHeight: 34 }}>
+        {p.name}
+      </Text>
+      <Text size="1" color="gray" as="div" truncate>{p.qty}</Text>
+      {p.buys && (
+        <div className="sp-row">
+          <LightningBoltIcon width={10} height={10} />
+          <Text size="1" weight="bold" style={{ fontSize: 10.5 }}>{p.buys}</Text>
+        </div>
+      )}
+      {p.rating && !p.buys && (
+        <div className="rating-row">
+          <StarFilledIcon width={10} height={10} color="var(--amber-9)" />
+          <Text size="1" weight="medium" color="gray" style={{ fontSize: 10.5 }}>{p.rating}</Text>
+        </div>
+      )}
+      {/* pinned to card bottom so price lines align across every card in a shelf */}
+      <div className="price-block">
+        {p.stock != null && (
+          <Text size="1" as="div" weight="bold" style={{
+            fontSize: 10.5,
+            color: oos ? 'var(--red-10)' : p.stock <= 10 ? 'var(--amber-11)' : 'var(--teal-10)',
+          }}>
+            {oos
+              ? `Out of stock · ships in ${p.lead} days`
+              : p.stock <= 10 ? `Only ${p.stock} left` : `In stock · ${p.stock}+ pcs`}
+          </Text>
+        )}
+        <Flex align="center" gap="2">
+          <Text size="2" weight="bold">₹{p.price.toLocaleString('en-IN')}</Text>
+          {p.mrp && (
+            <Text size="1" color="gray" style={{ textDecoration: 'line-through' }}>₹{p.mrp.toLocaleString('en-IN')}</Text>
+          )}
+        </Flex>
+        {p.bulk && (
+          <Text size="1" as="div" weight="bold" style={{ fontSize: 10.5, color: 'var(--blue-11)' }}>
+            Bulk: {p.bulk}
+          </Text>
+        )}
+      </div>
+    </div>
+  )
+})
+
+function Shelf({ title, items, onChange, extra, band, light, id, sub, onSeeAll }) {
+  const inner = (
+    <>
+      <SectionHead title={title} extra={extra} light={light} sub={sub} onSeeAll={onSeeAll} />
+      <div className="hscroll">
+        {items.map(p => <ProductCard key={p.id} p={p} onChange={onChange} />)}
+      </div>
+    </>
+  )
+  if (band) return <div className={band} id={id}>{inner}</div>
+  return <Box pt="5" id={id}>{inner}</Box>
+}
+
+/* ---------------- Category listing page (PLP) ---------------- */
+
+const CAT_RULES = {
+  All: () => true,
+  'Drawer Slides': p => /slide|drawer/i.test(p.name),
+  Hinges: p => /hinge/i.test(p.name),
+  Locks: p => /lock|aldrop|bolt/i.test(p.name),
+  Wardrobe: p => /wardrobe/i.test(p.name),
+  Kitchen: p => /kitchen|carousel|tandem|quadro/i.test(p.name),
+  Office: p => p.brand === 'worksmart',
+  Lighting: p => /light|profile|strip/i.test(p.name),
+  Handles: p => /handle|knob/i.test(p.name),
+  Storage: p => /shelf|castor|connector|catch|pin/i.test(p.name),
+}
+
+const PLP_RAIL = [['1503387762-592deb58ef4e', 'All'], ...CATEGORIES]
+
+/* "People also add" pairing rules: added item → complementary product id */
+const RECO_RULES = [
+  [/slide|drawer/i, 'x2'],
+  [/hinge/i, 'ba1'],
+  [/lock|bolt/i, 'ba4'],
+  [/light|strip|profile|sensor|night/i, 'ls5'],
+  [/keyboard|monitor|cpu|cable|grommet/i, 'ws5'],
+]
+const catOf = (x) => Object.keys(CAT_RULES).find(k => k !== 'All' && CAT_RULES[k](x))
+function recosFor(p) {
+  const rule = RECO_RULES.find(([re]) => re.test(p.name))
+  const pairId = rule ? rule[1] : 'ba5'
+  const list = []
+  const pair = FEED_POOL.find(x => x.id === pairId && x.id !== p.id)
+  if (pair) list.push(pair)
+  FEED_POOL.filter(x => x.id !== p.id && catOf(x) === catOf(p))
+    .forEach(x => { if (!list.some(y => y.id === x.id)) list.push(x) })
+  return list.slice(0, 6)
+}
+
+const SORT_OPTIONS = ['Popular', 'Price: low → high', 'Price: high → low', 'Biggest discount']
+
+/* Subcategory level of the IA: Brand → Category (rail) → Subcategory (image chips) → Product.
+   [label, keyword matcher] — chip thumbnails resolve from the first matching product. */
+const SUBCATS = {
+  All: [],
+  'Drawer Slides': [['Telescopic', 'telescopic'], ['Ball-bearing', 'ball-bearing'], ['Heavy duty', 'heavy'], ['Tandem', 'tandem']],
+  Hinges: [['Soft-close', 'soft-close'], ['Glass', 'glass'], ['Concealed', 'concealed'], ['Clip-on', 'clip-on']],
+  Locks: [['Cam locks', 'cam lock'], ['Digital', 'digital'], ['Wardrobe', 'wardrobe'], ['Bolts', 'bolt']],
+  Wardrobe: [['Sliding systems', 'sliding'], ['Locks', 'lock']],
+  Kitchen: [['Carousels', 'carousel'], ['Deep drawers', 'deep'], ['Quadro', 'quadro']],
+  Office: [['Keyboard trays', 'keyboard'], ['Monitor arms', 'monitor'], ['CPU', 'cpu'], ['Cable', 'cable']],
+  Lighting: [['LED strips', 'strip'], ['Sensor lights', 'sensor'], ['Profiles', 'profile'], ['Night lights', 'night']],
+  Handles: [['D-Handles', 'd-handle'], ['Support pins', 'pin']],
+  Storage: [['Castors', 'castor'], ['Shelf', 'shelf'], ['Catches', 'catch']],
+}
+
+const subcatThumb = (kw) =>
+  FEED_POOL.find(p => `${p.name} ${p.qty}`.toLowerCase().includes(kw))?.ph
+
+const MERCH_ROWS = [
+  { icon: '🧾', t: 'GST input credit on every invoice', s: 'Business billing built in' },
+  { icon: '🚚', t: 'Free delivery above ₹999', s: 'Straight to your site, no surge' },
+]
+
+function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBrand = 'ALL', recoStrip, onRecoClose }) {
+  const [b, setB] = useState(homeBrand)
+  const [deals, setDeals] = useState(false)
+  const [spec, setSpec] = useState(null) // selected subcategory: [label, kw]
+  const [sort, setSort] = useState(0)
+  // #fsheet hash opens the filter sheet for design review
+  const [fOpen, setFOpen] = useState(() => (window.location.hash === '#fsheet' ? 'sub' : null))
+  const mainRef = useRef(null)
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1)
+  const clearAll = () => { setB('ALL'); setDeals(false); setSpec(null); setSort(0) }
+  const badges = {
+    sub: spec ? 1 : 0,
+    brand: b !== 'ALL' ? 1 : 0,
+    deal: deals ? 1 : 0,
+    sort: sort > 0 ? 1 : 0,
+  }
+  const badgeTotal = Object.values(badges).reduce((a, x) => a + x, 0)
+
+  // rail hop → back to top, and subcategories are category-specific so they reset
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 })
+    setSpec(null)
+  }, [cat])
+
+  const inCat = useMemo(() => FEED_POOL.filter(CAT_RULES[cat] || (() => true)), [cat])
+  const dealsAvail = inCat.filter(p => p.tag).length
+
+  const products = useMemo(() => {
+    let list = inCat
+    if (b !== 'ALL') list = list.filter(p => p.brand === b)
+    if (spec) list = list.filter(p => `${p.name} ${p.qty}`.toLowerCase().includes(spec[1]))
+    if (deals) list = list.filter(p => p.tag)
+    list = [...list]
+    if (sort === 1) list.sort((x, y) => x.price - y.price)
+    if (sort === 2) list.sort((x, y) => y.price - x.price)
+    if (sort === 3) list.sort((x, y) => ((y.mrp || y.price) - y.price) / (y.mrp || y.price) - ((x.mrp || x.price) - x.price) / (x.mrp || x.price))
+    return list
+  }, [inCat, b, spec, deals, sort])
+
+  const railImg = (PLP_RAIL.find(r => r[1] === cat) || PLP_RAIL[0])[0]
+  const gridKey = `${cat}|${b}|${spec}|${deals}|${sort}`
+  const summary = [
+    `${products.length} item${products.length === 1 ? '' : 's'}`,
+    b !== 'ALL' && b.charAt(0).toUpperCase() + b.slice(1),
+    spec && spec[0],
+    deals && 'Deals only',
+    sort > 0 && SORT_OPTIONS[sort],
+  ].filter(Boolean).join(' · ')
+
+  // merch strip after every 6th product breaks grid monotony
+  const cells = []
+  products.forEach((p, i) => {
+    if (i > 0 && i % 6 === 0) cells.push({ merchIdx: (i / 6 - 1) % MERCH_ROWS.length })
+    cells.push(p)
+  })
+
+  return (
+    <div className="plp">
+      <div className="plp-head">
+        <button className="sheet-back" onClick={onClose} aria-label="Back">
+          <ArrowLeftIcon width={18} height={18} />
+        </button>
+        <Box style={{ flex: 1, textAlign: 'center' }}>
+          <Heading size="4" style={{ letterSpacing: '-0.2px' }}>
+            {cat === 'All' ? 'All fittings' : cat}
+          </Heading>
+          {b !== 'ALL' && (
+            <Text size="1" color="gray" as="div" style={{ marginTop: 1 }}>
+              {b.charAt(0).toUpperCase() + b.slice(1)} store
+            </Text>
+          )}
+        </Box>
+        <button className="sheet-back" onClick={onSearch} aria-label="Search">
+          <MagnifyingGlassIcon width={18} height={18} />
+        </button>
+      </div>
+      <div className="plp-body">
+        <div className="plp-rail">
+          {PLP_RAIL.map(([ph, label]) => (
+            <div key={label} className={`rail-item ${label === cat ? 'on' : ''}`} onClick={() => onPick(label)}>
+              <Img src={img(ph, 140)} alt={label} loading="lazy" />
+              <span className="rl">{label}</span>
+            </div>
+          ))}
+        </div>
+        <div className="plp-main" ref={mainRef}>
+          <div className="plp-sticky">
+            <div className="plp-chips">
+              <button className={`pchip ${badgeTotal > 0 ? 'on' : ''}`} onClick={() => setFOpen(cat === 'All' ? 'brand' : 'sub')}>
+                <MixerHorizontalIcon width={13} height={13} />
+                Filters{badgeTotal > 0 ? ` · ${badgeTotal}` : ''}
+              </button>
+              <button className={`pchip ${sort > 0 ? 'on' : ''}`} onClick={() => setFOpen('sort')}>
+                {sort > 0 ? SORT_OPTIONS[sort] : 'Sort'} <ChevronDownIcon width={13} height={13} />
+              </button>
+              <button className={`pchip ${deals ? 'on' : ''}`} onClick={() => setDeals(d => !d)}>
+                Deals only
+              </button>
+              {(SUBCATS[cat] || []).map(([label, kw]) => {
+                const th = subcatThumb(kw)
+                return (
+                  <button
+                    key={kw} className={`pchip ${spec?.[1] === kw ? 'on' : ''}`}
+                    onClick={() => setSpec(cur => (cur?.[1] === kw ? null : [label, kw]))}
+                  >
+                    {th && <Img className="pi" src={img(th, 80)} alt="" />}
+                    {label}
+                  </button>
+                )
+              })}
+              {BRAND_KEYS.slice(1).map(k => (
+                <button key={k} className={`pchip ${b === k ? 'on' : ''}`} onClick={() => setB(cur => (cur === k ? 'ALL' : k))}>
+                  <img className="pi-logo" src={BRAND_LOGOS[k]} alt="" />
+                  {cap(k)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            className="plp-banner"
+            onClick={() => dealsAvail > 0 && setDeals(d => !d)}
+            style={{ cursor: dealsAvail > 0 ? 'pointer' : 'default' }}
+          >
+            <Box flexGrow="1">
+              <Text size="3" weight="bold" as="div" style={{ color: '#5c3a10', letterSpacing: '-0.2px' }}>
+                {dealsAvail > 0
+                  ? (deals ? 'Showing deals only' : `${dealsAvail} deal${dealsAvail === 1 ? '' : 's'} live in ${cat === 'All' ? 'fittings' : cat.toLowerCase()}`)
+                  : `Pro picks: ${cat === 'All' ? 'every fitting' : cat.toLowerCase()}`}
+              </Text>
+              <Text size="1" weight="medium" as="div" mt="1" style={{ color: '#7a5420' }}>
+                {dealsAvail > 0
+                  ? (deals ? 'Tap to see everything again' : 'Trade prices · tap to show only deals')
+                  : 'Trade prices · GST billing · 90-min delivery'}
+              </Text>
+            </Box>
+            <Img src={img(railImg, 200)} alt="" />
+          </button>
+
+          <Box pt="2" pb="1">
+            <Text size="1" color="gray">{summary}</Text>
+          </Box>
+
+          {products.length > 0 ? (
+            <Grid columns="2" gapX="3" gapY="4" pt="1" key={gridKey}>
+              {cells.map((c, i) =>
+                c.merchIdx != null ? (
+                  <div className="merch-row cardin" key={`m${i}`} style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}>
+                    <Text size="4" style={{ flex: 'none' }}>{MERCH_ROWS[c.merchIdx].icon}</Text>
+                    <Box>
+                      <Text size="1" weight="bold" as="div" style={{ color: 'var(--blue-11)' }}>{MERCH_ROWS[c.merchIdx].t}</Text>
+                      <Text as="div" style={{ fontSize: 11, color: 'var(--blue-11)', opacity: .8 }}>{MERCH_ROWS[c.merchIdx].s}</Text>
+                    </Box>
+                  </div>
+                ) : (
+                  <div className="cardin" key={`plp-${c.id}`} style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}>
+                    <ProductCard p={c} grid onChange={onChange} />
+                  </div>
+                ),
+              )}
+            </Grid>
+          ) : (
+            <Flex direction="column" align="center" py="8" gap="2">
+              <Text size="2" weight="bold" color="gray">Nothing matches these filters</Text>
+              <Button size="1" radius="full" variant="soft" onClick={() => { setB('ALL'); setDeals(false); setSpec(null); setSort(0) }}>
+                Clear filters
+              </Button>
+            </Flex>
+          )}
+        </div>
+      </div>
+      <div className="plp-cartwrap">
+        {recoStrip && recoStrip.length > 0 && (
+          <div className="rstrip">
+            <Flex align="center" justify="between" px="3" pb="2">
+              <Text size="1" weight="bold" style={{ color: 'var(--teal-11)', fontSize: 10.5 }}>
+                PEOPLE ALSO ADD
+              </Text>
+              <button className="reco-x" onClick={onRecoClose} aria-label="Dismiss">
+                <Cross2Icon width={12} height={12} />
+              </button>
+            </Flex>
+            <div className="rstrip-scroll">
+              {recoStrip.map(x => (
+                <div key={`rs-${x.id}`} className="rmini">
+                  <div style={{ position: 'relative' }}>
+                    <Img src={img(x.ph, 220)} alt={x.name} loading="lazy" />
+                    {x.tag && <span className="pbadge" style={{ fontSize: 9, padding: '3px 6px', top: 6, left: 6 }}>{x.tag}</span>}
+                  </div>
+                  <Text as="div" weight="bold" className="clamp2" style={{ fontSize: 12, lineHeight: 1.3, height: 31 }}>
+                    {x.name}
+                  </Text>
+                  <Text as="div" color="gray" truncate style={{ fontSize: 10.5 }}>{x.qty}</Text>
+                  {x.stock != null && (
+                    <Text as="div" weight="bold" style={{
+                      fontSize: 10,
+                      color: x.stock === 0 ? 'var(--red-10)' : x.stock <= 10 ? 'var(--amber-11)' : 'var(--teal-10)',
+                    }}>
+                      {x.stock === 0 ? `Ships in ${x.lead} days` : x.stock <= 10 ? `Only ${x.stock} left` : `In stock · ${x.stock}+`}
+                    </Text>
+                  )}
+                  <Flex align="center" justify="between" mt="1">
+                    <Box>
+                      <Flex align="center" gap="1">
+                        <Text size="2" weight="bold">₹{x.price.toLocaleString('en-IN')}</Text>
+                        {x.mrp && <Text style={{ fontSize: 10, textDecoration: 'line-through', color: 'var(--gray-9)' }}>₹{x.mrp.toLocaleString('en-IN')}</Text>}
+                      </Flex>
+                      {x.bulk && (
+                        <Text as="div" weight="bold" style={{ fontSize: 9.5, color: 'var(--blue-11)' }}>
+                          Bulk: {x.bulk}
+                        </Text>
+                      )}
+                    </Box>
+                    <Button
+                      size="1" color="teal" radius="full" style={{ fontWeight: 800, height: 26, padding: '0 12px', flex: 'none' }}
+                      onClick={(e) => { onChange(1, x, { noReco: true }); sparkle(e) }}
+                    >
+                      ADD
+                    </Button>
+                  </Flex>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <CartBar cart={cart} />
+      </div>
+
+      {fOpen && (
+        <div className="bsheet-overlay" onClick={() => setFOpen(null)}>
+          <div className="bsheet fsheet" onClick={(e) => e.stopPropagation()}>
+            <Flex align="center" justify="between" px="4" pt="4" pb="3">
+              <Heading size="4">Filters & sorting</Heading>
+              <Text size="2" weight="bold" color="red" style={{ cursor: 'pointer' }} onClick={clearAll}>
+                Clear all
+              </Text>
+            </Flex>
+            <div className="fs-body">
+              <div className="fs-rail">
+                {[['sub', 'Subcategory'], ['brand', 'Brand'], ['deal', 'Deals'], ['sort', 'Sort']].map(([k, l]) => (
+                  <div key={k} className={`fs-group ${fOpen === k ? 'on' : ''}`} onClick={() => setFOpen(k)}>
+                    {badges[k] > 0 && <span className="fs-badge">{badges[k]}</span>}
+                    <Text size="1" weight="bold">{l}</Text>
+                  </div>
+                ))}
+              </div>
+              <div className="fs-pane">
+                {fOpen === 'sub' && (
+                  cat === 'All' ? (
+                    <Text size="2" color="gray">
+                      Pick a category from the page’s left rail first — subcategories live inside each category.
+                    </Text>
+                  ) : (
+                    <div className="fs-tiles">
+                      {(SUBCATS[cat] || []).map(([label, kw]) => {
+                        const th = subcatThumb(kw)
+                        const on = spec?.[1] === kw
+                        return (
+                          <button key={kw} className={`fs-tile ${on ? 'on' : ''}`} onClick={() => setSpec(on ? null : [label, kw])}>
+                            {th && <Img className="ph" src={img(th, 220)} alt="" />}
+                            <div className="fs-cap"><Text size="2" weight="bold">{label}</Text></div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )
+                )}
+                {fOpen === 'brand' && (
+                  <div className="fs-tiles">
+                    <button className={`fs-tile ${b === 'ALL' ? 'on' : ''}`} onClick={() => setB('ALL')}>
+                      <div className="media">
+                        <DashboardIcon width={26} height={26} color="var(--gray-11)" />
+                      </div>
+                      <div className="fs-cap"><Text size="2" weight="bold">All brands</Text></div>
+                    </button>
+                    {BRAND_KEYS.slice(1).map(k => (
+                      <button key={k} className={`fs-tile ${b === k ? 'on' : ''}`} onClick={() => setB(cur => (cur === k ? 'ALL' : k))}>
+                        <div className="media">
+                          <img className="lg" src={BRAND_LOGOS[k]} alt={k} />
+                        </div>
+                        <div className="fs-cap"><Text size="2" weight="bold">{cap(k)}</Text></div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {fOpen === 'deal' && (
+                  <div className="fs-tiles">
+                    <button className={`fs-tile ${!deals ? 'on' : ''}`} onClick={() => setDeals(false)}>
+                      <div className="media"><Text size="7">🗂️</Text></div>
+                      <div className="fs-cap"><Text size="2" weight="bold">All items</Text></div>
+                    </button>
+                    <button className={`fs-tile ${deals ? 'on' : ''}`} onClick={() => setDeals(true)}>
+                      <div className="media"><Text size="7">🏷️</Text></div>
+                      <div className="fs-cap"><Text size="2" weight="bold">Deals only</Text></div>
+                    </button>
+                  </div>
+                )}
+                {fOpen === 'sort' && SORT_OPTIONS.map((o, i) => (
+                  <button key={o} className="bsheet-row" onClick={() => setSort(i)}>
+                    <span className={`radio ${i === sort ? 'on' : ''}`} />
+                    <Text size="2" weight={i === sort ? 'bold' : 'medium'}>{o}</Text>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="fs-foot">
+              <Button size="3" variant="soft" color="gray" radius="full" onClick={() => setFOpen(null)}>
+                Close
+              </Button>
+              <Button size="3" color="teal" radius="full" style={{ flex: 1, fontWeight: 800 }} onClick={() => setFOpen(null)}>
+                Show {products.length} result{products.length === 1 ? '' : 's'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* Full-screen search / listing sheet — live filtering across the catalog */
+function SearchSheet({ sheet, onClose, onChange }) {
+  const [q, setQ] = useState(sheet?.query || '')
+  const [b, setB] = useState('ALL')
+  useEffect(() => { setQ(sheet?.query || ''); setB('ALL') }, [sheet])
+  if (!sheet) return null
+
+  const ql = q.trim().toLowerCase()
+  const base = sheet.items.filter(p => b === 'ALL' || p.brand === b)
+  const hits = base.filter(p => !ql || `${p.name} ${p.qty}`.toLowerCase().includes(ql))
+  const fallback = ql && hits.length === 0
+  const shown = fallback ? base : hits
+
+  return (
+    <div className="sheet">
+      <div className="sheet-head">
+        <button className="sheet-back" onClick={onClose} aria-label="Back">
+          <ArrowLeftIcon width={18} height={18} />
+        </button>
+        <TextField.Root
+          size="3" radius="full" autoFocus value={q} placeholder="Search fittings, brands, sizes…"
+          onChange={(e) => setQ(e.target.value)} style={{ flex: 1 }}
+        >
+          <TextField.Slot>
+            <MagnifyingGlassIcon width={16} height={16} />
+          </TextField.Slot>
+        </TextField.Root>
+      </div>
+      <div className="sheet-brands">
+        {BRAND_KEYS.map(k => (
+          <button key={k} className={`sim-chip ${b === k ? 'on' : ''}`} onClick={() => setB(k)}>
+            {k !== 'ALL' && (
+              <span className="lgchip"><img src={BRAND_LOGOS[k]} alt="" /></span>
+            )}
+            {k === 'ALL' ? 'All brands' : k.charAt(0).toUpperCase() + k.slice(1)}
+          </button>
+        ))}
+      </div>
+      <Box px="4" pt="2">
+        <Text size="1" color="gray">
+          {fallback
+            ? `No exact matches for “${q}” — showing everything${sheet.title ? ` in ${sheet.title}` : ''}`
+            : `${shown.length} item${shown.length === 1 ? '' : 's'}${sheet.title ? ` · ${sheet.title}` : ''}`}
+        </Text>
+      </Box>
+      <Grid columns="3" gapX="3" gapY="4" px="4" pt="3" pb="9">
+        {shown.map(p => <ProductCard key={`s-${p.id}`} p={p} grid onChange={onChange} />)}
+      </Grid>
+    </div>
+  )
+}
+
+/* ---------------- Seasonal: combos + monsoon store ---------------- */
+
+function ComboDeals({ onChange }) {
+  return (
+    <Box pt="5">
+      <SectionHead title="Combo kits" extra={<span className="save-pill">BUNDLE & SAVE</span>} />
+      <div className="hscroll">
+        {COMBOS.map(c => <ComboCard key={c.id} c={c} onChange={onChange} />)}
+      </div>
+    </Box>
+  )
+}
+
+function ComboCard({ c, onChange }) {
+  const [qty, setQty] = useState(0)
+  const p = { id: c.id, ph: c.ph, price: c.price }
+  const add = (e) => { setQty(q => q + 1); onChange(1, p); sparkle(e) }
+  const remove = () => { setQty(q => q - 1); onChange(-1, p) }
+
+  return (
+    <div className="combo-card" style={{ background: c.tint }}>
+      <div className="combo-head">
+        <Text size="2" weight="bold" as="div" className="clamp1" style={{ letterSpacing: '-0.1px' }}>{c.title}</Text>
+        <Text as="div" mt="1" className="clamp2" style={{ fontSize: 11, lineHeight: 1.35, color: 'var(--gray-10)', height: 30 }}>
+          {c.items}
+        </Text>
+      </div>
+      <div className="combo-img-wrap">
+        <Img className="combo-img" src={img(c.ph, 360)} alt={c.title} loading="lazy" />
+        <span className="combo-badge">-{Math.round(((c.was - c.price) / c.was) * 100)}%</span>
+        <AddControl qty={qty} onAdd={add} onRemove={remove} />
+      </div>
+      <div className="combo-foot">
+        <Flex align="baseline" gap="2">
+          <Text weight="bold" style={{ fontSize: 16, letterSpacing: '-0.2px' }}>₹{c.price.toLocaleString('en-IN')}</Text>
+          <Text size="1" color="gray" style={{ textDecoration: 'line-through' }}>₹{c.was.toLocaleString('en-IN')}</Text>
+        </Flex>
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--teal-11)', marginTop: 2 }}>
+          You save ₹{(c.was - c.price).toLocaleString('en-IN')}
+        </Text>
+      </div>
+    </div>
+  )
+}
+
+function ClearanceStore() {
+  return (
+    <div className="band-clearance" id="season-store">
+      <Flex align="center" justify="between">
+        <Box>
+          <Flex align="center" gap="2">
+            <Heading size="6" style={{ color: '#fff', letterSpacing: '-0.4px' }}>Clearance stock</Heading>
+            <span className="cl-pill">UP TO 60% OFF</span>
+          </Flex>
+          <Text size="2" as="div" mt="1" style={{ color: 'rgba(255,255,255,.7)' }}>
+            Last units — gone when they’re gone
+          </Text>
+        </Box>
+        <Text size="2" weight="bold" style={{ color: '#fff', cursor: 'pointer', flex: 'none' }}>See all</Text>
+      </Flex>
+      <Grid columns="2" gap="3" mt="4">
+        {CLEARANCE_TILES.map(t => (
+          <div className="m-tile" key={t.label}>
+            <div className="m-label" style={{ display: 'block' }}>
+              <Text size="2" weight="bold" as="div" style={{ color: '#fff', lineHeight: 1.3 }}>{t.label}</Text>
+              <Text size="1" weight="bold" as="div" mt="1" style={{ color: '#FFD43B' }}>Only {t.left} left</Text>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <Img src={img(t.ph, 280)} alt={t.label} loading="lazy" style={{ display: 'block', width: '100%', height: 104, objectFit: 'cover' }} />
+              <span className="cl-off">-{t.off}%</span>
+            </div>
+          </div>
+        ))}
+      </Grid>
+    </div>
+  )
+}
+
+/* ---------------- Quiz + leaderboard ---------------- */
+
+function QuizFlow({ onWin, onFinish, onLeaderboard, autoStart, skin }) {
+  const [stage, setStage] = useState(autoStart ? 'playing' : 'idle') // idle | playing | done
+  const [qi, setQi] = useState(0)
+  const [picked, setPicked] = useState(null)
+  const [correct, setCorrect] = useState(0)
+  const [tleft, setTleft] = useState(QUIZ_SECONDS)
+
+  const start = () => { setStage('playing'); setQi(0); setCorrect(0); setPicked(null) }
+
+  const advance = (isRight) => {
+    if (qi + 1 < QUIZ.length) { setQi(q => q + 1); setPicked(null) }
+    else {
+      const won = (correct + (isRight ? 1 : 0)) * COINS_PER_CORRECT
+      if (won > 0) onWin(won)
+      if (onFinish) onFinish()
+      setStage('done')
+    }
+  }
+
+  const pick = (i, e) => {
+    if (picked !== null) return
+    setPicked(i)
+    const isRight = i === QUIZ[qi].a
+    if (isRight) { setCorrect(c => c + 1); sparkle(e) }
+    setTimeout(() => advance(isRight), 900)
+  }
+
+  // 10s countdown per question — time out counts as a miss
+  useEffect(() => {
+    if (stage !== 'playing' || picked !== null) return
+    setTleft(QUIZ_SECONDS)
+    const iv = setInterval(() => setTleft(t => Math.max(0, t - 0.1)), 100)
+    return () => clearInterval(iv)
+  }, [stage, qi, picked])
+
+  useEffect(() => {
+    if (stage === 'playing' && picked === null && tleft === 0) {
+      setPicked(-1)
+      setTimeout(() => advance(false), 900)
+    }
+  }, [tleft]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <>
+      {stage === 'idle' && (
+        <Flex align="center" gap="3">
+          <Box flexGrow="1">
+            <span className="edition-pill" style={{ color: skin.btn }}>TODAY’S EDITION · {skin.name.toUpperCase()}</span>
+            <Heading size="5" mt="2" style={{ color: '#fff', letterSpacing: '-0.3px' }}>Daily Hardware Quiz</Heading>
+            <Text size="2" as="div" mt="1" style={{ color: 'rgba(255,255,255,.85)' }}>
+              3 questions · win up to {QUIZ.length * COINS_PER_CORRECT} coins · new look every day
+            </Text>
+            <Button
+              size="2" mt="3" radius="full"
+              style={{ background: '#fff', color: skin.btn, fontWeight: 800 }}
+              onClick={start}
+            >
+              <RocketIcon width={14} height={14} /> Play now
+            </Button>
+          </Box>
+          <StarFilledIcon width={56} height={56} color="rgba(255,255,255,.25)" style={{ flex: 'none' }} />
+        </Flex>
+      )}
+
+      {stage === 'playing' && (
+        <Box>
+          <Flex align="center" justify="between">
+            <Text size="1" weight="bold" style={{ color: 'rgba(255,255,255,.7)' }}>
+              QUESTION {qi + 1} OF {QUIZ.length} · {Math.ceil(tleft)}s
+            </Text>
+            <Text size="1" weight="bold" style={{ color: skin.accent }}>
+              {correct * COINS_PER_CORRECT} coins so far
+            </Text>
+          </Flex>
+          <div className="qbar">
+            <div className="qbar-fill" style={{ width: `${(tleft / QUIZ_SECONDS) * 100}%`, background: skin.accent }} />
+          </div>
+          <Heading size="4" mt="2" style={{ color: '#fff', lineHeight: 1.3 }}>{QUIZ[qi].q}</Heading>
+          <Box mt="2">
+            {QUIZ[qi].opts.map((o, i) => {
+              let cls = 'quiz-opt'
+              if (picked !== null && i === QUIZ[qi].a) cls += ' correct'
+              else if (picked === i) cls += ' wrong'
+              return (
+                <button key={o} className={cls} disabled={picked !== null} onClick={(e) => pick(i, e)}>
+                  {o}
+                </button>
+              )
+            })}
+          </Box>
+        </Box>
+      )}
+
+      {stage === 'done' && (
+        <Flex align="center" gap="3">
+          <Box flexGrow="1">
+            <Heading size="5" style={{ color: '#fff' }}>
+              {correct}/{QUIZ.length} correct · +{correct * COINS_PER_CORRECT} coins
+            </Heading>
+            <Text size="2" as="div" mt="1" style={{ color: 'rgba(255,255,255,.85)' }}>
+              Coins added to your balance. New quiz drops tomorrow at 8 AM — keep your streak alive.
+            </Text>
+            <Button
+              size="2" mt="3" radius="full" variant="outline"
+              style={{ color: '#fff', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,.5)', fontWeight: 700 }}
+              onClick={onLeaderboard}
+            >
+              View leaderboard
+            </Button>
+          </Box>
+          <StarFilledIcon width={56} height={56} color={skin.accent} style={{ flex: 'none' }} />
+        </Flex>
+      )}
+    </>
+  )
+}
+
+function QuizCard({ onWin, onFinish, skin }) {
+  return (
+    <div className={`quiz-card deco-${skin.deco}`} id="quiz" style={{ background: skin.bg }}>
+      <QuizFlow skin={skin} onWin={onWin} onFinish={onFinish} onLeaderboard={() => scrollToId('leaderboard')} />
+    </div>
+  )
+}
+
+function QuizDialog({ open, onOpenChange, onWin, onFinish, skin }) {
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Content className={`quiz-dialog deco-${skin.deco}`} maxWidth="380px" aria-describedby={undefined} style={{ background: skin.bg }}>
+        <Dialog.Title size="4" mb="3" style={{ color: skin.accent, paddingRight: 32 }}>
+          Quiz time — {QUIZ.length * COINS_PER_CORRECT} coins up for grabs
+        </Dialog.Title>
+        <button className="quiz-close" onClick={() => onOpenChange(false)} aria-label="Close">
+          <Cross2Icon width={15} height={15} />
+        </button>
+        <QuizFlow
+          autoStart skin={skin} onWin={onWin} onFinish={onFinish}
+          onLeaderboard={() => {
+            onOpenChange(false)
+            setTimeout(() => scrollToId('leaderboard'), 250)
+          }}
+        />
+      </Dialog.Content>
+    </Dialog.Root>
+  )
+}
+
+function useCountUp(target, go, dur = 900, delay = 0) {
+  const [v, setV] = useState(0)
+  useEffect(() => {
+    if (!go) { setV(0); return }
+    let raf
+    const t0 = performance.now() + delay
+    const step = (t) => {
+      const p = Math.min(1, Math.max(0, (t - t0) / dur))
+      setV(Math.round(target * (1 - Math.pow(1 - p, 3))))
+      if (p < 1) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [go, target, dur, delay])
+  return v
+}
+
+function LeaderCol({ entry, index, max, animate }) {
+  const e = entry
+  const shown = useCountUp(e.value, animate, 900, index * 110)
+  return (
+    <div className={`lbv-col ${e.me ? 'me' : ''}`}>
+      <Text size="1" weight="bold" color={e.me ? 'green' : 'gray'} style={{ fontSize: 10.5 }}>
+        {shown.toLocaleString('en-IN')}
+      </Text>
+      {e.top && <StarFilledIcon width={12} height={12} color="var(--amber-9)" />}
+      <div className="lb-av" style={{ background: e.me ? 'var(--teal-9)' : e.color, width: 30, height: 30, fontSize: 12, animationDelay: `${index * 110}ms` }}>
+        {e.name[0]}
+      </div>
+      <div
+        className="lbv-bar"
+        style={{
+          height: animate ? Math.max(14, Math.round((e.value / max) * 150)) : 8,
+          transitionDelay: `${index * 110}ms`,
+          background: e.me
+            ? 'linear-gradient(180deg, var(--teal-9), var(--teal-11))'
+            : `linear-gradient(180deg, ${e.color}CC, ${e.color}66)`,
+        }}
+      />
+      <Text size="1" weight="bold" color={e.me ? 'green' : 'gray'} style={{ fontSize: 10.5 }}>
+        #{e.rank}
+      </Text>
+      <Text size="1" weight={e.me ? 'bold' : 'medium'} truncate style={{ fontSize: 10.5, maxWidth: '100%' }}>
+        {e.name}
+      </Text>
+    </div>
+  )
+}
+
+function GameRow({ onSpin, onWin }) {
+  return (
+    <div className="game-row">
+      <button className="game-card game-spin" onClick={onSpin}>
+        <Text size="6" as="div">🎡</Text>
+        <Text size="3" weight="bold" as="div" mt="1" style={{ color: '#fff' }}>Spin & Win</Text>
+        <Text size="1" as="div" mt="1" style={{ color: 'rgba(255,255,255,.88)' }}>
+          1 free spin today · up to ₹250 off
+        </Text>
+      </button>
+      <StreakCard onWin={onWin} />
+    </div>
+  )
+}
+
+function StreakCard({ onWin }) {
+  const [claimed, setClaimed] = useState(() => localStorage.getItem('qc-streak-day') === DAY)
+  const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+  const hit = claimed ? 6 : 5
+  return (
+    <button
+      className="game-card game-streak"
+      onClick={(e) => {
+        if (claimed) return
+        setClaimed(true)
+        localStorage.setItem('qc-streak-day', DAY)
+        onWin(5)
+        sparkle(e)
+      }}
+    >
+      <Text size="3" weight="bold" as="div" style={{ color: '#fff' }}>{hit}-day streak</Text>
+      <Text size="1" as="div" mt="1" style={{ color: 'rgba(255,255,255,.88)' }}>
+        {claimed ? '+5 claimed · see you tomorrow' : 'Tap to check in · +5 coins'}
+      </Text>
+      <div className="day-dots">
+        {days.map((d, i) => (
+          <span key={i} className={`day-dot ${i < hit ? 'hit' : ''} ${i === hit && !claimed ? 'today' : ''}`}>
+            {i < hit ? '✓' : d}
+          </span>
+        ))}
+      </div>
+    </button>
+  )
+}
+
+function SpinDialog({ open, onOpenChange, onWin }) {
+  const [rot, setRot] = useState(0)
+  const [state, setState] = useState(() =>
+    localStorage.getItem('qc-spin-day') === DAY ? 'used' : 'ready') // ready | spinning | done | used
+  const [prize, setPrize] = useState(null)
+  const segs = 360 / WHEEL.length
+
+  const spin = () => {
+    if (state !== 'ready') return
+    const k = Math.floor(Math.random() * WHEEL.length)
+    setRot(360 * 5 + (360 - (k * segs + segs / 2)))
+    setState('spinning')
+    localStorage.setItem('qc-spin-day', DAY)
+    setTimeout(() => {
+      setPrize(WHEEL[k])
+      setState('done')
+      if (WHEEL[k].coins) onWin(WHEEL[k].coins)
+    }, 4200)
+  }
+
+  const gradient = WHEEL.map((s, i) => `${s.color} ${i * segs}deg ${(i + 1) * segs}deg`).join(', ')
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Content className="wheel-dialog" maxWidth="360px" aria-describedby={undefined}>
+        <Dialog.Title size="4" style={{ color: '#fff', paddingRight: 32 }}>Spin & Win</Dialog.Title>
+        <button className="quiz-close" onClick={() => onOpenChange(false)} aria-label="Close">
+          <Cross2Icon width={15} height={15} />
+        </button>
+        <div className="wheel-wrap">
+          <div className="wheel-pointer" />
+          <div
+            className="wheel"
+            style={{ background: `conic-gradient(${gradient})`, transform: `rotate(${rot}deg)` }}
+          >
+            {WHEEL.map((s, i) => (
+              <div key={s.label} className="wheel-lab" style={{ transform: `rotate(${i * segs + segs / 2}deg)` }}>
+                <span>{s.label}</span>
+              </div>
+            ))}
+          </div>
+          <button className="wheel-hub" onClick={spin} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+            SPIN
+          </button>
+        </div>
+        {state === 'done' && prize ? (
+          <Flex direction="column" align="center" gap="1" mt="3" pb="2">
+            <Heading size="5" style={{ color: '#FFD43B' }}>
+              {prize.label === 'TRY AGAIN' ? 'So close!' : `You won ${prize.label}!`}
+            </Heading>
+            <Text size="2" align="center" style={{ color: 'rgba(255,255,255,.9)' }}>
+              {prize.label === 'TRY AGAIN'
+                ? 'No luck this time — your free spin is back tomorrow.'
+                : prize.coins ? 'Coins added to your balance.' : 'Auto-applied on your next order.'}
+            </Text>
+            <Button size="2" mt="2" radius="full" style={{ background: '#fff', color: '#B34A0A', fontWeight: 800 }}
+              onClick={() => onOpenChange(false)}>
+              Keep shopping
+            </Button>
+          </Flex>
+        ) : state === 'used' ? (
+          <Flex direction="column" align="center" gap="1" mt="3" pb="2">
+            <Heading size="5" style={{ color: '#FFD43B' }}>Spin used for today</Heading>
+            <Text size="2" align="center" style={{ color: 'rgba(255,255,255,.9)' }}>
+              Your next free spin lands tomorrow morning.
+            </Text>
+            <Button size="2" mt="2" radius="full" style={{ background: '#fff', color: '#B34A0A', fontWeight: 800 }}
+              onClick={() => onOpenChange(false)}>
+              Keep shopping
+            </Button>
+          </Flex>
+        ) : (
+          <Flex direction="column" align="center" gap="1" mt="3" pb="2">
+            <Button
+              size="3" radius="full" disabled={state === 'spinning'}
+              style={{ background: '#fff', color: '#B34A0A', fontWeight: 800, opacity: state === 'spinning' ? .7 : 1 }}
+              onClick={spin}
+            >
+              {state === 'spinning' ? 'Spinning…' : 'SPIN NOW'}
+            </Button>
+            <Text size="1" style={{ color: 'rgba(255,255,255,.8)' }}>1 free spin every day</Text>
+          </Flex>
+        )}
+      </Dialog.Content>
+    </Dialog.Root>
+  )
+}
+
+function Leaderboard({ coins }) {
+  const [animate, setAnimate] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const ob = new IntersectionObserver(
+      entries => { if (entries[0].isIntersecting) setAnimate(true) },
+      { threshold: 0.35 },
+    )
+    if (ref.current) ob.observe(ref.current)
+    return () => ob.disconnect()
+  }, [])
+
+  const max = Math.max(...LEADERS.map(l => l.coins), coins)
+  const toTop5 = Math.max(0, LEADERS[LEADERS.length - 1].coins - coins + 1)
+
+  return (
+    <Box pt="5" id="leaderboard">
+      <SectionHead title="Top installers — HSR Layout" extra={<span className="save-pill">WEEKLY</span>} />
+      <Box px="4" mt="-2">
+        <Text size="1" color="gray" as="div">
+          Earn coins from quizzes & orders. Top 3 win ₹500 vouchers every Sunday.
+        </Text>
+      </Box>
+      <div className={`lb-card ${animate ? 'go' : ''}`} ref={ref}>
+        <div className="lbv">
+          {[
+            ...LEADERS.map((l, i) => ({ rank: i + 1, name: l.name.split(' ')[0], value: l.coins, color: l.c, top: i === 0 })),
+            { rank: 12, name: 'You', value: coins, me: true },
+          ].map((e, i) => (
+            <LeaderCol key={e.name} entry={e} index={i} max={max} animate={animate} />
+          ))}
+        </div>
+      </div>
+      <div className="lb-tip">
+        <RocketIcon width={15} height={15} color="var(--amber-11)" style={{ flex: 'none' }} />
+        <Text size="1" weight="bold" style={{ flex: 1, color: 'var(--amber-11)' }}>
+          {toTop5.toLocaleString('en-IN')} coins to crack the top 5 — quizzes give +30 daily
+        </Text>
+        <Button size="1" radius="full" color="amber" variant="solid" highContrast
+          style={{ fontWeight: 800, flex: 'none' }} onClick={() => scrollToId('quiz')}>
+          Earn now
+        </Button>
+      </div>
+    </Box>
+  )
+}
+
+/* ---------------- Categories / feed / chrome ---------------- */
+
+/* Maggi-style brand promo card — for launches or stock clearing */
+function BrandDay({ onShop }) {
+  return (
+    <Box px="4" pt="5">
+      <div className="bday">
+        <div className="bday-top">
+          <span className="bday-badge">{BRAND_DAY.badge}</span>
+          <span className="bday-ad">Ad</span>
+          <Img className="bday-img" src={img(BRAND_DAY.ph, 560)} alt={BRAND_DAY.name} loading="lazy" />
+        </div>
+        <Flex className="bday-foot" align="center" gap="3">
+          <span className="lgchip" style={{ padding: '5px 7px' }}>
+            <img src={BRAND_DAY.logo} alt="" style={{ height: 22, maxWidth: 54, objectFit: 'contain' }} />
+          </span>
+          <Box flexGrow="1" style={{ minWidth: 0 }}>
+            <Text size="2" weight="bold" as="div" truncate>{BRAND_DAY.name}</Text>
+            <Text size="1" color="gray" as="div" truncate>{BRAND_DAY.sub}</Text>
+          </Box>
+          <Button size="2" color="teal" radius="full" style={{ fontWeight: 800, flex: 'none' }} onClick={onShop}>
+            {BRAND_DAY.cta}
+          </Button>
+        </Flex>
+      </div>
+    </Box>
+  )
+}
+
+function CategoryGrid({ onPick, onSeeAll }) {
+  return (
+    <Box pt="5">
+      <SectionHead title="Shop by category" onSeeAll={onSeeAll} />
+      <Grid columns="3" gapX="3" gapY="4" px="4">
+        {CATEGORIES.map(([ph, label, count]) => (
+          <div className="cat-tile" key={label} onClick={() => onPick(label)}>
+            <Img className="cat-img" src={img(ph, 280)} alt={label} loading="lazy" />
+            <Text size="1" weight="bold" as="div" align="center" mt="2" truncate>
+              {label}
+            </Text>
+            <Text as="div" align="center" style={{ fontSize: 10.5, color: 'var(--gray-9)', fontWeight: 600 }}>
+              {count} items
+            </Text>
+          </div>
+        ))}
+      </Grid>
+    </Box>
+  )
+}
+
+function EndlessFeed({ onChange, pool }) {
+  const [items, setItems] = useState(() => pool.slice(0, 6).map(p => ({ ...p, id: `f0-${p.id}` })))
+  const [loading, setLoading] = useState(false)
+  const sentinel = useRef(null)
+  const batch = useRef(1)
+
+  // brand filter changed → restart the feed from the new pool
+  useEffect(() => {
+    setItems(pool.slice(0, 6).map(p => ({ ...p, id: `f0-${p.id}` })))
+    batch.current = 1
+  }, [pool])
+
+  const loadMore = useCallback(() => {
+    if (loading || items.length >= FEED_CAP || pool.length === 0) return
+    setLoading(true)
+    setTimeout(() => {
+      const b = batch.current++
+      const start = (b * 6) % pool.length
+      const next = [...pool, ...pool].slice(start, start + 6)
+        .map(p => ({ ...p, id: `f${b}-${p.id}` }))
+      setItems(cur => [...cur, ...next])
+      setLoading(false)
+    }, 700)
+  }, [loading, items.length, pool])
+
+  useEffect(() => {
+    const ob = new IntersectionObserver(
+      entries => { if (entries[0].isIntersecting) loadMore() },
+      { rootMargin: '600px' },
+    )
+    if (sentinel.current) ob.observe(sentinel.current)
+    return () => ob.disconnect()
+  }, [loadMore])
+
+  const done = items.length >= FEED_CAP
+
+  return (
+    <Box pt="5">
+      <SectionHead title="You might also like" />
+      <Grid columns="3" gapX="3" gapY="4" px="4">
+        {items.map(p => <ProductCard key={p.id} p={p} grid onChange={onChange} />)}
+        {loading && [0, 1, 2].map(i => <div className="skel" key={`sk${i}`} />)}
+      </Grid>
+      <div ref={sentinel} />
+      {done && (
+        <Flex direction="column" align="center" py="6" gap="1">
+          <Text size="2" weight="bold" color="gray">You’re all caught up</Text>
+          <Text size="1" color="gray">Fresh picks land every morning</Text>
+        </Flex>
+      )}
+    </Box>
+  )
+}
+
+function CartBar({ cart }) {
+  const note = cart.total >= FREE_DELIVERY_AT
+    ? 'FREE delivery unlocked'
+    : `Add ₹${FREE_DELIVERY_AT - cart.total} more for FREE delivery`
+  return (
+    <div className={`cartbar ${cart.count > 0 ? 'show' : ''}`}>
+      <Flex>
+        {cart.photos.slice(-3).map(ph => (
+          <Img key={ph} className="thumb" src={img(ph, 120)} alt="" />
+        ))}
+      </Flex>
+      <Box flexGrow="1">
+        <Text size="2" weight="bold" as="div">
+          {cart.count} item{cart.count === 1 ? '' : 's'} · ₹{cart.total}
+        </Text>
+        <Text size="1" weight="medium" as="div" style={{ color: 'var(--teal-4)' }}>{note}</Text>
+      </Box>
+      <Flex align="center" gap="1">
+        <Text size="2" weight="bold">View cart</Text>
+        <ChevronRightIcon width={16} height={16} />
+      </Flex>
+    </div>
+  )
+}
+
+function NavBar({ onCategories, onUtilities, active = 'home', mini = false }) {
+  const items = [
+    { icon: HomeIcon, label: 'Home', key: 'home', go: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+    { icon: DashboardIcon, label: 'Categories', key: 'categories', go: onCategories },
+    { icon: GearIcon, label: 'Utilities', key: 'utilities', go: onUtilities },
+    { icon: CounterClockwiseClockIcon, label: 'Reorder', key: 'reorder', go: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+    { icon: PersonIcon, label: 'Account', key: 'account' },
+  ]
+  return (
+    <div className={`navbar ${mini ? 'mini' : ''}`}>
+      {items.map((it) => {
+        const Icon = it.icon
+        const on = active === it.key
+        return (
+          <div key={it.label} className={`nav-item ${on ? 'active' : ''}`} onClick={it.go}>
+            <span className="nav-icw"><Icon width={20} height={20} /></span>
+            <Text size="1" weight={on ? 'bold' : 'medium'} className="nav-lb">{it.label}</Text>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ---------------- App ---------------- */
+
+export default function App() {
+  const [cart, setCart] = useState({ count: 0, total: 0, photos: [] })
+  const [coins, setCoins] = useState(() => {
+    const stored = localStorage.getItem('qc-coins')
+    return stored !== null ? Number(stored) || 240 : 240
+  })
+  // #compact hash forces the scrolled header state (handy for design review)
+  const [scrolled, setScrolled] = useState(window.location.hash === '#compact')
+  const [quizOpen, setQuizOpen] = useState(false)
+  const [wheelOpen, setWheelOpen] = useState(window.location.hash === '#wheel')
+  const [glow, setGlow] = useState(null)
+  const playedRef = useRef(localStorage.getItem('qc-quiz-day') === DAY)
+  const markPlayed = () => {
+    playedRef.current = true
+    localStorage.setItem('qc-quiz-day', DAY)
+  }
+  const addCoins = (n) => setCoins(c => c + n)
+  const fetchedSky = useSkyTheme()
+  const [sim, setSim] = useState(null)
+  const [simSkin, setSimSkin] = useState(null)
+  const simEnabled = window.location.hash === '#sim'
+  const sky = sim ?? fetchedSky
+  // Campaign takeover: ~1 in 3 app-opens get a campaign header instead of the weather sky
+  const campaign = useMemo(() => {
+    const m = window.location.hash.match(/^#campaign-(\d)$/)
+    if (m && CAMPAIGN_HEADERS[+m[1]]) return CAMPAIGN_HEADERS[+m[1]]
+    if (window.location.hash.startsWith('#theme-') || window.location.hash === '#sim') return null
+    return Math.random() < 0.33
+      ? CAMPAIGN_HEADERS[Math.floor(Math.random() * CAMPAIGN_HEADERS.length)]
+      : null
+  }, [])
+  const T = (campaign && !sim) ? campaign : SKY[sky.dp][sky.cond]
+  // Quiz edition rotates daily, independent of weather — novelty is the hook
+  const quizSkin = simSkin ?? QUIZ_SKINS[Math.floor(Date.now() / 86400000) % QUIZ_SKINS.length]
+
+  // Brand tab filtering + search/listing sheet (#brand-<key> hash for design review)
+  const [brand, setBrand] = useState(() => {
+    const m = window.location.hash.match(/#brand-(\w+)/)
+    return m && BRAND_KEYS.includes(m[1]) ? m[1] : 'ALL'
+  })
+  const [sheet, setSheet] = useState(() =>
+    window.location.hash === '#search' ? { items: FEED_POOL } : null)
+  const [plp, setPlp] = useState(() => {
+    if (window.location.hash === '#fsheet') return 'Hinges'
+    if (window.location.hash === '#strip') return 'All'
+    const m = window.location.hash.match(/^#plp(?:-(\w+))?$/)
+    if (!m) return null
+    return m[1] && CAT_RULES[m[1]] ? m[1] : 'All'
+  })
+  const bf = (items) => (brand === 'ALL' ? items : items.filter(p => p.brand === brand))
+  const pool = useMemo(
+    () => (brand === 'ALL' ? FEED_POOL : FEED_POOL.filter(p => p.brand === brand)),
+    [brand],
+  )
+  const openCategory = (label) => setPlp(label)
+
+  useEffect(() => { localStorage.setItem('qc-coins', String(coins)) }, [coins])
+
+  // Browser/phone back gesture closes the topmost overlay instead of leaving the app.
+  // UI close buttons route THROUGH history.back() so the entry stack stays consistent.
+  const sheetRef = useRef(sheet)
+  sheetRef.current = sheet
+  const plpOpen = plp !== null
+  const closePlp = () => {
+    if (window.history.state?.qcPlp) window.history.back()
+    else setPlp(null)
+  }
+  useEffect(() => {
+    if (!plpOpen) return
+    if (!window.history.state?.qcPlp) window.history.pushState({ qcPlp: true }, '')
+    const onPop = () => { if (!sheetRef.current) setPlp(null) }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [plpOpen])
+  const sheetOpen = sheet !== null
+  const closeSheet = () => {
+    if (window.history.state?.qcSheet) window.history.back()
+    else setSheet(null)
+  }
+  useEffect(() => {
+    if (!sheetOpen) return
+    if (!window.history.state?.qcSheet) window.history.pushState({ qcSheet: true }, '')
+    const onPop = () => setSheet(null)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [sheetOpen])
+
+  // Theme vars go on :root so portaled dialogs (quiz popup) inherit the sky too
+  useEffect(() => {
+    const r = document.documentElement.style
+    r.setProperty('--hdr-a', T.a)
+    r.setProperty('--hdr-b', T.b)
+    r.setProperty('--hdr-c', T.c)
+    r.setProperty('--hdr-d', T.d)
+  }, [T])
+
+  // rAF-throttled with hysteresis (on >110, off <70) so the header never flaps mid-scroll.
+  // navMini: Apple-style — scrolling DOWN shrinks the navbar, scrolling UP restores it.
+  const [navMini, setNavMini] = useState(window.location.hash === '#navmini')
+  useEffect(() => {
+    if (['#compact', '#navmini'].includes(window.location.hash)) return
+    let ticking = false
+    let lastY = window.scrollY
+    const onScroll = () => {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        const y = window.scrollY
+        setScrolled(s => (s ? y > 70 : y > 110))
+        const dy = y - lastY
+        if (Math.abs(dy) > 6) {
+          setNavMini(y > 140 && dy > 0)
+          lastY = y
+        }
+        ticking = false
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Quiz auto-pops 15s after open (once per session, skipped if already played)
+  useEffect(() => {
+    const t = setTimeout(() => { if (!playedRef.current) setQuizOpen(true) }, 15000)
+    return () => clearTimeout(t)
+  }, [])
+
+  const [reco, setReco] = useState(null)
+  const [recoStrip, setRecoStrip] = useState(null)
+  useEffect(() => {
+    if (!reco) return
+    const t = setTimeout(() => setReco(null), 7000)
+    return () => clearTimeout(t)
+  }, [reco])
+
+  // stable identity so memoized ProductCards skip re-render on cart changes
+  const changeCart = useCallback((delta, p, opts) => {
+    setCart(c => ({
+      count: c.count + delta,
+      total: c.total + delta * p.price,
+      photos: delta > 0 && !c.photos.includes(p.ph) ? [...c.photos, p.ph] : c.photos,
+    }))
+    if (delta > 0 && !opts?.noReco) {
+      const items = recosFor(p)
+      if (items.length) {
+        setReco(items[0])
+        setRecoStrip(items)
+      }
+    }
+  }, [])
+
+  // #reco / #strip hashes: auto-add an item so recommendations can be reviewed
+  useEffect(() => {
+    if (!['#reco', '#strip'].includes(window.location.hash)) return
+    const t = setTimeout(() => changeCart(1, BUY_AGAIN[0]), 600)
+    return () => clearTimeout(t)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const h = new Date().getHours()
+  const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
+
+  return (
+    <Theme accentColor="teal" grayColor="slate" radius="large">
+      <div className="app">
+        <TopBar
+          compact={scrolled} coins={coins} weather={{ icon: T.icon }} dp={sky.dp} cond={sky.cond}
+          brand={brand} onBrand={setBrand} onSearch={() => setSheet({ items: FEED_POOL })}
+          cartCount={cart.count}
+        />
+
+        <div className="header-extend" style={glow ? { '--banner-glow': glow } : undefined}>
+          <BannerCarousel quizSkin={quizSkin} onGlow={setGlow} />
+        </div>
+
+        {brand !== 'ALL' && (
+          <div className="filter-strip">
+            <Text size="1" weight="bold" style={{ flex: 1 }}>
+              Showing {brand.toUpperCase()} products only
+            </Text>
+            <button className="filter-clear" onClick={() => setBrand('ALL')}>
+              Clear <Cross2Icon width={11} height={11} />
+            </button>
+          </div>
+        )}
+
+        {bf(BUY_AGAIN).length > 0 && (
+          <Shelf
+            title={`${greet}, Virag`} sub="Your regulars — from your recent site orders"
+            items={bf(BUY_AGAIN)} onChange={changeCart}
+            onSeeAll={() => setSheet({ items: bf(BUY_AGAIN), title: 'Your regulars' })}
+          />
+        )}
+
+        <CategoryGrid onPick={openCategory} onSeeAll={() => setPlp('All')} />
+
+        {bf(DEALS).length > 0 && (
+          <Shelf
+            title="Deal of the day" items={bf(DEALS)} onChange={changeCart}
+            extra={<DealTimer />} band="band-deal" light
+            onSeeAll={() => setSheet({ items: bf(DEALS), title: 'Deal of the day' })}
+          />
+        )}
+
+        {brand === 'ALL' && <ComboDeals onChange={changeCart} />}
+
+        {brand === 'ALL' && (
+          <BrandDay onShop={() => setSheet({ items: FEED_POOL, query: BRAND_DAY.query, title: 'Brand of the day' })} />
+        )}
+
+        <QuizCard onWin={addCoins} onFinish={markPlayed} skin={quizSkin} />
+
+        <GameRow onSpin={() => setWheelOpen(true)} onWin={addCoins} />
+
+        <Leaderboard coins={coins} />
+
+        <QuizDialog
+          open={quizOpen} onOpenChange={setQuizOpen}
+          onWin={addCoins} onFinish={markPlayed} skin={quizSkin}
+        />
+        <SpinDialog open={wheelOpen} onOpenChange={setWheelOpen} onWin={addCoins} />
+
+        {simEnabled && (
+          <DevSimulator
+            dp={sky.dp} cond={sky.cond} onChange={setSim}
+            skinName={quizSkin.name} onSkin={setSimSkin}
+          />
+        )}
+
+        {brand === 'ALL' && <ClearanceStore />}
+
+        {bf(NEW_EBCO).length > 0 && (
+          <Shelf
+            title="New from Ebco" items={bf(NEW_EBCO)} onChange={changeCart} band="band-green"
+            onSeeAll={() => setSheet({ items: bf(NEW_EBCO), title: 'New from Ebco' })}
+          />
+        )}
+
+        {bf(WORKSMART).length > 0 && (
+          <Shelf
+            title="Worksmart picks" items={bf(WORKSMART)} onChange={changeCart} sub="Office fittings by Ebco"
+            onSeeAll={() => setSheet({ items: bf(WORKSMART), title: 'Worksmart picks' })}
+          />
+        )}
+
+        {bf(LIVESMART).length > 0 && (
+          <Shelf
+            title="Livsmart corner" items={bf(LIVESMART)} onChange={changeCart} sub="Smart living, by Ebco"
+            onSeeAll={() => setSheet({ items: bf(LIVESMART), title: 'Livsmart corner' })}
+          />
+        )}
+
+        {bf(ZIPCO_PEKO).length > 0 && (
+          <Shelf
+            title="Zipco & Peka corner" items={bf(ZIPCO_PEKO)} onChange={changeCart} band="band-pink"
+            onSeeAll={() => setSheet({ items: bf(ZIPCO_PEKO), title: 'Zipco & Peka' })}
+          />
+        )}
+
+        <EndlessFeed onChange={changeCart} pool={pool} />
+
+        {plp && (
+          <CategoryPage
+            cat={plp} onPick={setPlp} onClose={closePlp}
+            onChange={changeCart} cart={cart} homeBrand={brand}
+            onSearch={() => setSheet({ items: FEED_POOL })}
+            recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)}
+          />
+        )}
+
+        <SearchSheet sheet={sheet} onClose={closeSheet} onChange={changeCart} />
+
+        <button
+          className={`backtop ${scrolled ? 'show' : ''}`}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          <ChevronUpIcon width={14} height={14} /> Back to top
+        </button>
+
+        <div className="footer">
+          {reco && (
+            <div className="reco">
+              <Img className="reco-img" src={img(reco.ph, 100)} alt="" />
+              <Box flexGrow="1" style={{ minWidth: 0 }}>
+                <Text size="1" weight="bold" as="div" style={{ color: 'var(--teal-11)', fontSize: 10.5 }}>
+                  PEOPLE ALSO ADD
+                </Text>
+                <Text size="2" weight="bold" as="div" truncate>
+                  {reco.name} · ₹{reco.price.toLocaleString('en-IN')}
+                </Text>
+              </Box>
+              <Button
+                size="1" color="teal" radius="full" style={{ fontWeight: 800, flex: 'none' }}
+                onClick={(e) => { changeCart(1, reco, { noReco: true }); sparkle(e); setReco(null) }}
+              >
+                ADD
+              </Button>
+              <button className="reco-x" onClick={() => setReco(null)} aria-label="Dismiss">
+                <Cross2Icon width={13} height={13} />
+              </button>
+            </div>
+          )}
+          <CartBar cart={cart} />
+          <NavBar
+            onCategories={() => setPlp('All')}
+            onUtilities={() => { /* Utilities page comes later */ }}
+            active={plp ? 'categories' : 'home'}
+            mini={navMini}
+          />
+        </div>
+      </div>
+    </Theme>
+  )
+}
