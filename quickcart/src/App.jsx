@@ -10,7 +10,7 @@ import {
 } from '@radix-ui/react-icons'
 import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
-  FEED_POOL, CATEGORIES, BANNERS, COMBOS, CLEARANCE_TILES, QUIZ, COINS_PER_CORRECT,
+  FEED_POOL, CATEGORIES, BANNERS, COMBOS, CLEARANCE_TILES, QUIZ,
   LEADERS, SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
   BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS,
 } from './data.js'
@@ -244,7 +244,7 @@ function CartGlyph(props) {
   )
 }
 
-function TopBar({ compact, coins, weather, dp, cond, brand, onBrand, onSearch, cartCount }) {
+function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCount }) {
   const [hint, setHint] = useState(0)
   useEffect(() => {
     const t = setInterval(() => setHint(h => (h + 1) % SEARCH_HINTS.length), 2500)
@@ -286,9 +286,7 @@ function TopBar({ compact, coins, weather, dp, cond, brand, onBrand, onSearch, c
         <Text size="1" weight="bold" truncate style={{ flex: 1, minWidth: 0 }}>
           You’re #{MY_RANK.rank} of {MY_RANK.of} dealers · ↑{MY_RANK.moved} this week
         </Text>
-        <Text size="1" weight="bold" color="amber" style={{ flex: 'none' }}>
-          <span className="coin-pop" key={coins}>{coins}</span> pts
-        </Text>
+        <Text size="1" weight="bold" color="amber" style={{ flex: 'none' }}>View board</Text>
         <ChevronRightIcon width={13} height={13} color="var(--amber-11)" style={{ flex: 'none' }} />
       </div>
 
@@ -1045,7 +1043,7 @@ function ClearanceStore() {
 
 /* ---------------- Quiz + leaderboard ---------------- */
 
-function QuizFlow({ onWin, onFinish, onLeaderboard, autoStart, skin }) {
+function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
   const [stage, setStage] = useState(autoStart ? 'playing' : 'idle') // idle | playing | done
   const [qi, setQi] = useState(0)
   const [picked, setPicked] = useState(null)
@@ -1057,8 +1055,6 @@ function QuizFlow({ onWin, onFinish, onLeaderboard, autoStart, skin }) {
   const advance = (isRight) => {
     if (qi + 1 < QUIZ.length) { setQi(q => q + 1); setPicked(null) }
     else {
-      const won = (correct + (isRight ? 1 : 0)) * COINS_PER_CORRECT
-      if (won > 0) onWin(won)
       if (onFinish) onFinish()
       setStage('done')
     }
@@ -1095,7 +1091,7 @@ function QuizFlow({ onWin, onFinish, onLeaderboard, autoStart, skin }) {
             <span className="edition-pill" style={{ color: skin.btn }}>TODAY’S EDITION · {skin.name.toUpperCase()}</span>
             <Heading size="5" mt="2" style={{ color: '#fff', letterSpacing: '-0.3px' }}>Daily Hardware Quiz</Heading>
             <Text size="2" as="div" mt="1" style={{ color: 'rgba(255,255,255,.85)' }}>
-              3 questions · win up to {QUIZ.length * COINS_PER_CORRECT} coins · new look every day
+              3 questions · win an order coupon · new look every day
             </Text>
             <Button
               size="2" mt="3" radius="full"
@@ -1116,7 +1112,7 @@ function QuizFlow({ onWin, onFinish, onLeaderboard, autoStart, skin }) {
               QUESTION {qi + 1} OF {QUIZ.length} · {Math.ceil(tleft)}s
             </Text>
             <Text size="1" weight="bold" style={{ color: skin.accent }}>
-              {correct * COINS_PER_CORRECT} coins so far
+              {correct} correct so far
             </Text>
           </Flex>
           <div className="qbar">
@@ -1142,10 +1138,10 @@ function QuizFlow({ onWin, onFinish, onLeaderboard, autoStart, skin }) {
         <Flex align="center" gap="3">
           <Box flexGrow="1">
             <Heading size="5" style={{ color: '#fff' }}>
-              {correct}/{QUIZ.length} correct · +{correct * COINS_PER_CORRECT} coins
+              {correct > 0 ? `${correct}/${QUIZ.length} correct — ₹${correct * 25} OFF won!` : `${correct}/${QUIZ.length} — better luck tomorrow`}
             </Heading>
             <Text size="2" as="div" mt="1" style={{ color: 'rgba(255,255,255,.85)' }}>
-              Coins added to your balance. New quiz drops tomorrow at 8 AM — keep your streak alive.
+              {correct > 0 ? 'Coupon auto-applies on your next order. ' : ''}New quiz drops tomorrow at 8 AM.
             </Text>
             <Button
               size="2" mt="3" radius="full" variant="outline"
@@ -1162,26 +1158,26 @@ function QuizFlow({ onWin, onFinish, onLeaderboard, autoStart, skin }) {
   )
 }
 
-function QuizCard({ onWin, onFinish, skin }) {
+function QuizCard({ onFinish, skin }) {
   return (
     <div className={`quiz-card deco-${skin.deco}`} id="quiz" style={{ background: skin.bg }}>
-      <QuizFlow skin={skin} onWin={onWin} onFinish={onFinish} onLeaderboard={() => scrollToId('leaderboard')} />
+      <QuizFlow skin={skin} onFinish={onFinish} onLeaderboard={() => scrollToId('leaderboard')} />
     </div>
   )
 }
 
-function QuizDialog({ open, onOpenChange, onWin, onFinish, skin }) {
+function QuizDialog({ open, onOpenChange, onFinish, skin }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Content className={`quiz-dialog deco-${skin.deco}`} maxWidth="380px" aria-describedby={undefined} style={{ background: skin.bg }}>
         <Dialog.Title size="4" mb="3" style={{ color: skin.accent, paddingRight: 32 }}>
-          Quiz time — {QUIZ.length * COINS_PER_CORRECT} coins up for grabs
+          Quiz time — win an order coupon
         </Dialog.Title>
         <button className="quiz-close" onClick={() => onOpenChange(false)} aria-label="Close">
           <Cross2Icon width={15} height={15} />
         </button>
         <QuizFlow
-          autoStart skin={skin} onWin={onWin} onFinish={onFinish}
+          autoStart skin={skin} onFinish={onFinish}
           onLeaderboard={() => {
             onOpenChange(false)
             setTimeout(() => scrollToId('leaderboard'), 250)
@@ -1197,14 +1193,17 @@ function useCountUp(target, go, dur = 900, delay = 0) {
   useEffect(() => {
     if (!go) { setV(0); return }
     let raf
-    const t0 = performance.now() + delay
+    let start // anchor on the rAF clock itself — never mix with performance.now()
     const step = (t) => {
-      const p = Math.min(1, Math.max(0, (t - t0) / dur))
+      if (start === undefined) start = t + delay
+      const p = Math.min(1, Math.max(0, (t - start) / dur))
       setV(Math.round(target * (1 - Math.pow(1 - p, 3))))
       if (p < 1) raf = requestAnimationFrame(step)
     }
     raf = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(raf)
+    // hard guarantee: land on the exact target even if rAF is throttled (bg tabs, capture)
+    const settle = setTimeout(() => setV(target), dur + delay + 150)
+    return () => { cancelAnimationFrame(raf); clearTimeout(settle) }
   }, [go, target, dur, delay])
   return v
 }
@@ -1215,7 +1214,7 @@ function LeaderCol({ entry, index, max, animate }) {
   return (
     <div className={`lbv-col ${e.me ? 'me' : ''}`}>
       <Text size="1" weight="bold" color={e.me ? 'green' : 'gray'} style={{ fontSize: 10.5 }}>
-        {shown.toLocaleString('en-IN')}
+        {fmtL(shown)}
       </Text>
       {e.top && <StarFilledIcon width={12} height={12} color="var(--amber-9)" />}
       <div className="lb-av" style={{ background: e.me ? 'var(--teal-9)' : e.color, width: 30, height: 30, fontSize: 12, animationDelay: `${index * 110}ms` }}>
@@ -1241,7 +1240,7 @@ function LeaderCol({ entry, index, max, animate }) {
   )
 }
 
-function GameRow({ onSpin, onWin }) {
+function GameRow({ onSpin }) {
   return (
     <div className="game-row">
       <button className="game-card game-spin" onClick={onSpin}>
@@ -1251,12 +1250,12 @@ function GameRow({ onSpin, onWin }) {
           1 free spin today · up to ₹250 off
         </Text>
       </button>
-      <StreakCard onWin={onWin} />
+      <StreakCard />
     </div>
   )
 }
 
-function StreakCard({ onWin }) {
+function StreakCard() {
   const [claimed, setClaimed] = useState(() => localStorage.getItem('qc-streak-day') === DAY)
   const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
   const hit = claimed ? 6 : 5
@@ -1267,13 +1266,12 @@ function StreakCard({ onWin }) {
         if (claimed) return
         setClaimed(true)
         localStorage.setItem('qc-streak-day', DAY)
-        onWin(5)
         sparkle(e)
       }}
     >
       <Text size="3" weight="bold" as="div" style={{ color: '#fff' }}>{hit}-day streak</Text>
       <Text size="1" as="div" mt="1" style={{ color: 'rgba(255,255,255,.88)' }}>
-        {claimed ? '+5 claimed · see you tomorrow' : 'Tap to check in · +5 coins'}
+        {claimed ? 'Checked in · see you tomorrow' : 'Tap to check in · 7 days → ₹100 voucher'}
       </Text>
       <div className="day-dots">
         {days.map((d, i) => (
@@ -1286,7 +1284,7 @@ function StreakCard({ onWin }) {
   )
 }
 
-function SpinDialog({ open, onOpenChange, onWin }) {
+function SpinDialog({ open, onOpenChange }) {
   const [rot, setRot] = useState(0)
   const [state, setState] = useState(() =>
     localStorage.getItem('qc-spin-day') === DAY ? 'used' : 'ready') // ready | spinning | done | used
@@ -1302,7 +1300,6 @@ function SpinDialog({ open, onOpenChange, onWin }) {
     setTimeout(() => {
       setPrize(WHEEL[k])
       setState('done')
-      if (WHEEL[k].coins) onWin(WHEEL[k].coins)
     }, 4200)
   }
 
@@ -1339,7 +1336,7 @@ function SpinDialog({ open, onOpenChange, onWin }) {
             <Text size="2" align="center" style={{ color: 'rgba(255,255,255,.9)' }}>
               {prize.label === 'TRY AGAIN'
                 ? 'No luck this time — your free spin is back tomorrow.'
-                : prize.coins ? 'Coins added to your balance.' : 'Auto-applied on your next order.'}
+                : 'Auto-applied on your next order.'}
             </Text>
             <Button size="2" mt="2" radius="full" style={{ background: '#fff', color: '#B34A0A', fontWeight: 800 }}
               onClick={() => onOpenChange(false)}>
@@ -1374,7 +1371,7 @@ function SpinDialog({ open, onOpenChange, onWin }) {
   )
 }
 
-function Leaderboard({ coins }) {
+function Leaderboard() {
   const [animate, setAnimate] = useState(false)
   const ref = useRef(null)
 
@@ -1387,22 +1384,23 @@ function Leaderboard({ coins }) {
     return () => ob.disconnect()
   }, [])
 
-  const max = Math.max(...LEADERS.map(l => l.coins), coins)
-  const toTop5 = Math.max(0, LEADERS[LEADERS.length - 1].coins - coins + 1)
+  const myVol = TARGETS.monthly.done
+  const max = Math.max(...LEADERS.map(l => l.vol), myVol)
+  const toTop5 = Math.max(0, LEADERS[LEADERS.length - 1].vol - myVol + 1)
 
   return (
     <Box pt="5" id="leaderboard">
       <SectionHead title="Top dealers — HSR region" extra={<span className="save-pill">WEEKLY</span>} />
       <Box px="4" mt="-2">
         <Text size="1" color="gray" as="div">
-          Dealer rankings — points from purchases & quizzes. Top 3 earn extra margin this month.
+          Ranked by monthly purchase volume. Top 3 earn extra margin this month.
         </Text>
       </Box>
       <div className={`lb-card ${animate ? 'go' : ''}`} ref={ref}>
         <div className="lbv">
           {[
-            ...LEADERS.map((l, i) => ({ rank: i + 1, name: l.name.split(' ')[0], value: l.coins, color: l.c, top: i === 0 })),
-            { rank: 12, name: 'You', value: coins, me: true },
+            ...LEADERS.map((l, i) => ({ rank: i + 1, name: l.name.split(' ')[0], value: l.vol, color: l.c, top: i === 0 })),
+            { rank: 12, name: 'You', value: myVol, me: true },
           ].map((e, i) => (
             <LeaderCol key={e.name} entry={e} index={i} max={max} animate={animate} />
           ))}
@@ -1411,11 +1409,11 @@ function Leaderboard({ coins }) {
       <div className="lb-tip">
         <RocketIcon width={15} height={15} color="var(--amber-11)" style={{ flex: 'none' }} />
         <Text size="1" weight="bold" style={{ flex: 1, color: 'var(--amber-11)' }}>
-          {toTop5.toLocaleString('en-IN')} coins to crack the top 5 — quizzes give +30 daily
+          {fmtL(toTop5)} more in purchases to crack the top 5 — every order counts
         </Text>
         <Button size="1" radius="full" color="amber" variant="solid" highContrast
-          style={{ fontWeight: 800, flex: 'none' }} onClick={() => scrollToId('quiz')}>
-          Earn now
+          style={{ fontWeight: 800, flex: 'none' }} onClick={() => scrollToId('deals')}>
+          Order now
         </Button>
       </div>
     </Box>
@@ -1618,10 +1616,6 @@ function NavBar({ onCategories, onUtilities, active = 'home', mini = false }) {
 
 export default function App() {
   const [cart, setCart] = useState({ count: 0, total: 0, photos: [] })
-  const [coins, setCoins] = useState(() => {
-    const stored = localStorage.getItem('qc-coins')
-    return stored !== null ? Number(stored) || 240 : 240
-  })
   // #compact hash forces the scrolled header state (handy for design review)
   const [scrolled, setScrolled] = useState(window.location.hash === '#compact')
   const [quizOpen, setQuizOpen] = useState(false)
@@ -1632,7 +1626,6 @@ export default function App() {
     playedRef.current = true
     localStorage.setItem('qc-quiz-day', DAY)
   }
-  const addCoins = (n) => setCoins(c => c + n)
   const fetchedSky = useSkyTheme()
   const [sim, setSim] = useState(null)
   const [simSkin, setSimSkin] = useState(null)
@@ -1668,8 +1661,6 @@ export default function App() {
     [brand],
   )
   const openCategory = (label) => setPlp(label)
-
-  useEffect(() => { localStorage.setItem('qc-coins', String(coins)) }, [coins])
 
   // Browser/phone back gesture closes the topmost overlay instead of leaving the app.
   // UI close buttons route THROUGH history.back() so the entry stack stays consistent.
@@ -1778,7 +1769,7 @@ export default function App() {
     <Theme accentColor="teal" grayColor="slate" radius="large">
       <div className="app">
         <TopBar
-          compact={scrolled} coins={coins} weather={{ icon: T.icon }} dp={sky.dp} cond={sky.cond}
+          compact={scrolled} weather={{ icon: T.icon }} dp={sky.dp} cond={sky.cond}
           brand={brand} onBrand={setBrand} onSearch={() => setSheet({ items: FEED_POOL })}
           cartCount={cart.count}
         />
@@ -1813,13 +1804,13 @@ export default function App() {
         {bf(DEALS).length > 0 && (
           <Shelf
             title="Deal of the day" items={bf(DEALS)} onChange={changeCart}
-            extra={<DealTimer />} band="band-deal" light
+            extra={<DealTimer />} band="band-deal" light id="deals" 
             onSeeAll={() => setSheet({ items: bf(DEALS), title: 'Deal of the day' })}
           />
         )}
 
         {/* engagement break #1: timed quiz right after the urgency band */}
-        <QuizCard onWin={addCoins} onFinish={markPlayed} skin={quizSkin} />
+        <QuizCard onFinish={markPlayed} skin={quizSkin} />
 
         {brand === 'ALL' && <ComboDeals onChange={changeCart} />}
 
@@ -1835,7 +1826,7 @@ export default function App() {
         )}
 
         {/* engagement break #2: daily spin + streak check-in mid-page */}
-        <GameRow onSpin={() => setWheelOpen(true)} onWin={addCoins} />
+        <GameRow onSpin={() => setWheelOpen(true)} />
 
         {brand === 'ALL' && <ClearanceStore />}
 
@@ -1854,7 +1845,7 @@ export default function App() {
         )}
 
         {/* engagement break #3: the status race, deep enough to reward scrolling */}
-        <Leaderboard coins={coins} />
+        <Leaderboard />
 
         {bf(ZIPCO_PEKO).length > 0 && (
           <Shelf
@@ -1867,9 +1858,9 @@ export default function App() {
 
         <QuizDialog
           open={quizOpen} onOpenChange={setQuizOpen}
-          onWin={addCoins} onFinish={markPlayed} skin={quizSkin}
+          onFinish={markPlayed} skin={quizSkin}
         />
-        <SpinDialog open={wheelOpen} onOpenChange={setWheelOpen} onWin={addCoins} />
+        <SpinDialog open={wheelOpen} onOpenChange={setWheelOpen} />
 
         {simEnabled && (
           <DevSimulator

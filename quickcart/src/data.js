@@ -230,10 +230,10 @@ for (const [dp, [top, bottom]] of Object.entries(SKY_BASES)) {
 
 export const WHEEL = [
   { label: '₹100 OFF', color: '#F76B15' },
-  { label: '+20 COINS', color: '#6E56CF', coins: 20 },
+  { label: '₹75 OFF', color: '#6E56CF' },
   { label: 'FREE DELIVERY', color: '#12A594' },
   { label: '₹250 OFF', color: '#E5484D' },
-  { label: '+5 COINS', color: '#0090FF', coins: 5 },
+  { label: '5% OFF', color: '#0090FF' },
   { label: 'TRY AGAIN', color: '#8B8D98' },
 ]
 
@@ -256,14 +256,14 @@ export const QUIZ = [
   { q: 'Which fitting lets a drawer glide in and out?', opts: ['Cam lock', 'Telescopic slide', 'Shelf pin'], a: 1 },
   { q: 'Worksmart by Ebco is built for…?', opts: ['Kitchens', 'Bathrooms', 'Office workspaces'], a: 2 },
 ]
-export const COINS_PER_CORRECT = 10
 
+/* Dealer rankings by monthly purchase volume (₹) */
 export const LEADERS = [
-  { name: 'Sharma Hardware', coins: 2410, c: '#6E56CF' },
-  { name: 'Patil Traders', coins: 2180, c: '#E54666' },
-  { name: 'BuildMart Co', coins: 1925, c: '#0090FF' },
-  { name: 'Kable Agencies', coins: 1610, c: '#F76B15' },
-  { name: 'Meera Distributors', coins: 1540, c: '#12A594' },
+  { name: 'Sharma Hardware', vol: 241000, c: '#6E56CF' },
+  { name: 'Patil Traders', vol: 218000, c: '#E54666' },
+  { name: 'BuildMart Co', vol: 192500, c: '#0090FF' },
+  { name: 'Kable Agencies', vol: 161000, c: '#F76B15' },
+  { name: 'Meera Distributors', vol: 154000, c: '#12A594' },
 ]
 
 export const MY_RANK = { rank: 12, of: 48, moved: 2 }
