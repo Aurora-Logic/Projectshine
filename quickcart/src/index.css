@@ -440,6 +440,54 @@ body {
   gap: 8px;
 }
 
+/* ---------- Dealer targets card ---------- */
+.tgt {
+  border: 1px solid var(--gray-4);
+  border-radius: 18px;
+  padding: 14px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .05);
+}
+.seg {
+  display: flex;
+  gap: 2px;
+  background: var(--gray-3);
+  border-radius: 11px;
+  padding: 3px;
+  margin-top: 12px;
+}
+.seg-b {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--gray-11);
+  padding: 7px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .2s, color .2s;
+}
+.seg-b.on {
+  background: #fff;
+  color: var(--gray-12);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .12);
+}
+.tbar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--gray-3);
+  margin-top: 6px;
+  overflow: hidden;
+}
+.tbar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--teal-9), var(--teal-11));
+  transition: width .7s cubic-bezier(.22, 1, .36, 1);
+}
+
 /* ---------- Brand of the Day promo ---------- */
 .bday {
   border-radius: 20px;

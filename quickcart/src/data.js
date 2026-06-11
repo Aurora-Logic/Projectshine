@@ -259,12 +259,21 @@ export const QUIZ = [
 export const COINS_PER_CORRECT = 10
 
 export const LEADERS = [
-  { name: 'Raju Carpentry', coins: 2410, c: '#6E56CF' },
-  { name: 'Sharma Interiors', coins: 2180, c: '#E54666' },
-  { name: 'Priya Modulars', coins: 1925, c: '#0090FF' },
-  { name: 'Kabir Woodworks', coins: 1610, c: '#F76B15' },
-  { name: 'Meera Designs', coins: 1540, c: '#12A594' },
+  { name: 'Sharma Hardware', coins: 2410, c: '#6E56CF' },
+  { name: 'Patil Traders', coins: 2180, c: '#E54666' },
+  { name: 'BuildMart Co', coins: 1925, c: '#0090FF' },
+  { name: 'Kable Agencies', coins: 1610, c: '#F76B15' },
+  { name: 'Meera Distributors', coins: 1540, c: '#12A594' },
 ]
+
+export const MY_RANK = { rank: 12, of: 48, moved: 2 }
+
+/* Dealer purchase targets vs achieved (₹) */
+export const TARGETS = {
+  monthly: { label: 'Monthly', target: 200000, done: 124500, ends: '30 Jun', note: 'Hit it → +2% rebate' },
+  quarterly: { label: 'Quarterly', target: 600000, done: 451200, ends: '30 Jun', note: 'Qualifies Gold tier' },
+  yearly: { label: 'Yearly', target: 2400000, done: 1421800, ends: '31 Mar', note: 'Annual bonus slab +3%' },
+}
 
 export const SEARCH_HINTS = ['Search “drawer slides”', 'Search “soft-close hinge”', 'Search “cam lock”', 'Search “keyboard tray”', 'Search “LED profile”']
 

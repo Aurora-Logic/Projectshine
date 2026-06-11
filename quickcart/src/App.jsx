@@ -12,7 +12,7 @@ import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
   FEED_POOL, CATEGORIES, BANNERS, COMBOS, CLEARANCE_TILES, QUIZ, COINS_PER_CORRECT,
   LEADERS, SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
-  BRAND_DAY, CAMPAIGN_HEADERS,
+  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS,
 } from './data.js'
 import './App.css'
 
@@ -281,12 +281,14 @@ function TopBar({ compact, coins, weather, dp, cond, brand, onBrand, onSearch, c
         </TextField.Slot>
       </TextField.Root>
 
-      <div className="rewards-strip" onClick={() => scrollToId('quiz')}>
+      <div className="rewards-strip" onClick={() => scrollToId('leaderboard')}>
         <StarFilledIcon width={14} height={14} color="var(--amber-9)" style={{ flex: 'none' }} />
         <Text size="1" weight="bold" truncate style={{ flex: 1, minWidth: 0 }}>
-          <span className="coin-pop" key={coins}>{coins}</span> coins · 5-day order streak
+          You’re #{MY_RANK.rank} of {MY_RANK.of} dealers · ↑{MY_RANK.moved} this week
         </Text>
-        <Text size="1" weight="bold" color="amber" style={{ flex: 'none' }}>Play quiz, win more</Text>
+        <Text size="1" weight="bold" color="amber" style={{ flex: 'none' }}>
+          <span className="coin-pop" key={coins}>{coins}</span> pts
+        </Text>
         <ChevronRightIcon width={13} height={13} color="var(--amber-11)" style={{ flex: 'none' }} />
       </div>
 
@@ -1390,10 +1392,10 @@ function Leaderboard({ coins }) {
 
   return (
     <Box pt="5" id="leaderboard">
-      <SectionHead title="Top installers — HSR Layout" extra={<span className="save-pill">WEEKLY</span>} />
+      <SectionHead title="Top dealers — HSR region" extra={<span className="save-pill">WEEKLY</span>} />
       <Box px="4" mt="-2">
         <Text size="1" color="gray" as="div">
-          Earn coins from quizzes & orders. Top 3 win ₹500 vouchers every Sunday.
+          Dealer rankings — points from purchases & quizzes. Top 3 earn extra margin this month.
         </Text>
       </Box>
       <div className={`lb-card ${animate ? 'go' : ''}`} ref={ref}>
@@ -1421,6 +1423,46 @@ function Leaderboard({ coins }) {
 }
 
 /* ---------------- Categories / feed / chrome ---------------- */
+
+/* Dealer targets dashboard: monthly / quarterly / yearly purchase progress */
+const fmtL = (n) => (n >= 100000 ? `₹${(n / 100000).toFixed(2)}L` : `₹${n.toLocaleString('en-IN')}`)
+
+function TargetsCard() {
+  const [per, setPer] = useState('monthly')
+  const t = TARGETS[per]
+  const pct = Math.min(100, Math.round((t.done / t.target) * 100))
+  return (
+    <Box px="4" pt="5">
+      <div className="tgt">
+        <Flex align="center" justify="between">
+          <Heading size="4" style={{ letterSpacing: '-0.2px' }}>Your targets</Heading>
+          <span className="save-pill">FY 2026–27</span>
+        </Flex>
+        <div className="seg">
+          {Object.keys(TARGETS).map(k => (
+            <button key={k} className={`seg-b ${per === k ? 'on' : ''}`} onClick={() => setPer(k)}>
+              {TARGETS[k].label}
+            </button>
+          ))}
+        </div>
+        <Flex align="baseline" gap="2" mt="3">
+          <Text weight="bold" style={{ fontSize: 28, letterSpacing: '-0.5px' }}>{pct}%</Text>
+          <Text size="1" color="gray">achieved</Text>
+          <Text size="2" weight="bold" style={{ marginLeft: 'auto' }}>
+            {fmtL(t.done)} <Text size="1" color="gray" weight="medium">of {fmtL(t.target)}</Text>
+          </Text>
+        </Flex>
+        <div className="tbar">
+          <div className="tbar-fill" style={{ width: `${pct}%` }} />
+        </div>
+        <Flex align="center" justify="between" mt="2">
+          <Text size="1" color="gray">{fmtL(t.target - t.done)} to go · ends {t.ends}</Text>
+          <Text size="1" weight="bold" style={{ color: 'var(--amber-11)' }}>{t.note}</Text>
+        </Flex>
+      </div>
+    </Box>
+  )
+}
 
 /* Maggi-style brand promo card — for launches or stock clearing */
 function BrandDay({ onShop }) {
@@ -1758,11 +1800,13 @@ export default function App() {
 
         {bf(BUY_AGAIN).length > 0 && (
           <Shelf
-            title={`${greet}, Virag`} sub="Your regulars — from your recent site orders"
+            title={`${greet}, Virag`} sub="Your regulars — from your recent orders"
             items={bf(BUY_AGAIN)} onChange={changeCart}
             onSeeAll={() => setSheet({ items: bf(BUY_AGAIN), title: 'Your regulars' })}
           />
         )}
+
+        <TargetsCard />
 
         <CategoryGrid onPick={openCategory} onSeeAll={() => setPlp('All')} />
 
