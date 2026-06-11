@@ -1622,7 +1622,6 @@ body {
   max-width: 480px;
   background: #fff;
   border-radius: 20px 20px 0 0;
-  padding: 2px calc(24px + env(safe-area-inset-bottom));
   animation: sheetup .25s ease;
 }
 @keyframes sheetup { from { transform: translateY(40%); } }
