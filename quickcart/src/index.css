@@ -4630,3 +4630,8 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 .padd {
   box-shadow: inset 0 0 0 1.5px var(--green-7), 0 4px 12px rgba(0, 0, 0, .2);
 }
+
+/* segments breathe; ADD pill sits clearly outside the photo edge */
+.seg { padding: 3px; gap: 3px; }
+.seg-b { padding: 7px 12px; }
+.padd { bottom: -14px; }
