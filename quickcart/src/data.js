@@ -315,7 +315,7 @@ export const CAMPAIGN_HEADERS = [
 /* Hero v2 ("fest" takeover, client direction): yellow promo + 2x2 category tiles */
 export const FEST = {
   title: 'Hinge Fest',
-  off: '\u20b9150 OFF',
+  off: 'UP TO 28% OFF',
   cta: 'SHOP NOW',
   ph: '1594026112284-02bb6f3352fe',
   cat: 'Hinges',

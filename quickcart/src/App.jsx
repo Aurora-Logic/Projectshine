@@ -152,6 +152,8 @@ function bulkNudge(p, qty) {
 const QtyCtx = createContext(null)
 const PdpCtx = createContext(null)
 const CartCtx = createContext(null)
+/* live cart lines — single source of truth for every stepper in the app */
+const CartItemsCtx = createContext({})
 
 const BRAND_NAMES = { ebco: 'Ebco', zipco: 'Zipco', peka: 'Peka', worksmart: 'Worksmart by Ebco', livsmart: 'Livsmart by Ebco' }
 
@@ -161,6 +163,40 @@ const bulkTier = (p) => {
   if (!m) return null
   const bp = +m[2].replace(/,/g, '')
   return { thr: +m[1], bp, pct: Math.max(1, Math.round((1 - bp / p.price) * 100)) }
+}
+
+/* ONE price story: once a line crosses its bulk threshold, the tier price IS
+   the price — on the qty sheet, the cart row, the bill and the invoice. */
+const unitPriceFor = (p, n) => {
+  const t = bulkTier(p)
+  return t && n >= t.thr ? t.bp : p.price
+}
+const lineTotal = (p, n) => unitPriceFor(p, n) * n
+
+/* one coupon slot — written by wheel/quiz/streak, consumed at checkout */
+const saveCoupon = (c) => {
+  try { localStorage.setItem('qc-coupon', JSON.stringify(c)) } catch { /* storage off */ }
+}
+const couponFromWheel = (label) => {
+  if (label === 'TRY AGAIN') return null
+  if (label === 'FREE DELIVERY') return { label, kind: 'freedel', value: 0 }
+  if (label.endsWith('% OFF')) return { label, kind: 'pct', value: parseInt(label, 10) }
+  return { label, kind: 'amt', value: +label.replace(/[^\d]/g, '') }
+}
+
+/* live credit position: seed bills + bills raised by placed orders − paid */
+function creditState() {
+  let paid = []
+  let extra = []
+  try { paid = JSON.parse(localStorage.getItem('qc-paid') || '[]') } catch { /* none */ }
+  try { extra = JSON.parse(localStorage.getItem('qc-bills') || '[]') } catch { /* none */ }
+  const all = [
+    ...CREDIT.bills,
+    ...extra.map(b => ({ ...b, days: Math.ceil((b.due - Date.now()) / 864e5) })),
+  ]
+  const open = all.filter(b => !paid.includes(b.id))
+  const outstanding = open.reduce((s, b) => s + b.amt, 0)
+  return { limit: CREDIT.limit, open, paidIds: paid, all, outstanding }
 }
 
 /* Keeps an overlay mounted briefly after close so it can slide out */
@@ -535,15 +571,15 @@ function AddControl({ qty, onAdd, onRemove, onBulk }) {
 }
 
 const ProductCard = memo(function ProductCard({ p, grid, onChange }) {
-  const [qty, setQty] = useState(0)
+  const qty = useContext(CartItemsCtx)[p.id]?.n || 0
   const openQty = useContext(QtyCtx)
   const openPdp = useContext(PdpCtx)
   const add = (e) => {
     e.stopPropagation()
-    if (qty === 0 && openQty) { openQty(p, (n) => setQty(q => q + n)); return }
-    setQty(q => q + 1); onChange(1, p); sparkle(e)
+    if (qty === 0 && openQty) { openQty(p); return }
+    onChange(1, p); sparkle(e)
   }
-  const remove = (e) => { e?.stopPropagation(); setQty(q => q - 1); onChange(-1, p) }
+  const remove = (e) => { e?.stopPropagation(); onChange(-1, p) }
 
   const oos = p.stock === 0
   return (
@@ -553,7 +589,7 @@ const ProductCard = memo(function ProductCard({ p, grid, onChange }) {
         {(p.tag || (p.mrp && p.mrp > p.price)) && (
           <span className="pbadge">{p.tag || `${Math.round(((p.mrp - p.price) / p.mrp) * 100)}% OFF`}</span>
         )}
-        <AddControl qty={qty} onAdd={add} onRemove={remove} onBulk={openQty ? () => openQty(p, (n) => setQty(q => q + n)) : undefined} />
+        <AddControl qty={qty} onAdd={add} onRemove={remove} onBulk={openQty ? () => openQty(p) : undefined} />
       </div>
       {p.usual && <span className="usual-pill">YOUR USUAL</span>}
       <Text size="2" weight="bold" as="div" mt={p.usual ? '1' : '3'} className="clamp2" style={{ fontSize: 13, lineHeight: 1.3, minHeight: 34 }}>
@@ -1144,7 +1180,14 @@ function SearchSheet({ sheet, onClose, onChange, recoStrip, onRecoClose }) {
 
   const ql = q.trim().toLowerCase()
   const base = applyF(sheet.items.filter(CAT_RULES[cat] || (() => true)), f, b)
-  const hits = base.filter(p => !ql || `${p.name} ${p.qty}`.toLowerCase().includes(ql))
+  // tokenized AND-match over name/pack/brand/material, hyphen + plural tolerant
+  const snorm = (s) => s.toLowerCase().replace(/-/g, ' ')
+  const tokens = snorm(ql).split(/\s+/).filter(Boolean).map(t => t.replace(/s$/, ''))
+  const hits = base.filter(p => {
+    if (tokens.length === 0) return true
+    const hay = snorm(`${p.name} ${p.qty || ''} ${p.brand} ${p.mat || ''}`)
+    return tokens.every(t => hay.includes(t))
+  })
   const fallback = ql && hits.length === 0
   const shown = fallback ? base : hits
 
@@ -1245,15 +1288,15 @@ function ComboDeals({ onChange }) {
 }
 
 function ComboCard({ c, onChange }) {
-  const [qty, setQty] = useState(0)
   const p = { id: c.id, ph: c.ph, price: c.price, name: c.title, qty: c.items }
+  const qty = useContext(CartItemsCtx)[p.id]?.n || 0
   const openQty = useContext(QtyCtx)
   const add = (e) => {
     e.stopPropagation()
-    if (qty === 0 && openQty) { openQty(p, (n) => setQty(q => q + n), { noReco: true }); return }
-    setQty(q => q + 1); onChange(1, p); sparkle(e)
+    if (qty === 0 && openQty) { openQty(p, null, { noReco: true }); return }
+    onChange(1, p); sparkle(e)
   }
-  const remove = (e) => { e?.stopPropagation(); setQty(q => q - 1); onChange(-1, p) }
+  const remove = (e) => { e?.stopPropagation(); onChange(-1, p) }
 
   return (
     <div className="combo-card" style={{ background: c.tint }}>
@@ -1296,6 +1339,7 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
   const [qi, setQi] = useState(0)
   const [picked, setPicked] = useState(null)
   const [correct, setCorrect] = useState(0)
+  const correctRef = useRef(0)
   const [tleft, setTleft] = useState(QUIZ_SECONDS)
 
   const start = () => { setStage('playing'); setQi(0); setCorrect(0); setPicked(null) }
@@ -1304,6 +1348,9 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
     if (qi + 1 < QUIZ.length) { setQi(q => q + 1); setPicked(null) }
     else {
       if (onFinish) onFinish()
+      if (correctRef.current > 0) {
+        saveCoupon({ label: `QUIZ ₹${correctRef.current * 25} OFF`, kind: 'amt', value: correctRef.current * 25 })
+      }
       setStage('done')
     }
   }
@@ -1312,7 +1359,7 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
     if (picked !== null) return
     setPicked(i)
     const isRight = i === QUIZ[qi].a
-    if (isRight) { setCorrect(c => c + 1); sparkle(e) }
+    if (isRight) { correctRef.current += 1; setCorrect(c => c + 1); sparkle(e) }
     setTimeout(() => advance(), 900)
   }
 
@@ -1482,28 +1529,61 @@ function GameRow({ onSpin }) {
   )
 }
 
+/* streak derives from stored check-in days; day 7 issues a real coupon */
+function streakDays() {
+  try {
+    const a = JSON.parse(localStorage.getItem('qc-streak-days') || '[]')
+    return Array.isArray(a) ? a : []
+  } catch { return [] }
+}
+function streakCount(days) {
+  // consecutive run ending today or yesterday
+  let count = 0
+  const d = new Date()
+  if (!days.includes(d.toDateString())) d.setDate(d.getDate() - 1)
+  while (days.includes(d.toDateString())) {
+    count += 1
+    d.setDate(d.getDate() - 1)
+  }
+  return count
+}
+
 function StreakCard() {
-  const [claimed, setClaimed] = useState(() => localStorage.getItem('qc-streak-day') === DAY)
-  const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-  const hit = claimed ? 6 : 5
+  const [days, setDays] = useState(streakDays)
+  const claimed = days.includes(DAY)
+  const count = streakCount(days)
+  const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+  const checkIn = (e) => {
+    if (claimed) return
+    const next = [...days.slice(-13), DAY]
+    const c = streakCount(next)
+    if (c >= 7) {
+      saveCoupon({ label: 'STREAK ₹100 OFF', kind: 'amt', value: 100 })
+      setDays([DAY]) // run banked as a coupon; streak restarts
+      try { localStorage.setItem('qc-streak-days', JSON.stringify([DAY])) } catch { /* storage off */ }
+    } else {
+      setDays(next)
+      try { localStorage.setItem('qc-streak-days', JSON.stringify(next)) } catch { /* storage off */ }
+    }
+    sparkle(e)
+  }
+  const justBanked = claimed && count === 1 && days.length === 1
   return (
-    <button
-      className="game-card game-streak"
-      onClick={(e) => {
-        if (claimed) return
-        setClaimed(true)
-        localStorage.setItem('qc-streak-day', DAY)
-        sparkle(e)
-      }}
-    >
-      <Text size="3" weight="bold" as="div" style={{ color: '#fff' }}>{hit}-day streak</Text>
+    <button className="game-card game-streak" onClick={checkIn}>
+      <Text size="3" weight="bold" as="div" style={{ color: '#fff' }}>
+        {count}-day streak
+      </Text>
       <Text size="1" as="div" mt="1" style={{ color: 'rgba(255,255,255,.88)' }}>
-        {claimed ? 'Checked in · see you tomorrow' : 'Tap to check in · 7 days → ₹100 voucher'}
+        {justBanked
+          ? '₹100 coupon banked — applies on your next bill'
+          : claimed
+            ? `Checked in · ${Math.max(0, 7 - count)} more to ₹100 off`
+            : 'Tap to check in · 7 days → ₹100 off your bill'}
       </Text>
       <div className="day-dots">
-        {days.map((d, i) => (
-          <span key={i} className={`day-dot ${i < hit ? 'hit' : ''} ${i === hit && !claimed ? 'today' : ''}`}>
-            {i < hit ? '✓' : d}
+        {labels.map((d, i) => (
+          <span key={i} className={`day-dot ${i < count ? 'hit' : ''} ${i === count && !claimed ? 'today' : ''}`}>
+            {i < count ? '✓' : d}
           </span>
         ))}
       </div>
@@ -1526,6 +1606,8 @@ function SpinDialog({ open, onOpenChange }) {
     localStorage.setItem('qc-spin-day', DAY)
     setTimeout(() => {
       setPrize(WHEEL[k])
+      const c = couponFromWheel(WHEEL[k].label)
+      if (c) saveCoupon(c)
       setState('done')
     }, 4200)
   }
@@ -1765,15 +1847,15 @@ function FestHero({ onCat, palette, layout = 'a' }) {
 
 /* Flash Sale — Deal of the day + Clearance merged: timer, discounts, selling-fast bars */
 function FlashCard({ p, onChange }) {
-  const [qty, setQty] = useState(0)
+  const qty = useContext(CartItemsCtx)[p.id]?.n || 0
   const openQty = useContext(QtyCtx)
   const openPdp = useContext(PdpCtx)
   const add = (e) => {
     e.stopPropagation()
-    if (qty === 0 && openQty) { openQty(p, (n) => setQty(q => q + n)); return }
-    setQty(q => q + 1); onChange(1, p); sparkle(e)
+    if (qty === 0 && openQty) { openQty(p); return }
+    onChange(1, p); sparkle(e)
   }
-  const remove = (e) => { e?.stopPropagation(); setQty(q => q - 1); onChange(-1, p) }
+  const remove = (e) => { e?.stopPropagation(); onChange(-1, p) }
   const pct = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0
   const sold = Math.max(15, Math.min(95, 100 - (p.stock ?? 50)))
   return (
@@ -1781,7 +1863,7 @@ function FlashCard({ p, onChange }) {
       <div className="pimg-wrap" style={{ aspectRatio: 'auto', height: 104 }}>
         <Img className="pimg" src={img(p.ph, 320)} alt={p.name} />
         {pct > 0 && <span className="flash-off">-{pct}%</span>}
-        <AddControl qty={qty} onAdd={add} onRemove={remove} onBulk={openQty ? () => openQty(p, (n) => setQty(q => q + n)) : undefined} />
+        <AddControl qty={qty} onAdd={add} onRemove={remove} onBulk={openQty ? () => openQty(p) : undefined} />
       </div>
       <div className="flash-body">
         <Text as="div" weight="bold" className="clamp1" style={{ fontSize: 12.5 }}>{p.name}</Text>
@@ -1919,14 +2001,15 @@ function CategoryGrid({ onPick, onSeeAll }) {
 }
 
 function EndlessFeed({ onChange, pool }) {
-  const [items, setItems] = useState(() => pool.slice(0, 6).map(p => ({ ...p, id: `f0-${p.id}` })))
+  // the batch lives in the render key only — the same SKU stays one cart line
+  const [items, setItems] = useState(() => pool.slice(0, 6).map(p => ({ p, k: `f0-${p.id}` })))
   const [loading, setLoading] = useState(false)
   const sentinel = useRef(null)
   const batch = useRef(1)
 
   // brand filter changed → restart the feed from the new pool
   useEffect(() => {
-    setItems(pool.slice(0, 6).map(p => ({ ...p, id: `f0-${p.id}` })))
+    setItems(pool.slice(0, 6).map(p => ({ p, k: `f0-${p.id}` })))
     batch.current = 1
   }, [pool])
 
@@ -1937,7 +2020,7 @@ function EndlessFeed({ onChange, pool }) {
       const b = batch.current++
       const start = (b * 6) % pool.length
       const next = [...pool, ...pool].slice(start, start + 6)
-        .map(p => ({ ...p, id: `f${b}-${p.id}` }))
+        .map(p => ({ p, k: `f${b}-${p.id}` }))
       setItems(cur => [...cur, ...next])
       setLoading(false)
     }, 700)
@@ -1958,7 +2041,7 @@ function EndlessFeed({ onChange, pool }) {
     <Box pt="5">
       <SectionHead title="You might also like" />
       <Grid columns="3" gapX="3" gapY="4" px="4">
-        {items.map(p => <ProductCard key={p.id} p={p} grid onChange={onChange} />)}
+        {items.map(it => <ProductCard key={it.k} p={it.p} grid onChange={onChange} />)}
         {loading && [0, 1, 2].map(i => <div className="skel" key={`sk${i}`} />)}
       </Grid>
       <div ref={sentinel} />
@@ -2883,7 +2966,7 @@ function OrderDetailPage({ order, onClose, onChange }) {
   const TL = [
     ['Order placed', 'Confirmed at HSR depot'],
     ['Packed', 'Quality-checked and invoiced'],
-    ['On the way', order.express ? 'Express rider assigned · ~15 min' : 'Out for delivery'],
+    ['On the way', order.promise ? `Out for delivery · ${order.promise}` : 'Out for delivery'],
     ['Delivered', `Received at ${order.addrLabel || 'Shop'}`],
   ]
   const timeFor = (i) => {
@@ -3942,7 +4025,7 @@ function QtySheet({ q, onClose, onConfirm }) {
             <Text size="1" weight="bold" as="div" style={{ color: unlocked ? 'var(--green-11)' : 'var(--amber-11)', display: 'flex', alignItems: 'center', gap: 5 }}>
               {unlocked && <CheckIcon width={12} height={12} style={{ flex: 'none' }} />}
               {unlocked
-                ? `${tier.pct}% bulk price unlocked — ₹${saved.toLocaleString('en-IN')} savings on invoice`
+                ? `${tier.pct}% bulk price applied — you save ₹${saved.toLocaleString('en-IN')}`
                 : `Add ${tier.thr - n} more to unlock ₹${tier.bp.toLocaleString('en-IN')}/pc (${tier.pct}% off)`}
             </Text>
             <div className="qs-mbar"><div style={{ width: `${Math.min(100, (n / tier.thr) * 100)}%` }} /></div>
@@ -3950,7 +4033,14 @@ function QtySheet({ q, onClose, onConfirm }) {
         )}
         <button className="qs-cta" onClick={(e) => onConfirm(n, e)}>
           <span>Add {n} {n === 1 ? 'piece' : 'pieces'}</span>
-          <span>₹{(n * p.price).toLocaleString('en-IN')}</span>
+          <span>
+            ₹{lineTotal(p, n).toLocaleString('en-IN')}
+            {unlocked && (
+              <s style={{ opacity: .65, fontWeight: 600, marginLeft: 7, fontSize: 12 }}>
+                ₹{(n * p.price).toLocaleString('en-IN')}
+              </s>
+            )}
+          </span>
         </button>
       </div>
     </div>
@@ -4003,9 +4093,9 @@ function SwipeRow({ onRemove, children }) {
 
 /* ---------------- Reorder page — regulars, one tap away ---------------- */
 
-function RoRow({ m, added, onAdd, onStep, onCustom }) {
+function RoRow({ m, onAdd, onStep, onCustom }) {
   const openPdp = useContext(PdpCtx)
-  const qty = added[m.id] || 0
+  const qty = useContext(CartItemsCtx)[m.p.id]?.n || 0
   const p = m.p
   const off = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0
   const oos = p.stock === 0
@@ -4135,29 +4225,24 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
   const [hidden, setHidden] = useState({})
   const due = meta.filter(m => m.due && !hidden[m.id])
   const regular = meta.filter(m => !m.due && !hidden[m.id])
-  const [added, setAdded] = useState({})
+  const cartItems = useContext(CartItemsCtx)
   const openQty = useContext(QtyCtx)
   const custom = (m) => {
-    if (openQty) openQty(m.p, (n) => setAdded(a => ({ ...a, [m.id]: (a[m.id] || 0) + n })), { noReco: true })
+    if (openQty) openQty(m.p, null, { noReco: true })
   }
   const removeRow = (m) => {
-    const q = added[m.id] || 0
-    if (q > 0) {
-      onChange(-q, m.p)
-      setAdded(a => ({ ...a, [m.id]: 0 }))
-    }
+    const q = cartItems[m.p.id]?.n || 0
+    if (q > 0) onChange(-q, m.p)
     setHidden(h => ({ ...h, [m.id]: true }))
   }
   const addUsual = (m, e) => {
     onChange(m.usual, m.p, { noReco: true })
-    setAdded(a => ({ ...a, [m.id]: (a[m.id] || 0) + m.usual }))
     if (e) sparkle(e)
   }
   const step = (m, d) => {
     onChange(d, m.p, { noReco: true })
-    setAdded(a => ({ ...a, [m.id]: Math.max(0, (a[m.id] || 0) + d) }))
   }
-  const pendingDue = due.filter(m => !added[m.id])
+  const pendingDue = due.filter(m => !cartItems[m.p.id]?.n)
   const dueTotal = pendingDue.reduce((s, m) => s + m.usual * m.p.price, 0)
   const addAllDue = (e) => {
     pendingDue.forEach(m => addUsual(m))
@@ -4218,7 +4303,7 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
                 </Text>
                 {due.map(m => (
                   <SwipeRow key={m.id} onRemove={() => removeRow(m)}>
-                    <RoRow m={m} added={added} onAdd={addUsual} onStep={step} onCustom={custom} />
+                    <RoRow m={m} onAdd={addUsual} onStep={step} onCustom={custom} />
                   </SwipeRow>
                 ))}
               </div>
@@ -4230,7 +4315,7 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
               </Text>
               {regular.map(m => (
                 <SwipeRow key={m.id} onRemove={() => removeRow(m)}>
-                  <RoRow m={m} added={added} onAdd={addUsual} onStep={step} onCustom={custom} />
+                  <RoRow m={m} onAdd={addUsual} onStep={step} onCustom={custom} />
                 </SwipeRow>
               ))}
             </div>
@@ -4302,7 +4387,7 @@ function OrderCard({ order, onDismiss, onReorder, onAddMore }) {
   const eta = delivered
     ? 'Delivered — invoice sent on email'
     : si === 2
-      ? (order.express ? 'Arriving in ~15 min' : 'Arriving today by 6 PM')
+      ? (order.promise ? `Arriving · ${order.promise}` : 'Arriving today by 6 PM')
       : si === 1 ? 'Packed at depot — rider assigning' : 'Confirmed at depot'
   const rate = (n) => {
     setRated(n)
@@ -4453,8 +4538,9 @@ async function generateEstimate({ cust, items, bill }) {
   doc.addFont('PJS-Bold.ttf', 'PJS', 'bold')
 
   const W = 210, H = 297, M = 16
-  const GREEN = [20, 99, 63], INK = [26, 28, 31], GRAY = [105, 110, 116]
-  const PAPER = [242, 242, 240], HAIR = [203, 203, 198]
+  // monochrome ink on warm off-white "OG paper"; the only colour comes from logos
+  const INK = [26, 28, 31], GRAY = [105, 110, 116]
+  const PAPER = [248, 245, 237], HAIR = [208, 203, 192]
   const inr = (n) => '₹' + n.toLocaleString('en-IN')
   const no = `QE-${String(Date.now()).slice(-6)}`
   const d = new Date()
@@ -4463,7 +4549,7 @@ async function generateEstimate({ cust, items, bill }) {
   paper()
 
   // ---- masthead: wordmark left, monogram right (tight)
-  doc.setFont('PJS', 'bold').setFontSize(25).setTextColor(...GREEN).text('QuickCart', M, 23)
+  doc.setFont('PJS', 'bold').setFontSize(25).setTextColor(...INK).text('QuickCart', M, 23)
   doc.addImage(mark.data, 'PNG', W - M - 13, 12, 13, 13)
 
   // ---- information columns
@@ -4556,8 +4642,8 @@ async function generateEstimate({ cust, items, bill }) {
   const pages = doc.getNumberOfPages()
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i)
-    doc.setDrawColor(...GREEN).setLineWidth(0.4).line(M, H - 21, W - M, H - 21)
-    doc.setFont('PJS', 'normal').setFontSize(7.5).setTextColor(...GREEN)
+    doc.setDrawColor(...INK).setLineWidth(0.4).line(M, H - 21, W - M, H - 21)
+    doc.setFont('PJS', 'normal').setFontSize(7.5).setTextColor(...GRAY)
     doc.text(['estimates@quickcart.in', 'quickcart-nine-iota.vercel.app'], M, H - 15.5)
     doc.text(['304 Maple Heights, HSR Layout', 'Bengaluru 560102'], 72, H - 15.5)
     doc.text(['Trade prices · GST billing', '90-min site delivery'], 128, H - 15.5)
@@ -4634,10 +4720,14 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
     return t && n >= t.thr ? s + (p.price - t.bp) * n : s
   }, 0)
   const mrpSave = items.reduce((s, { p, n }) => s + ((p.mrp || p.price) - p.price) * n, 0)
+  // cart.total is already NET of bulk pricing (lineTotal charges the tier rate),
+  // so the bill presents gross → bulk deduction → net; toPay must NOT subtract
+  // bulkSave again
+  const grossTotal = cart.total + bulkSave
   const slab = [...SCHEMES].reverse().find(s => cart.total >= s.min)
   const nextSlab = SCHEMES.find(s => cart.total < s.min)
   const schemeOff = slab ? Math.round((cart.total * slab.off) / 100) : 0
-  const toPay = Math.max(0, cart.total - schemeOff - bulkSave + fee)
+  const toPay = Math.max(0, cart.total - schemeOff + fee)
   const saving = mrpSave + bulkSave + schemeOff
   const addr = addrs.find(a => a.id === sel) || addrs[0]
   const deals = applyF(DEALS, { ...DEFAULT_F, sort: 3 }, 'ALL').filter(d => !cart.items[d.id]).slice(0, 6)
@@ -4684,7 +4774,9 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
                       <Box flexGrow="1" style={{ minWidth: 0 }}>
                         <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{p.name}</Text>
                         <Text as="div" style={{ fontSize: 10.5, color: bulkOn ? 'var(--green-11)' : 'var(--gray-10)', fontWeight: bulkOn ? 700 : 500 }}>
-                          ₹{p.price.toLocaleString('en-IN')}{bulkOn ? ` · ${t.pct}% bulk off applied` : ''}
+                          ₹{unitPriceFor(p, n).toLocaleString('en-IN')}
+                          {bulkOn && <s style={{ color: 'var(--gray-9)', marginLeft: 5 }}> ₹{p.price.toLocaleString('en-IN')}</s>}
+                          {bulkOn ? ` · ${t.pct}% bulk applied` : ''}
                         </Text>
                       </Box>
                       <div className="cs-step">
@@ -4692,7 +4784,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
                         <Text key={n} className="numpop" size="1" weight="bold" style={{ width: 26, textAlign: 'center', color: '#fff' }}>{n}</Text>
                         <button onClick={() => onChange(1, p, { noReco: true })} aria-label="More"><PlusIcon width={12} height={12} /></button>
                       </div>
-                      <Text size="1" weight="bold" style={{ minWidth: 60, textAlign: 'right', flex: 'none', whiteSpace: 'nowrap' }}>₹{(n * p.price).toLocaleString('en-IN')}</Text>
+                      <Text size="1" weight="bold" style={{ minWidth: 60, textAlign: 'right', flex: 'none', whiteSpace: 'nowrap' }}>₹{lineTotal(p, n).toLocaleString('en-IN')}</Text>
                     </div>
                     </SwipeRow>
                     {t && !bulkOn && (
@@ -4824,7 +4916,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
               <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
                 BILL DETAILS
               </Text>
-              <Flex justify="between" mt="2"><Text size="1" color="gray">Item total</Text><Text size="1" weight="bold">₹{cart.total.toLocaleString('en-IN')}</Text></Flex>
+              <Flex justify="between" mt="2"><Text size="1" color="gray">Item total</Text><Text size="1" weight="bold">₹{grossTotal.toLocaleString('en-IN')}</Text></Flex>
               {bulkSave > 0 && (
                 <Flex justify="between" mt="1">
                   <Text size="1" style={{ color: 'var(--green-11)' }}>Bulk price savings</Text>
@@ -4900,7 +4992,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
       {estSheet && (
         <EstimateSheet
           items={items}
-          bill={{ itemTotal: cart.total, bulkSave, schemeOff, slabPct: slab ? slab.off : 0, fee, express, toPay }}
+          bill={{ itemTotal: grossTotal, bulkSave, schemeOff, slabPct: slab ? slab.off : 0, fee, express, toPay }}
           onClose={() => setEstSheet(false)}
         />
       )}
@@ -4930,7 +5022,7 @@ function ProductPage({ p, onClose, onChange, cart }) {
   const openQty = useContext(QtyCtx)
   const openPdp = useContext(PdpCtx)
   const openCart = useContext(CartCtx)
-  const [added, setAdded] = useState(0)
+  const added = useContext(CartItemsCtx)[p.id]?.n || 0
   const [listSheet, setListSheet] = useState(false)
   // Zara-style gestures: horizontal swipe anywhere on the page moves to the
   // prev/next product in this range; vertical swipe (or tap) on the photo
@@ -5171,7 +5263,7 @@ function ProductPage({ p, onClose, onChange, cart }) {
                   size="1" color="green" radius="full" mt="2" style={{ fontWeight: 800 }}
                   onClick={(e) => {
                     onChange(1, p, { noReco: true }); onChange(1, club, { noReco: true })
-                    sparkle(e); setAdded(a => a + 1)
+                    sparkle(e)
                   }}
                 >
                   Add both
@@ -5207,7 +5299,7 @@ function ProductPage({ p, onClose, onChange, cart }) {
           <>
             <button
               className="qs-cta ghost" style={{ marginTop: 0, flex: 1, justifyContent: 'center' }}
-              onClick={() => openQty && openQty(p, (n) => setAdded(a => a + n))}
+              onClick={() => openQty && openQty(p)}
             >
               Add more
             </button>
@@ -5229,7 +5321,7 @@ function ProductPage({ p, onClose, onChange, cart }) {
             </Box>
             <button
               className="qs-cta" style={{ marginTop: 0, flex: 1, justifyContent: 'center' }}
-              onClick={() => openQty && openQty(p, (n) => setAdded(a => a + n))}
+              onClick={() => openQty && openQty(p)}
             >
               Add to cart
             </button>
@@ -5243,7 +5335,19 @@ function ProductPage({ p, onClose, onChange, cart }) {
 }
 
 export default function App() {
-  const [cart, setCart] = useState({ count: 0, total: 0, photos: [], items: {} })
+  const [cartItems, setCartItems] = useState({})
+  // derived view keeps every existing consumer signature intact
+  const cart = useMemo(() => {
+    let count = 0
+    let total = 0
+    const photos = []
+    Object.values(cartItems).forEach(({ p, n }) => {
+      count += n
+      total += lineTotal(p, n)
+      if (!photos.includes(p.ph)) photos.push(p.ph)
+    })
+    return { items: cartItems, count, total, photos }
+  }, [cartItems])
   // #compact hash forces the scrolled header state (handy for design review)
   const [scrolled, setScrolled] = useState(window.location.hash === '#compact')
   const [quizOpen, setQuizOpen] = useState(false)
@@ -5512,17 +5616,15 @@ export default function App() {
   // stable identity so memoized ProductCards skip re-render on cart changes
   const recoSrc = useRef(null)
   const changeCart = useCallback((delta, p, opts) => {
-    setCart(c => {
-      const items = { ...c.items }
+    setCartItems(items => {
       const n = (items[p.id]?.n || 0) + delta
-      if (n <= 0) delete items[p.id]
-      else items[p.id] = { p, n }
-      return {
-        count: Math.max(0, c.count + delta),
-        total: Math.max(0, c.total + delta * p.price),
-        photos: delta > 0 && !c.photos.includes(p.ph) ? [...c.photos, p.ph] : c.photos,
-        items,
+      if (n <= 0) {
+        if (!items[p.id]) return items
+        const next = { ...items }
+        delete next[p.id]
+        return next
       }
+      return { ...items, [p.id]: { p, n } }
     })
     if (delta > 0 && !opts?.noReco) {
       const items = recosFor(p)
@@ -5581,6 +5683,7 @@ export default function App() {
       <QtyCtx.Provider value={openQty}>
       <PdpCtx.Provider value={openPdp}>
       <CartCtx.Provider value={openCart}>
+      <CartItemsCtx.Provider value={cart.items}>
       <div className="app">
         <TopBar
           compact={scrolled} dp={sky.dp} cond={sky.cond}
@@ -5759,7 +5862,7 @@ export default function App() {
             onPlaced={(rec) => {
               setOrder(rec)
               localStorage.setItem('qc-order', JSON.stringify(rec))
-              setCart({ count: 0, total: 0, photos: [], items: {} })
+              setCartItems({})
               // land on home with the tracking card in view, whatever the stack was
               setCartOpen(false)
               setQsheet(null)
@@ -5821,6 +5924,7 @@ export default function App() {
           </div>
         </div>
       </div>
+      </CartItemsCtx.Provider>
       </CartCtx.Provider>
       </PdpCtx.Provider>
       </QtyCtx.Provider>
