@@ -914,12 +914,13 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
   )
 }
 
-/* Full-screen search / listing sheet — live filtering across the catalog */
+/* Full-screen search / listing sheet — live filtering with category rail + brand chips */
 function SearchSheet({ sheet, onClose, onChange }) {
   const [q, setQ] = useState(sheet?.query || '')
   const [b, setB] = useState('ALL')
+  const [cat, setCat] = useState('All')
   const [pageReady, setPageReady] = useState(false)
-  useEffect(() => { setQ(sheet?.query || ''); setB('ALL') }, [sheet])
+  useEffect(() => { setQ(sheet?.query || ''); setB('ALL'); setCat('All') }, [sheet])
   useEffect(() => {
     setPageReady(false)
     if (!sheet) return
@@ -929,7 +930,9 @@ function SearchSheet({ sheet, onClose, onChange }) {
   if (!sheet) return null
 
   const ql = q.trim().toLowerCase()
-  const base = sheet.items.filter(p => b === 'ALL' || p.brand === b)
+  const base = sheet.items
+    .filter(CAT_RULES[cat] || (() => true))
+    .filter(p => b === 'ALL' || p.brand === b)
   const hits = base.filter(p => !ql || `${p.name} ${p.qty}`.toLowerCase().includes(ql))
   const fallback = ql && hits.length === 0
   const shown = fallback ? base : hits
@@ -949,28 +952,44 @@ function SearchSheet({ sheet, onClose, onChange }) {
           </TextField.Slot>
         </TextField.Root>
       </div>
-      <div className="sheet-brands">
-        {BRAND_KEYS.map(k => (
-          <button key={k} className={`sim-chip ${b === k ? 'on' : ''}`} onClick={() => setB(k)}>
-            {k !== 'ALL' && (
-              <span className="lgchip"><img src={BRAND_LOGOS[k]} alt="" /></span>
-            )}
-            {k === 'ALL' ? 'All brands' : k.charAt(0).toUpperCase() + k.slice(1)}
-          </button>
-        ))}
+      <div className="plp-body">
+        <div className="plp-rail">
+          {PLP_RAIL.map(([ph, label]) => (
+            <div key={label} className={`rail-item ${label === cat ? 'on' : ''}`} onClick={() => setCat(label)}>
+              <Img src={img(ph, 140)} alt={label} loading="lazy" />
+              <span className="rl">{label}</span>
+            </div>
+          ))}
+        </div>
+        <div className="plp-main">
+          <div className="sheet-brands" style={{ padding: '12px 0 2px' }}>
+            {BRAND_KEYS.map(k => (
+              <button key={k} className={`sim-chip ${b === k ? 'on' : ''}`} onClick={() => setB(k)}>
+                {k !== 'ALL' && (
+                  <span className="lgchip"><img src={BRAND_LOGOS[k]} alt="" /></span>
+                )}
+                {k === 'ALL' ? 'All brands' : k.charAt(0).toUpperCase() + k.slice(1)}
+              </button>
+            ))}
+          </div>
+          <Box pt="2">
+            <Text size="1" color="gray">
+              {fallback
+                ? `No exact matches for “${q}” — showing everything${cat !== 'All' ? ` in ${cat}` : ''}`
+                : [
+                    `${shown.length} item${shown.length === 1 ? '' : 's'}`,
+                    cat !== 'All' && cat,
+                    sheet.title,
+                  ].filter(Boolean).join(' · ')}
+            </Text>
+          </Box>
+          <Grid columns="2" gapX="3" gapY="4" pt="3" pb="9">
+            {pageReady
+              ? shown.map(p => <ProductCard key={`s-${p.id}`} p={p} grid onChange={onChange} />)
+              : [0, 1, 2, 3].map(i => <div className="skel" key={`sk${i}`} />)}
+          </Grid>
+        </div>
       </div>
-      <Box px="4" pt="2">
-        <Text size="1" color="gray">
-          {fallback
-            ? `No exact matches for “${q}” — showing everything${sheet.title ? ` in ${sheet.title}` : ''}`
-            : `${shown.length} item${shown.length === 1 ? '' : 's'}${sheet.title ? ` · ${sheet.title}` : ''}`}
-        </Text>
-      </Box>
-      <Grid columns="3" gapX="3" gapY="4" px="4" pt="3" pb="9">
-        {pageReady
-          ? shown.map(p => <ProductCard key={`s-${p.id}`} p={p} grid onChange={onChange} />)
-          : [0, 1, 2, 3, 4, 5].map(i => <div className="skel" key={`sk${i}`} />)}
-      </Grid>
     </div>
   )
 }
