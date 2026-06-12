@@ -1968,7 +1968,11 @@ export default function App() {
   const [heroPal, setHeroPal] = useState(() => {
     const m = window.location.hash.match(/^#hero-(\w+)$/)
     const hit = m && HERO_PALETTES.find(p => p.name.toLowerCase() === m[1].toLowerCase())
-    return hit || HERO_PALETTES[0]
+    if (hit) return hit
+    // rotate through palette combinations on every app open (until client finalizes one)
+    const idx = (Number(localStorage.getItem('qc-hero-idx') || -1) + 1) % HERO_PALETTES.length
+    localStorage.setItem('qc-hero-idx', String(idx))
+    return HERO_PALETTES[idx]
   })
   const sky = sim ?? fetchedSky
   // Campaign takeover ONLY when explicitly scheduled (hash preview / future campaign flag).

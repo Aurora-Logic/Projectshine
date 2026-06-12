@@ -294,9 +294,9 @@ export const BRAND_LOGOS = {
   livsmart: livsmartLogo,
 }
 
-/* Maggi-style "Brand of the Day" promo slot — swap content to push launches or clear stock */
+/* "Product of the Day" promo slot — swap content to push launches or clear stock */
 export const BRAND_DAY = {
-  badge: 'BRAND OF THE DAY',
+  badge: 'PRODUCT OF THE DAY',
   name: 'Ebco Quadro Drawer System',
   sub: 'Launch offer · ₹1,450 · soft-close',
   cta: 'Shop now',
