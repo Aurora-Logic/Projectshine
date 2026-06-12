@@ -36,7 +36,10 @@ npm run dev        # http://localhost:5174
 | `#cart` | Cart (preloaded) |
 | `#order` / `#ordpg` | Order tracking card / order detail page |
 | `#reorder` / `#pastorder` | Reorder page / past-order edit sheet |
-| `#account` `#dash` `#credit` `#lists` `#orders` `#site` | Account + sub-pages |
+| `#account` `#dash` `#credit` `#lists` `#orders` `#site` `#claims` `#brand` | Account + sub-pages |
+| `#kit` | Project Kit Builder |
+| `#pros` | Find a Pro (Utilities tab) |
+| `#inspo` / `#inspo-<id>` | Inspiration gallery / a specific look |
 | `#wheel` | Spin & Win |
 | `#sim` | Dev simulator (sky/quiz/hero variants) |
 | `#fest-a`…`#fest-e` / `#hero-<palette>` | Pin a hero layout / palette |

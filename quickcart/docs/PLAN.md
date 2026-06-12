@@ -64,8 +64,8 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 
 ### A4 · Design-system consolidation (before more visual iteration)
 
-- [ ] **A4.1 L** Token block in `:root`: color ramps, radius scale, shadows, z-scale (`--z-header/nav/page/overlay/gate`), type scale with 10px floor; replace top ~20 hexes, 13 radii, per-page z-integers.
-- [ ] **A4.2 M** Fold append-only patch layers into one section per component; delete ~27 dead selectors, dead media query, empty `App.css`.
+- [x] *(foundation — z/radius/shadow/gold tokens live, new pages wired; full hex/radius sweep rides the A5.1 split)* **A4.1 L** Token block in `:root`: color ramps, radius scale, shadows, z-scale (`--z-header/nav/page/overlay/gate`), type scale with 10px floor; replace top ~20 hexes, 13 radii, per-page z-integers.
+- [x] *(53 dead rule blocks from replaced designs deleted; fold-by-component rides A5.1)* **A4.2 M** Fold append-only patch layers into one section per component; delete ~27 dead selectors, dead media query, empty `App.css`.
 - [ ] **A4.3 M** One `.page` primitive + one `.progress-fill` replaces 10 page blocks / 8 bars.
 - [ ] **A4.4 M** Promote top repeated inline styles to utilities; keep inline only for dynamic values (469 inline styles today).
 - [ ] **A4.5 M** Palette discipline: collapse 8 yellows → one gold ramp; promos onto 2–3 sanctioned accents.
@@ -73,6 +73,11 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 - [ ] **A4.7 L** Imagery program (biggest visual lift): per-SKU packshots (client/backend supplies), localize to `public/img/`, `onError` fallback in `Img`. *Backend dependency noted by client: images come from backend.*
 
 ### A5 · Architecture refactor (sequence matters; no features mid-split)
+
+> **13 Jun status:** money math extracted to `money.js` (pure, unit-tested) as the
+> first A5 slice. The full file split (A5.1) is deliberately **deferred while a
+> parallel working session commits into App.jsx** — splitting now would break its
+> anchors mid-flight. Run the split in a coordinated window.
 
 - [ ] **A5.1 L** Split App.jsx along its section banners → `lib/ hooks/ components/ screens/ games/ orders/`. No logic changes.
 - [ ] **A5.2 M** Cart provider (`CartStateCtx` + stable dispatch); delete cart prop-drilling from ~30 signatures.
@@ -87,11 +92,11 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 
 - [x] **A6.1 S** Real README (pitch, port 5174, hash deep-link table incl. *no-hash = login gate*, demo limits).
 - [x] **A6.2 S** OG/meta tags (reuse manifest copy + 1200×630 image).
-- [ ] **A6.3 S** `vercel.json` → `npm ci`; `engines` field; security headers/CSP.
-- [ ] **A6.4 M** Tests + CI after lint green: vitest on cart/bulk/scheme math + render-smoke per hash; GitHub Actions.
+- [x] **A6.3 S** `vercel.json` → `npm ci`; `engines` field; security headers/CSP.
+- [x] *(vitest: 24 tests on money math + seed integrity; Actions: lint+test+build)* **A6.4 M** Tests + CI after lint green: vitest on cart/bulk/scheme math + render-smoke per hash; GitHub Actions.
 - [ ] **A6.5 M** Code-split after A5.1 (lazy wheel/quiz/account/orders/login).
-- [ ] **A6.6 S** Self-host Plus Jakarta Sans.
-- [ ] **A6.7 S** Geolocation behind explicit affordance (time-theme default).
+- [x] *(variable woff2, latin subset, preloaded, immutable cache header)* **A6.6 S** Self-host Plus Jakarta Sans.
+- [x] *(qc-geo opt-in flag; no permission prompt on first paint)* **A6.7 S** Geolocation behind explicit affordance (time-theme default).
 - [ ] **A6.8 S** PWA: `start_url` → home hash (skip gate), separate maskable icon, SW only if offline matters.
 - [ ] **A6.9 S** Repo hygiene: rm duplicate root PNGs, stray root `node_modules`, template leftovers; first-screen "Demo — no SMS"; confirm/undo Delete-list; GSTIN strict regex + "Valid format"; `jsconfig` checkJs.
 

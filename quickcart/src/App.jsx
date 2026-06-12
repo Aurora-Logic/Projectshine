@@ -18,6 +18,7 @@ import {
   SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
   BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES, REORDER, PAST_ORDERS, DASH, CREDIT, CAT_SCHEMES,
 } from './data.js'
+import { bulkTier, unitPriceFor, lineTotal } from './money.js'
 import './App.css'
 
 const img = (id, w = 480) =>
@@ -58,6 +59,8 @@ function useSkyTheme() {
 
   useEffect(() => {
     if (window.location.hash.startsWith('#theme-')) return
+    // explicit opt-in only (qc-geo) — never a permission prompt on first paint
+    if (localStorage.getItem('qc-geo') !== '1') return
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
@@ -159,20 +162,7 @@ const CartItemsCtx = createContext({})
 const BRAND_NAMES = { ebco: 'Ebco', zipco: 'Zipco', peka: 'Peka', worksmart: 'Worksmart by Ebco', livsmart: 'Livsmart by Ebco' }
 
 /* Parse "10+ @ ₹350/pc" into a usable tier: threshold, bulk price, % off */
-const bulkTier = (p) => {
-  const m = p.bulk?.match(/(\d+)\+\s*@\s*₹([\d,]+)/)
-  if (!m) return null
-  const bp = +m[2].replace(/,/g, '')
-  return { thr: +m[1], bp, pct: Math.max(1, Math.round((1 - bp / p.price) * 100)) }
-}
-
-/* ONE price story: once a line crosses its bulk threshold, the tier price IS
-   the price — on the qty sheet, the cart row, the bill and the invoice. */
-const unitPriceFor = (p, n) => {
-  const t = bulkTier(p)
-  return t && n >= t.thr ? t.bp : p.price
-}
-const lineTotal = (p, n) => unitPriceFor(p, n) * n
+// money math lives in money.js (pure, unit-tested)
 
 /* one coupon slot — written by wheel/quiz/streak, consumed at checkout */
 const saveCoupon = (c) => {
