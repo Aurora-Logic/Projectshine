@@ -12,7 +12,7 @@ import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
   FEED_POOL, CATEGORIES, BANNERS, COMBOS, CLEARANCE_TILES, QUIZ,
   LEADERS, SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
-  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES,
+  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES, REORDER, PAST_ORDERS,
 } from './data.js'
 import './App.css'
 
@@ -1984,12 +1984,12 @@ function CartBar({ cart }) {
   )
 }
 
-function NavBar({ onCategories, onUtilities, active = 'home', mini = false }) {
+function NavBar({ onCategories, onUtilities, onReorder, active = 'home', mini = false }) {
   const items = [
     { icon: HomeIcon, label: 'Home', key: 'home', go: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
     { icon: DashboardIcon, label: 'Categories', key: 'categories', go: onCategories },
     { icon: GearIcon, label: 'Utilities', key: 'utilities', go: onUtilities },
-    { icon: CounterClockwiseClockIcon, label: 'Reorder', key: 'reorder', go: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+    { icon: CounterClockwiseClockIcon, label: 'Reorder', key: 'reorder', go: onReorder },
     { icon: PersonIcon, label: 'Account', key: 'account' },
   ]
   return (
@@ -2070,6 +2070,154 @@ function QtySheet({ q, onClose, onConfirm }) {
           <span>₹{(n * p.price).toLocaleString('en-IN')}</span>
         </button>
       </div>
+    </div>
+  )
+}
+
+/* ---------------- Reorder page — regulars, one tap away ---------------- */
+
+function RoRow({ m, added, onAdd, onStep }) {
+  const qty = added[m.id] || 0
+  return (
+    <div className="ro-row">
+      <Img src={img(m.p.ph, 120)} alt="" />
+      <Box flexGrow="1" style={{ minWidth: 0 }}>
+        <Text size="1" weight="bold" as="div" className="clamp1">{m.p.name}</Text>
+        <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>
+          ₹{m.p.price.toLocaleString('en-IN')} · {m.every} · last {m.last}d ago
+        </Text>
+        <span className={`ro-chip ${m.due ? 'due' : ''}`}>{m.due ? `Due · usually ${m.usual} pcs` : `Usually ${m.usual} pcs`}</span>
+      </Box>
+      {qty === 0 ? (
+        <button className="ro-add" onClick={(e) => onAdd(m, e)}>
+          ADD {m.usual}
+        </button>
+      ) : (
+        <div className="ro-step">
+          <button onClick={() => onStep(m, -1)} aria-label="Less"><MinusIcon width={12} height={12} /></button>
+          <Text key={qty} className="numpop" size="1" weight="bold" style={{ width: 28, textAlign: 'center', color: '#fff' }}>{qty}</Text>
+          <button onClick={() => onStep(m, 1)} aria-label="More"><PlusIcon width={12} height={12} /></button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ReorderPage({ onClose, onChange, cart, lastOrder }) {
+  const ready = useNextFrame()
+  const meta = useMemo(
+    () => REORDER.map(m => ({ ...m, p: FEED_POOL.find(p => p.id === m.id) })).filter(x => x.p),
+    [],
+  )
+  const due = meta.filter(m => m.due)
+  const regular = meta.filter(m => !m.due)
+  const [added, setAdded] = useState({})
+  const addUsual = (m, e) => {
+    onChange(m.usual, m.p, { noReco: true })
+    setAdded(a => ({ ...a, [m.id]: (a[m.id] || 0) + m.usual }))
+    if (e) sparkle(e)
+  }
+  const step = (m, d) => {
+    onChange(d, m.p, { noReco: true })
+    setAdded(a => ({ ...a, [m.id]: Math.max(0, (a[m.id] || 0) + d) }))
+  }
+  const pendingDue = due.filter(m => !added[m.id])
+  const dueTotal = pendingDue.reduce((s, m) => s + m.usual * m.p.price, 0)
+  const addAllDue = (e) => {
+    pendingDue.forEach(m => addUsual(m))
+    if (e) sparkle(e)
+  }
+  const past = [
+    ...(lastOrder ? [{
+      id: lastOrder.id, date: 'Today',
+      items: (lastOrder.items || []).map(({ p, n }) => ({ p, n })),
+    }] : []),
+    ...PAST_ORDERS.map(o => ({
+      ...o,
+      items: o.items.map(([id, n]) => ({ p: FEED_POOL.find(p => p.id === id), n })).filter(x => x.p),
+    })),
+  ]
+  const repeat = (o, e) => {
+    o.items.forEach(({ p, n }) => onChange(n, p, { noReco: true }))
+    if (e) sparkle(e)
+  }
+  return (
+    <div className="reorderpage">
+      <div className="pdp-head">
+        <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Text size="2" weight="bold" as="div">Reorder</Text>
+          <Text size="1" color="gray" as="div">One tap adds your usual quantity</Text>
+        </Box>
+        <CounterClockwiseClockIcon width={18} height={18} color="var(--gray-9)" />
+      </div>
+      <div className="cp-body">
+        {ready && (
+          <>
+            <div className={`ro-banner ${pendingDue.length === 0 ? 'done' : ''}`}>
+              {pendingDue.length > 0 ? (
+                <>
+                  <Box style={{ minWidth: 0 }}>
+                    <Text size="2" weight="bold" as="div" style={{ color: '#fff' }}>
+                      {pendingDue.length} item{pendingDue.length === 1 ? '' : 's'} due for reorder
+                    </Text>
+                    <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.85)' }}>
+                      Your usual quantities · ₹{dueTotal.toLocaleString('en-IN')}
+                    </Text>
+                  </Box>
+                  <button className="ro-banner-cta" onClick={addAllDue}>Add all</button>
+                </>
+              ) : (
+                <Flex align="center" gap="2">
+                  <CheckIcon width={15} height={15} color="#fff" />
+                  <Text size="2" weight="bold" style={{ color: '#fff' }}>All due items are in your cart</Text>
+                </Flex>
+              )}
+            </div>
+
+            {due.length > 0 && (
+              <div className="cp-card">
+                <Text size="1" weight="bold" as="div" style={{ color: 'var(--amber-11)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                  DUE NOW
+                </Text>
+                {due.map(m => <RoRow key={m.id} m={m} added={added} onAdd={addUsual} onStep={step} />)}
+              </div>
+            )}
+
+            <div className="cp-card">
+              <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                YOUR REGULARS
+              </Text>
+              {regular.map(m => <RoRow key={m.id} m={m} added={added} onAdd={addUsual} onStep={step} />)}
+            </div>
+
+            <div className="cp-card">
+              <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                PAST ORDERS
+              </Text>
+              {past.map(o => (
+                <div className="ro-past" key={o.id}>
+                  <Flex>
+                    {o.items.slice(0, 3).map(({ p }) => (
+                      <Img key={`rp-${o.id}-${p.id}`} className="thumb" src={img(p.ph, 80)} alt="" />
+                    ))}
+                  </Flex>
+                  <Box flexGrow="1" style={{ minWidth: 0 }}>
+                    <Text size="1" weight="bold" as="div">{o.date} · {o.items.length} items</Text>
+                    <Text as="div" className="clamp1" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>
+                      ₹{o.items.reduce((s, { p, n }) => s + p.price * n, 0).toLocaleString('en-IN')} · PO {o.id}
+                    </Text>
+                  </Box>
+                  <Button size="1" variant="soft" color="green" radius="full" style={{ fontWeight: 800, flex: 'none' }} onClick={(e) => repeat(o, e)}>
+                    Repeat
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+      <div className="plp-cartwrap"><CartBar cart={cart} /></div>
     </div>
   )
 }
@@ -2844,6 +2992,7 @@ export default function App() {
   const [pdp, setPdp] = useState(() => (window.location.hash === '#pdp' ? FEED_POOL[0] : null))
   const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
   const [cartOpen, setCartOpen] = useState(window.location.hash === '#cart')
+  const [reorderOpen, setReorderOpen] = useState(window.location.hash === '#reorder')
   const [order, setOrder] = useState(() => {
     if (window.location.hash === '#order') {
       return {
@@ -2883,6 +3032,8 @@ export default function App() {
   qtyRef.current = qsheet
   const cartRef = useRef(cartOpen)
   cartRef.current = cartOpen
+  const reorderRef = useRef(reorderOpen)
+  reorderRef.current = reorderOpen
   const plpOpen = plp !== null
   const closePlp = () => {
     if (window.history.state?.qcPlp) window.history.back()
@@ -2891,7 +3042,7 @@ export default function App() {
   useEffect(() => {
     if (!plpOpen) return
     if (!window.history.state?.qcPlp) window.history.pushState({ qcPlp: true }, '')
-    const onPop = () => { if (!sheetRef.current && !pdpRef.current && !qtyRef.current && !cartRef.current) setPlp(null) }
+    const onPop = () => { if (!sheetRef.current && !pdpRef.current && !qtyRef.current && !cartRef.current && !reorderRef.current) setPlp(null) }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [plpOpen])
@@ -2932,6 +3083,19 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop)
   }, [qtyOpen])
 
+  const closeReorder = () => {
+    if (window.history.state?.qcReorder) window.history.back()
+    else setReorderOpen(false)
+  }
+  useEffect(() => {
+    if (!reorderOpen) return
+    if (!window.history.state?.qcReorder) window.history.pushState({ qcReorder: true }, '')
+    const onPop = () => {
+      if (!pdpRef.current && !qtyRef.current && !cartRef.current) setReorderOpen(false)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [reorderOpen])
   const closeCart = () => {
     if (window.history.state?.qcCart) window.history.back()
     else setCartOpen(false)
@@ -3217,6 +3381,10 @@ export default function App() {
 
         <SearchSheet sheet={sheet} onClose={closeSheet} onChange={changeCart} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
 
+        {reorderOpen && (
+          <ReorderPage onClose={closeReorder} onChange={changeCart} cart={cart} lastOrder={order} />
+        )}
+
         {pdp && <ProductPage key={pdp.id} p={pdp} onClose={closePdp} onChange={changeCart} cart={cart} />}
 
         {qsheet && <QtySheet q={qsheet} onClose={closeQty} onConfirm={confirmQty} />}
@@ -3261,7 +3429,8 @@ export default function App() {
             <NavBar
               onCategories={() => setPlp('All')}
               onUtilities={() => { /* Utilities page comes later */ }}
-              active={plp ? 'categories' : 'home'}
+              onReorder={() => setReorderOpen(true)}
+              active={reorderOpen ? 'reorder' : plp ? 'categories' : 'home'}
               mini={navMini}
             />
             <button

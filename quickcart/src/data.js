@@ -356,3 +356,20 @@ export const ADDRESSES = [
   { id: 'a1', label: 'Shop', addr: '304, Maple Heights, 27th Main, HSR Layout, Bengaluru 560102' },
   { id: 'a2', label: 'Godown', addr: 'Plot 18, Bommanahalli Industrial Area, Hosur Road, Bengaluru 560068' },
 ]
+
+/* Reorder intelligence: usual qty + buying cadence per regular SKU */
+export const REORDER = [
+  { id: 'ba1', usual: 20, every: 'every 2 wks', last: 16, due: true },
+  { id: 'ba2', usual: 30, every: 'every 3 wks', last: 24, due: true },
+  { id: 'ba3', usual: 50, every: 'every month', last: 34, due: true },
+  { id: 'dl1', usual: 24, every: 'every month', last: 37, due: true },
+  { id: 'ba4', usual: 10, every: 'every 2 wks', last: 9, due: false },
+  { id: 'ba5', usual: 12, every: 'every month', last: 12, due: false },
+  { id: 'ne1', usual: 5, every: 'every 6 wks', last: 22, due: false },
+  { id: 'ws1', usual: 8, every: 'every 2 mo', last: 25, due: false },
+]
+
+export const PAST_ORDERS = [
+  { id: 'QC-471203', date: 'Mon, 2 Jun', items: [['ba1', 20], ['ba3', 50], ['dl1', 24]] },
+  { id: 'QC-458819', date: 'Sat, 17 May', items: [['ba2', 30], ['ba1', 20], ['ws1', 8], ['ba5', 12]] },
+]
