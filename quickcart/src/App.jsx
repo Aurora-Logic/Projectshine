@@ -2991,6 +2991,8 @@ function AcctDash({ onReorder }) {
 
 const ordPgRef = { current: false }
 
+const POD_SHOTS = ['1586528116311-ad8dd3c8310d', '1566576721346-d4a3b4eaeb55']
+
 function OrderDetailPage({ order, onClose, onChange }) {
   const pieces = order.items.reduce((s, { n }) => s + n, 0)
   const bill = order.bill || null
@@ -3068,6 +3070,28 @@ function OrderDetailPage({ order, onClose, onChange }) {
             })}
           </div>
         </div>
+        {(!live || si === ORDER_STAGES.length - 1) && (
+          <div className="cp-card">
+            <Flex align="center" justify="between">
+              <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                PROOF OF DELIVERY
+              </Text>
+              <span className="st-chip ok">OTP VERIFIED</span>
+            </Flex>
+            <div className="pod-shots">
+              {POD_SHOTS.map(s => <Img key={s} src={img(s, 360)} alt="Delivery photo" />)}
+            </div>
+            <Flex align="center" gap="2" mt="2">
+              <div className="vr-av">S</div>
+              <Box flexGrow="1" style={{ minWidth: 0 }}>
+                <Text size="1" weight="bold" as="div">Received by Suresh · store staff</Text>
+                <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>
+                  Geo-tagged at {order.addrLabel || 'Shop'} · {timeFor(3)}
+                </Text>
+              </Box>
+            </Flex>
+          </div>
+        )}
         <div className="cp-card">
           <div className="ods-stats" style={{ marginTop: 0 }}>
             <div><Text size="2" weight="bold" as="div">{pieces}</Text><span>pieces</span></div>
@@ -4247,15 +4271,16 @@ const ACCT_TITLES = {
 }
 
 /* Estimate PDF branding: company name, logo upload, text colours */
-const EST_SWATCHES = ['#1A1C1F', '#696E74', '#14633F', '#30A46C', '#1A43AE', '#C9A44A', '#9A3412', '#7C2D92']
-function ColorRow({ label, value, onChange }) {
+const EST_SWATCHES = ['#1A1C1F', '#696E74', '#1A2342', '#14633F', '#30A46C', '#1A43AE', '#C9A44A', '#9A3412']
+const EST_PAPERS = ['#F8F5ED', '#FFFFFF', '#F2F2F0', '#F1F5EF', '#F8F1ED', '#EFF3F6']
+function ColorRow({ label, value, onChange, swatches = EST_SWATCHES }) {
   return (
     <div>
       <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
         {label}
       </Text>
       <div className="clr-row">
-        {EST_SWATCHES.map(c => (
+        {swatches.map(c => (
           <button
             key={c} type="button"
             className={`clr-dot ${value.toUpperCase() === c ? 'on' : ''}`}
@@ -5066,6 +5091,10 @@ const EST_BRAND_DEFAULT = {
   logo: null, // dataURL from upload; null = bundled /brand-logo.png
   footer: '#696E74',
   side: '#696E74',
+  wordmark: '#1A1C1F',
+  paper: '#F8F5ED', // hairlines are derived from this so any paper tone stays coherent
+  photos: true,
+  validDays: 7,
 }
 const hexToRgb = (hex) => {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || '')
@@ -5077,13 +5106,14 @@ const hexToRgb = (hex) => {
 async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }) {
   // product thumbnails: square JPEGs fetched per line item; a failed fetch
   // degrades to a neutral placeholder square rather than failing the export
+  const showImg = brand.photos !== false
   const thumb = (ph) => fetchB64(`https://images.unsplash.com/photo-${ph}?fit=crop&w=160&h=160&q=70&fm=jpg`)
     .then(b => 'data:image/jpeg;base64,' + b).catch(() => null)
   const [{ jsPDF }, { default: autoTable }, fontN, fontB, mark, thumbs, ...brands] = await Promise.all([
     import('jspdf'), import('jspdf-autotable'),
     fetchB64('/fonts/PJS-Regular.ttf'), fetchB64('/fonts/PJS-Bold.ttf'),
     imgData(brand.logo || '/brand-logo.png'),
-    Promise.all(items.map(({ p }) => thumb(p.ph))),
+    showImg ? Promise.all(items.map(({ p }) => thumb(p.ph))) : Promise.resolve([]),
     ...Object.values(BRAND_LOGOS).map(imgData),
   ])
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true })
@@ -5092,10 +5122,12 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   doc.addFileToVFS('PJS-Bold.ttf', fontB)
   doc.addFont('PJS-Bold.ttf', 'PJS', 'bold')
 
-  const W = 210, H = 297, M = 16
-  // monochrome ink on warm off-white "OG paper"; the only colour comes from logos
+  const W = 210, H = 297, M = 14 // 14mm sides, ~6mm top
+  // monochrome ink on dealer-chosen paper; hairlines derive from the paper
+  // tone so any background stays coherent
   const INK = [26, 28, 31], GRAY = [105, 110, 116]
-  const PAPER = [248, 245, 237], HAIR = [208, 203, 192]
+  const PAPER = hexToRgb(brand.paper || EST_BRAND_DEFAULT.paper)
+  const HAIR = PAPER.map(c => Math.max(0, c - 42))
   const inr = (n) => '₹' + n.toLocaleString('en-IN')
   const no = `QE-${String(Date.now()).slice(-6)}`
   const d = new Date()
@@ -5104,33 +5136,33 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   paper()
 
   // ---- masthead: company wordmark left, company logo right (tight)
-  const FOOT = hexToRgb(brand.footer), SIDE = hexToRgb(brand.side)
-  doc.setFont('PJS', 'bold').setFontSize(brand.name.length > 14 ? 20 : 25).setTextColor(...INK).text(brand.name, M, 23)
+  const FOOT = hexToRgb(brand.footer), SIDE = hexToRgb(brand.side), WORD = hexToRgb(brand.wordmark || '#1A1C1F')
+  doc.setFont('PJS', 'bold').setFontSize(brand.name.length > 14 ? 20 : 25).setTextColor(...WORD).text(brand.name, M, 13.5)
   const mw = Math.min(40, (mark.w / mark.h) * 16)
-  doc.addImage(mark.data, 'PNG', W - M - mw, 8, mw, 16)
+  doc.addImage(mark.data, 'PNG', W - M - mw, 6, mw, 16)
 
   // ---- brand strip on page 1 (keeps every page's bottom free for line items)
   doc.setFont('PJS', 'bold').setFontSize(6.5).setTextColor(...GRAY).setCharSpace(0.5)
-  doc.text('AUTHORIZED DEALER FOR', M, 32)
+  doc.text('AUTHORIZED DEALER FOR', M, 25)
   doc.setCharSpace(0)
   const lh = 9
   let bx = M
   for (const b of brands) {
     const dw = (b.w / b.h) * lh
-    doc.addImage(b.data, 'PNG', bx, 34.5, dw, lh)
+    doc.addImage(b.data, 'PNG', bx, 27.5, dw, lh)
     bx += dw + 10
   }
 
   // ---- information columns
   doc.setFont('PJS', 'bold').setFontSize(9).setTextColor(...INK)
-  doc.text('Customer Information', M, 52).text('Dealer Information', 112, 52)
+  doc.text('Customer Information', M, 45).text('Dealer Information', 112, 45)
   doc.setFont('PJS', 'normal').setFontSize(8.5).setTextColor(...GRAY)
   const custLines = [cust.name, cust.phone, ...(cust.site ? doc.splitTextToSize(cust.site, 80) : [])].filter(Boolean)
-  doc.text(custLines, M, 58)
-  doc.text([`Virag Bora — ${brand.name}`, '304 Maple Heights, HSR Layout', 'Bengaluru 560102 · +91 98450 00000'], 112, 58)
+  doc.text(custLines, M, 51)
+  doc.text([`Virag Bora — ${brand.name}`, '304 Maple Heights, HSR Layout', 'Bengaluru 560102 · +91 98450 00000'], 112, 51)
 
   // ---- title row between hairlines: Estimate big, number/date body-size
-  const tTop = 58 + Math.max(custLines.length, 3) * 4.3 + 5
+  const tTop = 51 + Math.max(custLines.length, 3) * 4.3 + 5
   doc.setDrawColor(...HAIR).setLineWidth(0.3).line(M, tTop, W - M, tTop)
   doc.setFont('PJS', 'bold').setFontSize(17).setTextColor(...INK).text('Estimate', M, tTop + 9.5)
   doc.setFont('PJS', 'normal').setFontSize(10).setTextColor(...GRAY)
@@ -5138,30 +5170,45 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   doc.text(today, W - M, tTop + 9.5, { align: 'right' })
   doc.line(M, tTop + 14, W - M, tTop + 14)
 
-  // ---- items table: hairline rows, product thumbnails
+  // ---- items table: hairline rows; photo column only when enabled
+  const priceCols = showImg ? [4, 5] : [3, 4]
   autoTable(doc, {
     startY: tTop + 19,
-    margin: { left: M, right: M, bottom: 24 },
-    head: [['Qty', '', 'Item no', 'Description', 'Unit price', 'Amount']],
-    body: items.map(({ p, n }) => [n, '', p.id.toUpperCase(), `${p.name}\n${p.qty || ''}`, inr(p.price), inr(p.price * n)]),
+    margin: { left: M, right: M, top: 12, bottom: 24 },
+    head: [showImg
+      ? ['Qty', '', 'Item no', 'Description', 'Unit price', 'Amount']
+      : ['Qty', 'Item no', 'Description', 'Unit price', 'Amount']],
+    body: items.map(({ p, n }) => {
+      const cells = [n, p.id.toUpperCase(), `${p.name}\n${p.qty || ''}`, inr(p.price), inr(p.price * n)]
+      if (showImg) cells.splice(1, 0, '')
+      return cells
+    }),
     theme: 'plain',
     styles: { font: 'PJS', fontSize: 8.5, textColor: INK, cellPadding: { top: 2.2, bottom: 2.2, left: 0, right: 2 }, valign: 'middle' },
     headStyles: { font: 'PJS', fontStyle: 'bold', fontSize: 8.5, textColor: INK, lineWidth: { bottom: 0.35 }, lineColor: INK },
     bodyStyles: { lineWidth: { bottom: 0.18 }, lineColor: HAIR },
-    columnStyles: {
-      0: { cellWidth: 11 },
-      1: { cellWidth: 13, minCellHeight: 12.5 },
-      2: { cellWidth: 20, textColor: GRAY },
-      3: { cellWidth: 'auto' },
-      4: { cellWidth: 25, halign: 'right', textColor: GRAY },
-      5: { cellWidth: 27, halign: 'right' },
-    },
+    columnStyles: showImg
+      ? {
+        0: { cellWidth: 11 },
+        1: { cellWidth: 13, minCellHeight: 12.5 },
+        2: { cellWidth: 20, textColor: GRAY },
+        3: { cellWidth: 'auto' },
+        4: { cellWidth: 25, halign: 'right', textColor: GRAY },
+        5: { cellWidth: 27, halign: 'right' },
+      }
+      : {
+        0: { cellWidth: 11 },
+        1: { cellWidth: 20, textColor: GRAY },
+        2: { cellWidth: 'auto' },
+        3: { cellWidth: 25, halign: 'right', textColor: GRAY },
+        4: { cellWidth: 27, halign: 'right' },
+      },
     willDrawPage: (data) => { if (data.pageNumber > 1) paper() },
     didParseCell: (data) => {
-      if (data.section === 'head' && data.column.index >= 4) data.cell.styles.halign = 'right'
+      if (data.section === 'head' && priceCols.includes(data.column.index)) data.cell.styles.halign = 'right'
     },
     didDrawCell: (data) => {
-      if (data.section !== 'body' || data.column.index !== 1) return
+      if (!showImg || data.section !== 'body' || data.column.index !== 1) return
       const t = thumbs[data.row.index]
       const s = 9, ix = data.cell.x, iy = data.cell.y + (data.cell.height - s) / 2
       if (t) doc.addImage(t, 'JPEG', ix, iy, s, s)
@@ -5192,7 +5239,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   doc.text(inr(bill.toPay), W - M, y, { align: 'right' })
   doc.setDrawColor(...INK).setLineWidth(0.35).line(tx, y + 3, W - M, y + 3)
   doc.setFont('PJS', 'normal').setFontSize(8).setTextColor(...INK)
-    .text(doc.splitTextToSize('Please confirm this estimate within 7 days — GST as applicable.', W - M - tx), tx, y + 9.5)
+    .text(doc.splitTextToSize(`Please confirm this estimate within ${brand.validDays || 7} days — GST as applicable.`, W - M - tx), tx, y + 9.5)
 
   // ---- footer on every page: hairline + contact columns + side text
   const pages = doc.getNumberOfPages()
