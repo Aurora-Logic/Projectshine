@@ -344,3 +344,15 @@ export const TIERS = [
   { name: 'Gold', min: 200000, icon: '🥇', perk: '+2% margin · priority dispatch' },
   { name: 'Platinum', min: 400000, icon: '💎', perk: '+3% margin · dedicated support' },
 ]
+
+/* B2B order-value scheme slabs: % off the entire invoice */
+export const SCHEMES = [
+  { min: 10000, off: 1 },
+  { min: 25000, off: 2 },
+  { min: 50000, off: 3 },
+]
+
+export const ADDRESSES = [
+  { id: 'a1', label: 'Shop', addr: '304, Maple Heights, 27th Main, HSR Layout, Bengaluru 560102' },
+  { id: 'a2', label: 'Godown', addr: 'Plot 18, Bommanahalli Industrial Area, Hosur Road, Bengaluru 560068' },
+]

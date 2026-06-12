@@ -12,7 +12,7 @@ import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
   FEED_POOL, CATEGORIES, BANNERS, COMBOS, CLEARANCE_TILES, QUIZ,
   LEADERS, SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
-  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS,
+  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES,
 } from './data.js'
 import './App.css'
 
@@ -2057,82 +2057,332 @@ function QtySheet({ q, onClose, onConfirm }) {
   )
 }
 
-/* ---------------- Cart sheet — line items, bill, bulk savings ---------------- */
+/* ---------------- Cart page — items, schemes, address, instructions ---------------- */
 
-function CartSheet({ cart, onClose, onChange }) {
+function loadAddrs() {
+  try {
+    const s = JSON.parse(localStorage.getItem('qc-addr') || 'null')
+    if (Array.isArray(s) && s.length) return s
+  } catch { /* fall through to defaults */ }
+  return ADDRESSES
+}
+
+function AddressSheet({ addrs, sel, onPick, onAdd, onClose }) {
+  const [adding, setAdding] = useState(false)
+  const [label, setLabel] = useState('')
+  const [addr, setAddr] = useState('')
+  return (
+    <div className="qsheet-overlay" onClick={onClose}>
+      <div className="qsheet" onClick={(e) => e.stopPropagation()}>
+        <div className="qsheet-grab" />
+        <Heading size="4" style={{ letterSpacing: '-0.3px' }}>Delivery address</Heading>
+        <div className="addr-list">
+          {addrs.map(a => (
+            <button key={a.id} className="addr-row" onClick={() => { onPick(a.id); onClose() }}>
+              <span className={`radio ${a.id === sel ? 'on' : ''}`} style={{ marginTop: 2 }} />
+              <span style={{ minWidth: 0 }}>
+                <Text size="2" weight="bold" as="div">{a.label}</Text>
+                <Text size="1" color="gray" as="div" style={{ lineHeight: 1.35 }}>{a.addr}</Text>
+              </span>
+            </button>
+          ))}
+        </div>
+        {adding ? (
+          <div className="addr-form">
+            <input
+              className="cp-input" placeholder="Label — e.g. Site 2, New godown"
+              value={label} onChange={(e) => setLabel(e.target.value)}
+            />
+            <textarea
+              className="cp-note" rows={2} placeholder="Full address"
+              value={addr} onChange={(e) => setAddr(e.target.value)}
+            />
+            <Button
+              size="2" color="teal" mt="2" style={{ fontWeight: 800, width: '100%' }}
+              disabled={!label.trim() || !addr.trim()}
+              onClick={() => { onAdd({ id: `a${Date.now()}`, label: label.trim(), addr: addr.trim() }); onClose() }}
+            >
+              Save address
+            </Button>
+          </div>
+        ) : (
+          <button className="addr-add" onClick={() => setAdding(true)}>
+            <PlusIcon width={14} height={14} /> Add new address
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CartPage({ cart, onClose, onChange, onPlaced }) {
+  const openQty = useContext(QtyCtx)
   const items = Object.values(cart.items)
-  const fee = cart.total >= FREE_DELIVERY_AT ? 0 : 49
-  const savings = items.reduce((s, { p, n }) => {
+  const [addrs, setAddrs] = useState(loadAddrs)
+  const [sel, setSel] = useState(() => localStorage.getItem('qc-addr-sel') || loadAddrs()[0].id)
+  const [addrSheet, setAddrSheet] = useState(false)
+  const [note, setNote] = useState(() => localStorage.getItem('qc-note') || '')
+  const [placed, setPlaced] = useState(null)
+  const [express, setExpress] = useState(false)
+  const pickAddr = (id) => { setSel(id); localStorage.setItem('qc-addr-sel', id) }
+  const addAddr = (a) => {
+    const next = [...addrs, a]
+    setAddrs(next)
+    localStorage.setItem('qc-addr', JSON.stringify(next))
+    pickAddr(a.id)
+  }
+  const saveNote = (v) => { setNote(v); localStorage.setItem('qc-note', v) }
+
+  const baseFee = cart.total >= FREE_DELIVERY_AT || cart.total === 0 ? 0 : 49
+  const fee = baseFee + (express ? 200 : 0)
+  const bulkSave = items.reduce((s, { p, n }) => {
     const t = bulkTier(p)
     return t && n >= t.thr ? s + (p.price - t.bp) * n : s
   }, 0)
+  const mrpSave = items.reduce((s, { p, n }) => s + ((p.mrp || p.price) - p.price) * n, 0)
+  const slab = [...SCHEMES].reverse().find(s => cart.total >= s.min)
+  const nextSlab = SCHEMES.find(s => cart.total < s.min)
+  const schemeOff = slab ? Math.round((cart.total * slab.off) / 100) : 0
+  const toPay = Math.max(0, cart.total - schemeOff - bulkSave + fee)
+  const saving = mrpSave + bulkSave + schemeOff
+  const addr = addrs.find(a => a.id === sel) || addrs[0]
+  const deals = applyF(DEALS, { ...DEFAULT_F, sort: 3 }, 'ALL').filter(d => !cart.items[d.id]).slice(0, 6)
+  const tPct = Math.min(100, Math.round(((TARGETS.monthly.done + cart.total) / TARGETS.monthly.target) * 100))
+
   return (
-    <div className="qsheet-overlay" onClick={onClose}>
-      <div className="qsheet cart-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="qsheet-grab" />
-        <Flex align="center" justify="between">
-          <Heading size="4" style={{ letterSpacing: '-0.3px' }}>Your cart</Heading>
-          <Text size="1" weight="bold" color="gray">{cart.count} item{cart.count === 1 ? '' : 's'}</Text>
-        </Flex>
+    <div className="cartpage">
+      <div className="pdp-head">
+        <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
+        <Text size="2" weight="bold" style={{ flex: 1 }}>Your cart</Text>
+        <Text size="1" weight="bold" color="gray">{cart.count} item{cart.count === 1 ? '' : 's'}</Text>
+      </div>
+      <div className="cp-body">
         {items.length === 0 ? (
-          <Box py="6" style={{ textAlign: 'center' }}>
-            <Text size="2" color="gray">Your cart is empty — add products to get rolling</Text>
+          <Box p="6" style={{ textAlign: 'center' }}>
+            <Text size="2" color="gray" as="div">Your cart is empty — add products to get rolling</Text>
+            <Button mt="3" size="2" color="teal" radius="full" style={{ fontWeight: 800 }} onClick={onClose}>
+              Browse products
+            </Button>
           </Box>
         ) : (
           <>
-            <div className="cs-list">
+            {saving > 0 && (
+              <div className="cp-save">🎉 You're saving ₹{saving.toLocaleString('en-IN')} on this order</div>
+            )}
+
+            <div className="cp-card">
               {items.map(({ p, n }) => {
                 const t = bulkTier(p)
                 const bulkOn = t && n >= t.thr
                 return (
-                  <div className="cs-row" key={p.id}>
-                    <Img src={img(p.ph, 120)} alt="" />
-                    <Box flexGrow="1" style={{ minWidth: 0 }}>
-                      <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{p.name}</Text>
-                      <Text as="div" style={{ fontSize: 10.5, color: bulkOn ? 'var(--teal-11)' : 'var(--gray-10)', fontWeight: bulkOn ? 700 : 500 }}>
-                        ₹{p.price.toLocaleString('en-IN')}{bulkOn ? ` · ${t.pct}% bulk off on invoice` : ''}
-                      </Text>
-                    </Box>
-                    <div className="cs-step">
-                      <button onClick={() => onChange(-1, p)} aria-label="Less"><MinusIcon width={12} height={12} /></button>
-                      <Text key={n} className="numpop" size="1" weight="bold" style={{ width: 26, textAlign: 'center', color: '#fff' }}>{n}</Text>
-                      <button onClick={() => onChange(1, p, { noReco: true })} aria-label="More"><PlusIcon width={12} height={12} /></button>
+                  <div key={p.id}>
+                    <div className="cs-row">
+                      <Img src={img(p.ph, 120)} alt="" />
+                      <Box flexGrow="1" style={{ minWidth: 0 }}>
+                        <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{p.name}</Text>
+                        <Text as="div" style={{ fontSize: 10.5, color: bulkOn ? 'var(--teal-11)' : 'var(--gray-10)', fontWeight: bulkOn ? 700 : 500 }}>
+                          ₹{p.price.toLocaleString('en-IN')}{bulkOn ? ` · ${t.pct}% bulk off applied` : ''}
+                        </Text>
+                      </Box>
+                      <div className="cs-step">
+                        <button onClick={() => onChange(-1, p)} aria-label="Less"><MinusIcon width={12} height={12} /></button>
+                        <Text key={n} className="numpop" size="1" weight="bold" style={{ width: 26, textAlign: 'center', color: '#fff' }}>{n}</Text>
+                        <button onClick={() => onChange(1, p, { noReco: true })} aria-label="More"><PlusIcon width={12} height={12} /></button>
+                      </div>
+                      <Text size="1" weight="bold" style={{ width: 60, textAlign: 'right', flex: 'none' }}>₹{(n * p.price).toLocaleString('en-IN')}</Text>
                     </div>
-                    <Text size="1" weight="bold" style={{ width: 60, textAlign: 'right', flex: 'none' }}>₹{(n * p.price).toLocaleString('en-IN')}</Text>
+                    {t && !bulkOn && (
+                      <button className="cs-nudge" onClick={() => onChange(t.thr - n, p, { noReco: true })}>
+                        Add {t.thr - n} more → {t.pct}% off this item
+                      </button>
+                    )}
                   </div>
                 )
               })}
             </div>
-            <div className="cs-bill">
-              <Flex justify="between">
-                <Text size="1" color="gray">Item total</Text>
-                <Text size="1" weight="bold">₹{cart.total.toLocaleString('en-IN')}</Text>
-              </Flex>
-              <Flex justify="between" mt="1">
-                <Text size="1" color="gray">Delivery</Text>
-                <Text size="1" weight="bold" style={fee === 0 ? { color: 'var(--teal-10)' } : undefined}>
-                  {fee === 0 ? 'FREE' : `₹${fee}`}
-                </Text>
-              </Flex>
-              {fee > 0 && (
-                <Text size="1" as="div" mt="1" style={{ color: 'var(--amber-11)', fontWeight: 700 }}>
-                  Add ₹{(FREE_DELIVERY_AT - cart.total).toLocaleString('en-IN')} more for FREE delivery
+
+            {deals.length > 0 && (
+              <div className="cp-card">
+                <Flex align="center" justify="between">
+                  <Text size="2" weight="bold">⚡ Flash deals before you checkout</Text>
+                  <DealTimer />
+                </Flex>
+                <div className="cp-deals">
+                  {deals.map(d => (
+                    <div key={`cpd-${d.id}`} className="cp-deal">
+                      <div style={{ position: 'relative' }}>
+                        <Img src={img(d.ph, 160)} alt="" />
+                        {d.mrp && <span className="flash-off" style={{ top: 4, left: 4 }}>-{Math.round(((d.mrp - d.price) / d.mrp) * 100)}%</span>}
+                      </div>
+                      <Text as="div" weight="bold" className="clamp2" style={{ fontSize: 10.5, lineHeight: 1.25, height: 27, marginTop: 4 }}>{d.name}</Text>
+                      <Flex align="center" justify="between" mt="1">
+                        <Text size="1" weight="bold">₹{d.price.toLocaleString('en-IN')}</Text>
+                        <Button
+                          size="1" color="teal" radius="full" style={{ fontWeight: 800, height: 22, padding: '0 10px' }}
+                          onClick={() => openQty && openQty(d, null, { noReco: true })}
+                        >
+                          ADD
+                        </Button>
+                      </Flex>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="cp-card cp-scheme">
+              <Text size="1" weight="bold" as="div" style={{ color: 'var(--teal-11)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                VOLUME SCHEME
+              </Text>
+              {nextSlab ? (
+                <>
+                  <Text size="2" weight="bold" as="div" mt="1">
+                    Add ₹{(nextSlab.min - cart.total).toLocaleString('en-IN')} more → {nextSlab.off}% off the entire invoice
+                  </Text>
+                  <div className="qs-mbar" style={{ marginTop: 8 }}>
+                    <div style={{ width: `${Math.min(100, (cart.total / nextSlab.min) * 100)}%` }} />
+                  </div>
+                  {slab && (
+                    <Text size="1" as="div" mt="1" style={{ color: 'var(--teal-11)', fontWeight: 700 }}>
+                      {slab.off}% scheme active — saving ₹{schemeOff.toLocaleString('en-IN')}
+                    </Text>
+                  )}
+                </>
+              ) : (
+                <Text size="2" weight="bold" as="div" mt="1" style={{ color: 'var(--teal-11)' }}>
+                  Top slab unlocked 🎉 {slab.off}% off the entire invoice — ₹{schemeOff.toLocaleString('en-IN')} saved
                 </Text>
               )}
-              {savings > 0 && (
+              <Text size="1" color="gray" as="div" mt="1">
+                This order takes your monthly target to {tPct}%
+              </Text>
+            </div>
+
+            <div className="cp-card">
+              <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                DELIVERY SPEED
+              </Text>
+              <button className="dlv-row" onClick={() => setExpress(false)}>
+                <span className={`radio ${!express ? 'on' : ''}`} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <Text size="2" weight="bold" as="div">Standard · today by 6 PM</Text>
+                  <Text size="1" color="gray" as="div">FREE above ₹{FREE_DELIVERY_AT}</Text>
+                </span>
+                <Text size="1" weight="bold" style={baseFee === 0 ? { color: 'var(--teal-10)' } : undefined}>
+                  {baseFee === 0 ? 'FREE' : `₹${baseFee}`}
+                </Text>
+              </button>
+              <button className="dlv-row" onClick={() => setExpress(true)}>
+                <span className={`radio ${express ? 'on' : ''}`} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <Text size="2" weight="bold" as="div">⚡ Express · at your shop in 1 hour</Text>
+                  <Text size="1" color="gray" as="div">Rush dispatch from the nearest depot</Text>
+                </span>
+                <Text size="1" weight="bold">+₹200</Text>
+              </button>
+            </div>
+
+            <div className="cp-card">
+              <Flex align="center" justify="between" gap="3">
+                <Box style={{ minWidth: 0 }}>
+                  <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                    DELIVER TO · {addr.label.toUpperCase()}
+                  </Text>
+                  <Text size="1" as="div" mt="1" style={{ lineHeight: 1.4 }}>{addr.addr}</Text>
+                </Box>
+                <Button
+                  size="1" variant="soft" color="teal" radius="full" style={{ fontWeight: 800, flex: 'none' }}
+                  onClick={() => setAddrSheet(true)}
+                >
+                  Change
+                </Button>
+              </Flex>
+            </div>
+
+            <div className="cp-card">
+              <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                SPECIAL INSTRUCTIONS
+              </Text>
+              <textarea
+                className="cp-note" rows={2}
+                placeholder="e.g. Call before dispatch · unload at godown gate · bill to GSTIN"
+                value={note} onChange={(e) => saveNote(e.target.value)}
+              />
+            </div>
+
+            <div className="cp-card">
+              <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                BILL DETAILS
+              </Text>
+              <Flex justify="between" mt="2"><Text size="1" color="gray">Item total</Text><Text size="1" weight="bold">₹{cart.total.toLocaleString('en-IN')}</Text></Flex>
+              {bulkSave > 0 && (
                 <Flex justify="between" mt="1">
-                  <Text size="1" weight="bold" style={{ color: 'var(--teal-11)' }}>Bulk savings on invoice</Text>
-                  <Text size="1" weight="bold" style={{ color: 'var(--teal-11)' }}>−₹{savings.toLocaleString('en-IN')}</Text>
+                  <Text size="1" style={{ color: 'var(--teal-11)' }}>Bulk price savings</Text>
+                  <Text size="1" weight="bold" style={{ color: 'var(--teal-11)' }}>−₹{bulkSave.toLocaleString('en-IN')}</Text>
                 </Flex>
               )}
+              {schemeOff > 0 && (
+                <Flex justify="between" mt="1">
+                  <Text size="1" style={{ color: 'var(--teal-11)' }}>Volume scheme ({slab.off}%)</Text>
+                  <Text size="1" weight="bold" style={{ color: 'var(--teal-11)' }}>−₹{schemeOff.toLocaleString('en-IN')}</Text>
+                </Flex>
+              )}
+              <Flex justify="between" mt="1">
+                <Text size="1" color="gray">Delivery</Text>
+                <Text size="1" weight="bold" style={baseFee === 0 ? { color: 'var(--teal-10)' } : undefined}>{baseFee === 0 ? 'FREE' : `₹${baseFee}`}</Text>
+              </Flex>
+              {express && (
+                <Flex justify="between" mt="1">
+                  <Text size="1" color="gray">Express 1-hour delivery</Text>
+                  <Text size="1" weight="bold">+₹200</Text>
+                </Flex>
+              )}
+              {baseFee > 0 && (
+                <Text size="1" as="div" mt="1" style={{ color: 'var(--amber-11)', fontWeight: 700 }}>
+                  Add ₹{(FREE_DELIVERY_AT - cart.total).toLocaleString('en-IN')} more for FREE standard delivery
+                </Text>
+              )}
+              <div className="cp-divider" />
+              <Flex justify="between"><Text size="2" weight="bold">To pay</Text><Text size="2" weight="bold">₹{toPay.toLocaleString('en-IN')}</Text></Flex>
+              {mrpSave > 0 && (
+                <Text size="1" as="div" mt="1" color="gray">Plus ₹{mrpSave.toLocaleString('en-IN')} below MRP on these items</Text>
+              )}
             </div>
-            <button className="qs-cta">
-              <span>Proceed to checkout</span>
-              <span>₹{(cart.total + fee).toLocaleString('en-IN')}</span>
-            </button>
           </>
         )}
       </div>
+      {items.length > 0 && (
+        <div className="pdp-cta">
+          <Box style={{ flex: 'none' }}>
+            <Text size="3" weight="bold" as="div">₹{toPay.toLocaleString('en-IN')}</Text>
+            <Text size="1" color="gray" as="div">
+              {addr.label} · {express ? 'Express · 1 hr' : baseFee === 0 ? 'FREE delivery' : `+₹${baseFee} delivery`}
+            </Text>
+          </Box>
+          <button
+            className="qs-cta" style={{ marginTop: 0, flex: 1, justifyContent: 'center' }}
+            onClick={(e) => { sparkle(e); setPlaced({ id: `QC-${String(Date.now()).slice(-6)}`, amt: toPay }) }}
+          >
+            Place order
+          </button>
+        </div>
+      )}
+      {addrSheet && (
+        <AddressSheet addrs={addrs} sel={sel} onPick={pickAddr} onAdd={addAddr} onClose={() => setAddrSheet(false)} />
+      )}
+      {placed && (
+        <div className="order-done">
+          <div className="od-card">
+            <div className="od-tick">✓</div>
+            <Heading size="5" mt="3" style={{ letterSpacing: '-0.3px' }}>Order placed!</Heading>
+            <Text size="2" color="gray" as="div" mt="1">PO {placed.id} · ₹{placed.amt.toLocaleString('en-IN')}</Text>
+            <Text size="1" color="gray" as="div" mt="1">Invoice & dispatch details on WhatsApp + email</Text>
+            <Button mt="4" size="3" color="teal" radius="full" style={{ fontWeight: 800, width: '100%' }} onClick={onPlaced}>
+              Done
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -2821,7 +3071,12 @@ export default function App() {
 
         {qsheet && <QtySheet q={qsheet} onClose={closeQty} onConfirm={confirmQty} />}
 
-        {cartOpen && <CartSheet cart={cart} onClose={closeCart} onChange={changeCart} />}
+        {cartOpen && (
+          <CartPage
+            cart={cart} onClose={closeCart} onChange={changeCart}
+            onPlaced={() => { setCart({ count: 0, total: 0, photos: [], items: {} }); closeCart() }}
+          />
+        )}
 
         <div className="footer">
           {reco && (
