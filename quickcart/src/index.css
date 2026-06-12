@@ -1815,14 +1815,30 @@ body {
   text-align: center;
   text-shadow: 0 1px 3px rgba(0, 0, 0, .45);
 }
-.fest-scallop {
+.fest-edge {
   height: 14px;
   margin: 16px -12px 0;
   border-top: 1px solid var(--hdr-d, #142F27);
-  background-image: radial-gradient(circle at 12px 0, var(--hdr-d, #142F27) 12px, transparent 12.6px);
-  background-size: 24px 14px;
   background-repeat: repeat-x;
   background-color: #fff;
+}
+.fest-edge.scallop {
+  background-image: radial-gradient(circle at 12px 0, var(--hdr-d, #142F27) 12px, transparent 12.6px);
+  background-size: 24px 14px;
+}
+.fest-edge.wave {
+  background-image: radial-gradient(circle at 12px 17px, var(--hdr-d, #142F27) 12px, transparent 12.6px);
+  background-size: 24px 14px;
+}
+.fest-edge.zigzag {
+  background-image: conic-gradient(from -45deg at 50% 0, var(--hdr-d, #142F27) 90deg, transparent 0);
+  background-size: 20px 12px;
+  height: 12px;
+}
+.fest-edge.teeth {
+  background-image: linear-gradient(90deg, var(--hdr-d, #142F27) 0 12px, transparent 12px 22px);
+  background-size: 22px 10px;
+  height: 10px;
 }
 .fest-dots {
   display: flex;
@@ -1904,3 +1920,99 @@ body {
   border-radius: 999px;
   background: linear-gradient(90deg, #F76B15, #E5484D);
 }
+
+/* dot-row shapes follow the palette */
+.fest-dots.d-dash span { width: 16px; height: 5px; border-radius: 999px; }
+.fest-dots.d-diamond span { border-radius: 2px; transform: rotate(45deg); }
+.fest-dots.d-square span { border-radius: 2px; }
+
+/* ---------- Bulk qty nudge ---------- */
+.qnudge {
+  margin-top: 5px;
+  background: var(--amber-3);
+  border: 1px solid var(--amber-6);
+  color: var(--amber-11);
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: 7px;
+  padding: 4px 7px;
+  animation: nudgein .3s cubic-bezier(.34, 1.4, .64, 1);
+}
+.qnudge.done {
+  background: var(--teal-3);
+  border-color: var(--teal-6);
+  color: var(--teal-11);
+}
+@keyframes nudgein {
+  from { opacity: 0; transform: translateY(4px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---------- Bestsellers collage ---------- */
+.bs-card {
+  flex: none;
+  width: 200px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition: transform .15s;
+}
+.bs-card:active { transform: scale(.97); }
+.bs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--gray-4);
+  border-radius: 20px;
+  padding: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .07);
+}
+.bs-grid img {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+.bs-more {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 178px;
+  background: var(--gray-12);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 5px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
+  white-space: nowrap;
+}
+.bs-prog {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 12px;
+}
+.bs-prog span {
+  width: 14px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--gray-4);
+  transition: background .25s, width .25s;
+}
+.bs-prog span.on { background: var(--amber-9); width: 26px; }
+
+/* reco strip inside search sheet */
+.sheet-reco {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  z-index: 5;
+  pointer-events: none;
+}
+.sheet-reco .rstrip { pointer-events: auto; }

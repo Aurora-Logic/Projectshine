@@ -329,9 +329,10 @@ export const FEST = {
 
 /* Hero v2 palette options — flip in #sim, preview via #hero-<name>; finalize or rotate */
 export const HERO_PALETTES = [
-  { name: 'Forest', a: '#2C5F50', b: '#234D41', c: '#1D4237', d: '#142F27' },
-  { name: 'Ocean', a: '#1F5D73', b: '#194B5E', c: '#143D4E', d: '#0D2B38' },
-  { name: 'Dusk', a: '#4A4180', b: '#3B3469', c: '#2F2955', d: '#211D3E' },
-  { name: 'Ember', a: '#73382A', b: '#5E2C20', c: '#4A2218', d: '#341711' },
-  { name: 'Espresso', a: '#5C4332', b: '#4A3628', c: '#3B2B20', d: '#2A1E16' },
+  { name: 'Emerald', a: '#0FA36B', b: '#0B8A59', c: '#087246', d: '#065A37', edge: 'scallop', dot: 'dot' },
+  { name: 'Lagoon', a: '#0E9CB8', b: '#0B84A4', c: '#086E8C', d: '#065870', edge: 'wave', dot: 'dash' },
+  { name: 'Violet', a: '#7C5CE0', b: '#6847C9', c: '#5536AE', d: '#42288F', edge: 'zigzag', dot: 'diamond' },
+  { name: 'Sunset', a: '#E8553C', b: '#CF4430', c: '#B23423', d: '#8F2618', edge: 'teeth', dot: 'square' },
+  { name: 'Royal', a: '#2D6FE8', b: '#2459C9', c: '#1C46A8', d: '#143385', edge: 'wave', dot: 'dot' },
+  { name: 'Forest', a: '#2C5F50', b: '#234D41', c: '#1D4237', d: '#142F27', edge: 'scallop', dot: 'dot' },
 ]

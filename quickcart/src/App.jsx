@@ -132,6 +132,19 @@ function sparkle(e) {
   }
 }
 
+/* Bulk-tier nudge: "Add N more → X% off" — the dealer upsell loop */
+function bulkNudge(p, qty) {
+  if (!p.bulk || qty <= 0) return null
+  const m = p.bulk.match(/(\d+)\+\s*@\s*₹([\d,]+)/)
+  if (!m) return null
+  const thr = +m[1]
+  const bp = +m[2].replace(/,/g, '')
+  const pct = Math.max(1, Math.round((1 - bp / p.price) * 100))
+  return qty >= thr
+    ? { done: true, text: `${pct}% bulk price unlocked 🎉` }
+    : { done: false, text: `Add ${thr - qty} more → ${pct}% off` }
+}
+
 const scrollToId = (id) =>
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
@@ -519,6 +532,12 @@ const ProductCard = memo(function ProductCard({ p, grid, onChange }) {
             Bulk: {p.bulk}
           </Text>
         )}
+        {(() => {
+          const n = bulkNudge(p, qty)
+          return n ? (
+            <div key={n.text} className={`qnudge ${n.done ? 'done' : ''}`}>{n.text}</div>
+          ) : null
+        })()}
       </div>
     </div>
   )
@@ -610,6 +629,64 @@ const MERCH_ROWS = [
   { icon: '🧾', t: 'GST input credit on every invoice', s: 'Business billing built in' },
   { icon: '🚚', t: 'Free delivery above ₹999', s: 'Straight to your site, no surge' },
 ]
+
+/* "People also add" strip — shared by PLP and Search */
+function RecoStrip({ items, onClose, onChange }) {
+  if (!items || items.length === 0) return null
+  return (
+    <div className="rstrip">
+      <Flex align="center" justify="between" px="3" pb="2">
+        <Text size="1" weight="bold" style={{ color: 'var(--teal-11)', fontSize: 10.5 }}>
+          PEOPLE ALSO ADD
+        </Text>
+        <button className="reco-x" onClick={onClose} aria-label="Dismiss">
+          <Cross2Icon width={12} height={12} />
+        </button>
+      </Flex>
+      <div className="rstrip-scroll">
+        {items.map(x => (
+          <div key={`rs-${x.id}`} className="rmini">
+            <div style={{ position: 'relative' }}>
+              <Img src={img(x.ph, 220)} alt={x.name} loading="lazy" />
+              {x.tag && <span className="pbadge" style={{ fontSize: 9, padding: '3px 6px', top: 6, left: 6 }}>{x.tag}</span>}
+            </div>
+            <Text as="div" weight="bold" className="clamp2" style={{ fontSize: 12, lineHeight: 1.3, height: 31 }}>
+              {x.name}
+            </Text>
+            <Text as="div" color="gray" truncate style={{ fontSize: 10.5 }}>{x.qty}</Text>
+            {x.stock != null && (
+              <Text as="div" weight="bold" style={{
+                fontSize: 10,
+                color: x.stock === 0 ? 'var(--red-10)' : x.stock <= 10 ? 'var(--amber-11)' : 'var(--teal-10)',
+              }}>
+                {x.stock === 0 ? `Ships in ${x.lead} days` : x.stock <= 10 ? `Only ${x.stock} left` : `In stock · ${x.stock}+`}
+              </Text>
+            )}
+            <Flex align="center" justify="between" mt="1">
+              <Box>
+                <Flex align="center" gap="1">
+                  <Text size="2" weight="bold">₹{x.price.toLocaleString('en-IN')}</Text>
+                  {x.mrp && <Text style={{ fontSize: 10, textDecoration: 'line-through', color: 'var(--gray-9)' }}>₹{x.mrp.toLocaleString('en-IN')}</Text>}
+                </Flex>
+                {x.bulk && (
+                  <Text as="div" weight="bold" style={{ fontSize: 9.5, color: 'var(--blue-11)' }}>
+                    Bulk: {x.bulk}
+                  </Text>
+                )}
+              </Box>
+              <Button
+                size="1" color="teal" radius="full" style={{ fontWeight: 800, height: 26, padding: '0 12px', flex: 'none' }}
+                onClick={(e) => { onChange(1, x, { noReco: true }); sparkle(e) }}
+              >
+                ADD
+              </Button>
+            </Flex>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 /* ---------- Shared filter system: subcat · brand · material · load · size · deals · sort ---------- */
 
@@ -957,59 +1034,7 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
         </div>
       </div>
       <div className="plp-cartwrap">
-        {recoStrip && recoStrip.length > 0 && (
-          <div className="rstrip">
-            <Flex align="center" justify="between" px="3" pb="2">
-              <Text size="1" weight="bold" style={{ color: 'var(--teal-11)', fontSize: 10.5 }}>
-                PEOPLE ALSO ADD
-              </Text>
-              <button className="reco-x" onClick={onRecoClose} aria-label="Dismiss">
-                <Cross2Icon width={12} height={12} />
-              </button>
-            </Flex>
-            <div className="rstrip-scroll">
-              {recoStrip.map(x => (
-                <div key={`rs-${x.id}`} className="rmini">
-                  <div style={{ position: 'relative' }}>
-                    <Img src={img(x.ph, 220)} alt={x.name} loading="lazy" />
-                    {x.tag && <span className="pbadge" style={{ fontSize: 9, padding: '3px 6px', top: 6, left: 6 }}>{x.tag}</span>}
-                  </div>
-                  <Text as="div" weight="bold" className="clamp2" style={{ fontSize: 12, lineHeight: 1.3, height: 31 }}>
-                    {x.name}
-                  </Text>
-                  <Text as="div" color="gray" truncate style={{ fontSize: 10.5 }}>{x.qty}</Text>
-                  {x.stock != null && (
-                    <Text as="div" weight="bold" style={{
-                      fontSize: 10,
-                      color: x.stock === 0 ? 'var(--red-10)' : x.stock <= 10 ? 'var(--amber-11)' : 'var(--teal-10)',
-                    }}>
-                      {x.stock === 0 ? `Ships in ${x.lead} days` : x.stock <= 10 ? `Only ${x.stock} left` : `In stock · ${x.stock}+`}
-                    </Text>
-                  )}
-                  <Flex align="center" justify="between" mt="1">
-                    <Box>
-                      <Flex align="center" gap="1">
-                        <Text size="2" weight="bold">₹{x.price.toLocaleString('en-IN')}</Text>
-                        {x.mrp && <Text style={{ fontSize: 10, textDecoration: 'line-through', color: 'var(--gray-9)' }}>₹{x.mrp.toLocaleString('en-IN')}</Text>}
-                      </Flex>
-                      {x.bulk && (
-                        <Text as="div" weight="bold" style={{ fontSize: 9.5, color: 'var(--blue-11)' }}>
-                          Bulk: {x.bulk}
-                        </Text>
-                      )}
-                    </Box>
-                    <Button
-                      size="1" color="teal" radius="full" style={{ fontWeight: 800, height: 26, padding: '0 12px', flex: 'none' }}
-                      onClick={(e) => { onChange(1, x, { noReco: true }); sparkle(e) }}
-                    >
-                      ADD
-                    </Button>
-                  </Flex>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <RecoStrip items={recoStrip} onClose={onRecoClose} onChange={onChange} />
         <CartBar cart={cart} />
       </div>
 
@@ -1022,7 +1047,7 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
 }
 
 /* Full-screen search / listing sheet — live filtering with category rail + brand chips */
-function SearchSheet({ sheet, onClose, onChange }) {
+function SearchSheet({ sheet, onClose, onChange, recoStrip, onRecoClose }) {
   const [q, setQ] = useState(sheet?.query || '')
   const [b, setB] = useState('ALL')
   const [cat, setCat] = useState('All')
@@ -1106,6 +1131,9 @@ function SearchSheet({ sheet, onClose, onChange }) {
               : [0, 1, 2, 3].map(i => <div className="skel" key={`sk${i}`} />)}
           </Grid>
         </div>
+      </div>
+      <div className="sheet-reco">
+        <RecoStrip items={recoStrip} onClose={onRecoClose} onChange={onChange} />
       </div>
       <FilterSheet
         group={fOpen} onGroup={setFOpen} cat={cat}
@@ -1574,8 +1602,55 @@ function Leaderboard() {
 
 /* ---------------- Categories / feed / chrome ---------------- */
 
+/* Bestsellers: 2×2 collage cards per category, scroll progress, → PLP */
+const BESTS = [
+  ['Hinges', 'Hinges & Channels'],
+  ['Drawer Slides', 'Slides & Channels'],
+  ['Locks', 'Locks & Latches'],
+  ['Kitchen', 'Kitchen Systems'],
+  ['Lighting', 'Lighting & Smart'],
+]
+
+function BestSellers({ onCat }) {
+  const ref = useRef(null)
+  const [idx, setIdx] = useState(0)
+  const onScroll = () => {
+    const el = ref.current
+    if (el) setIdx(Math.min(BESTS.length - 1, Math.round(el.scrollLeft / 212)))
+  }
+  return (
+    <Box pt="5" className="cv">
+      <SectionHead title="Bestsellers" onSeeAll={() => onCat('All')} />
+      <div className="hscroll" ref={ref} onScroll={onScroll}>
+        {BESTS.map(([cat, label]) => {
+          const imgs = FEED_POOL.filter(CAT_RULES[cat]).slice(0, 4)
+          for (const p of FEED_POOL) {
+            if (imgs.length >= 4) break
+            if (!imgs.includes(p)) imgs.push(p)
+          }
+          const count = (CATEGORIES.find(c => c[1] === cat) || [])[2] || 99
+          return (
+            <button key={cat} className="bs-card" onClick={() => onCat(cat)}>
+              <div className="bs-grid">
+                {imgs.map(p => <Img key={p.id} src={img(p.ph, 200)} alt="" loading="lazy" />)}
+              </div>
+              <span className="bs-more">+{count} more</span>
+              <Text as="div" weight="bold" style={{ fontSize: 15, letterSpacing: '-0.2px', padding: '14px 4px 2px' }}>
+                {label}
+              </Text>
+            </button>
+          )
+        })}
+      </div>
+      <div className="bs-prog">
+        {BESTS.map((_, i) => <span key={i} className={i === idx ? 'on' : ''} />)}
+      </div>
+    </Box>
+  )
+}
+
 /* Hero v2: client "fest" takeover — promo card + 2x2 category tiles, scalloped edge */
-function FestHero({ onCat }) {
+function FestHero({ onCat, palette }) {
   return (
     <div className="fest-wrap">
       <div className="fest-grid">
@@ -1594,8 +1669,8 @@ function FestHero({ onCat }) {
           ))}
         </div>
       </div>
-      <div className="fest-scallop" />
-      <div className="fest-dots">
+      <div className={`fest-edge ${palette?.edge || 'scallop'}`} />
+      <div className={`fest-dots d-${palette?.dot || 'dot'}`}>
         {Array.from({ length: 12 }, (_, i) => <span key={i} />)}
       </div>
     </div>
@@ -1626,6 +1701,10 @@ function FlashCard({ p, onChange }) {
         <Text as="div" weight="bold" style={{ fontSize: 10, color: p.stock === 0 ? 'var(--red-10)' : 'var(--amber-11)' }}>
           {p.stock === 0 ? `Out · ships in ${p.lead} days` : p.stock <= 10 ? `Selling fast · only ${p.stock} left` : `${sold}% claimed`}
         </Text>
+        {(() => {
+          const n = bulkNudge(p, qty)
+          return n ? <div key={n.text} className={`qnudge ${n.done ? 'done' : ''}`}>{n.text}</div> : null
+        })()}
       </div>
     </div>
   )
@@ -1980,6 +2059,7 @@ export default function App() {
   }, [reco])
 
   // stable identity so memoized ProductCards skip re-render on cart changes
+  const recoSrc = useRef(null)
   const changeCart = useCallback((delta, p, opts) => {
     setCart(c => ({
       count: c.count + delta,
@@ -1989,9 +2069,16 @@ export default function App() {
     if (delta > 0 && !opts?.noReco) {
       const items = recosFor(p)
       if (items.length) {
+        recoSrc.current = p.id
         setReco(items[0])
         setRecoStrip(items)
       }
+    }
+    // removing the product that triggered a recommendation dismisses its card
+    if (delta < 0 && recoSrc.current === p.id) {
+      recoSrc.current = null
+      setReco(null)
+      setRecoStrip(null)
     }
   }, [])
 
@@ -2031,12 +2118,14 @@ export default function App() {
         />
 
         {heroVariant === 'fest' ? (
-          <FestHero onCat={(c) => setPlp(c)} />
+          <FestHero onCat={(c) => setPlp(c)} palette={heroPal} />
         ) : (
           <div className="header-extend" style={glow ? { '--banner-glow': glow } : undefined}>
             <BannerCarousel quizSkin={quizSkin} onGlow={setGlow} />
           </div>
         )}
+
+        <BestSellers onCat={(c) => setPlp(c)} />
 
         {brand !== 'ALL' && (
           <div className="filter-strip">
@@ -2152,7 +2241,7 @@ export default function App() {
           />
         )}
 
-        <SearchSheet sheet={sheet} onClose={closeSheet} onChange={changeCart} />
+        <SearchSheet sheet={sheet} onClose={closeSheet} onChange={changeCart} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
 
         <button
           className={`backtop ${scrolled ? 'show' : ''}`}
