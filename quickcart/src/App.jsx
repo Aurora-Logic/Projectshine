@@ -4419,66 +4419,93 @@ const fetchB64 = async (url) => {
   for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000))
   return btoa(s)
 }
-const imgData = (url) => new Promise((resolve, reject) => {
-  const im = new Image()
-  im.onload = () => {
-    const c = document.createElement('canvas')
-    c.width = im.naturalWidth
-    c.height = im.naturalHeight
-    c.getContext('2d').drawImage(im, 0, 0)
-    resolve({ data: c.toDataURL('image/png'), w: im.naturalWidth, h: im.naturalHeight })
-  }
-  im.onerror = () => reject(new Error(`image ${url}`))
-  im.src = url
-})
+/* original PNG bytes go straight into the PDF (a canvas re-encode would
+   balloon palette PNGs into full RGBA); Image is only used to read dims */
+const imgData = async (url) => {
+  const data = 'data:image/png;base64,' + await fetchB64(url)
+  return new Promise((resolve, reject) => {
+    const im = new Image()
+    im.onload = () => resolve({ data, w: im.naturalWidth, h: im.naturalHeight })
+    im.onerror = () => reject(new Error(`image ${url}`))
+    im.src = data
+  })
+}
 
 async function generateEstimate({ cust, items, bill }) {
-  const [{ jsPDF }, { default: autoTable }, fontN, fontB, mark, ...brands] = await Promise.all([
+  const [{ jsPDF }, { default: autoTable }, fontN, fontB, fontD, mark, ...brands] = await Promise.all([
     import('jspdf'), import('jspdf-autotable'),
-    fetchB64('/fonts/DejaVuSans.ttf'), fetchB64('/fonts/DejaVuSans-Bold.ttf'),
+    fetchB64('/fonts/DejaVuSans.ttf'), fetchB64('/fonts/DejaVuSans-Bold.ttf'), fetchB64('/fonts/DejaVuSerif-Bold.ttf'),
     imgData('/icon-192.png'),
     ...Object.values(BRAND_LOGOS).map(imgData),
   ])
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true })
   doc.addFileToVFS('DejaVuSans.ttf', fontN)
   doc.addFont('DejaVuSans.ttf', 'DejaVu', 'normal')
   doc.addFileToVFS('DejaVuSans-Bold.ttf', fontB)
   doc.addFont('DejaVuSans-Bold.ttf', 'DejaVu', 'bold')
+  doc.addFileToVFS('DejaVuSerif-Bold.ttf', fontD)
+  doc.addFont('DejaVuSerif-Bold.ttf', 'DejaVuSerif', 'bold')
 
-  const W = 210, M = 14, GREEN = [20, 99, 63], INK = [24, 28, 33], GRAY = [110, 117, 125]
+  const W = 210, H = 297, M = 14
+  const GREEN = [20, 99, 63], GOLD = [245, 194, 66], CREAM = [253, 246, 231]
+  const INK = [24, 28, 33], GRAY = [110, 117, 125], WARM = [154, 124, 61]
   const inr = (n) => '₹' + n.toLocaleString('en-IN')
   const no = `QE-${String(Date.now()).slice(-6)}`
   const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 
-  // header: logo + company left, ESTIMATE meta right
-  doc.addImage(mark.data, 'PNG', M, 12, 13, 13)
-  doc.setFont('DejaVu', 'bold').setFontSize(17).setTextColor(...INK).text('QuickCart', M + 17, 19)
-  doc.setFont('DejaVu', 'normal').setFontSize(8.5).setTextColor(...GRAY)
-    .text('Furniture hardware · trade prices · 90-min delivery', M + 17, 24.5)
-  doc.setFont('DejaVu', 'bold').setFontSize(15).setTextColor(...GREEN).text('ESTIMATE', W - M, 17, { align: 'right' })
-  doc.setFont('DejaVu', 'normal').setFontSize(8.5).setTextColor(...GRAY)
-    .text(`${no}  ·  ${today}  ·  valid 7 days`, W - M, 23, { align: 'right' })
-  doc.setDrawColor(...GREEN).setLineWidth(0.8).line(M, 30, W - M, 30)
+  // ---- header: deep-green editorial band
+  doc.setFillColor(...GREEN).rect(0, 0, W, 46, 'F')
+  doc.setFillColor(255, 255, 255).roundedRect(M, 11, 19, 19, 4.5, 4.5, 'F')
+  doc.addImage(mark.data, 'PNG', M + 3, 14, 13, 13)
+  doc.setFont('DejaVu', 'bold').setFontSize(19).setTextColor(255, 255, 255).text('QuickCart', M + 24, 20.5)
+  doc.setFont('DejaVu', 'normal').setFontSize(8.5).setTextColor(196, 224, 207)
+    .text('Furniture hardware for beautiful interiors', M + 24, 26.5)
+  doc.setFont('DejaVuSerif', 'bold').setFontSize(26).setTextColor(...GOLD).text('Estimate', W - M, 22, { align: 'right' })
+  doc.setFont('DejaVu', 'normal').setFontSize(8.5).setTextColor(225, 238, 230)
+    .text(`${no} · ${today} · valid 7 days`, W - M, 28.5, { align: 'right' })
+  // designer touch: a cabinet-finish palette strip
+  const pal = [GOLD, [255, 233, 168], [228, 239, 231], [201, 142, 27], [255, 255, 255]]
+  let px = W - M - (5 * 9 + 4 * 3)
+  for (const c of pal) { doc.setFillColor(...c).roundedRect(px, 37.5, 9, 2.6, 1.3, 1.3, 'F'); px += 12 }
 
-  // prepared for / from
-  doc.setFontSize(7.5).setTextColor(...GRAY).text('PREPARED FOR', M, 38).text('FROM', 120, 38)
-  doc.setFont('DejaVu', 'bold').setFontSize(10.5).setTextColor(...INK).text(cust.name, M, 44)
-  doc.setFont('DejaVu', 'normal').setFontSize(9)
-  const custLines = [cust.phone, ...(cust.site ? doc.splitTextToSize(cust.site, 86) : [])].filter(Boolean)
-  doc.text(custLines, M, 49.5)
-  doc.setFont('DejaVu', 'bold').setFontSize(10.5).text('Virag Bora · QuickCart dealer', 120, 44)
-  doc.setFont('DejaVu', 'normal').setFontSize(9)
-    .text(['304 Maple Heights, HSR Layout', 'Bengaluru 560102'], 120, 49.5)
+  // ---- brand showcase: warm cream band right under the masthead
+  doc.setFillColor(...CREAM).rect(0, 46, W, 27, 'F')
+  doc.setFont('DejaVu', 'bold').setFontSize(7.5).setTextColor(...WARM).setCharSpace(0.6)
+  doc.text('AUTHORIZED DEALER · THE BRANDS BEHIND BEAUTIFUL INTERIORS', W / 2, 53.5, { align: 'center' })
+  doc.setCharSpace(0)
+  const lh = 7.5, pad = 4, chipH = 13
+  const sizes = brands.map(b => ({ ...b, dw: (b.w / b.h) * lh }))
+  const stripW = sizes.reduce((s, b) => s + b.dw + pad * 2, 0) + (sizes.length - 1) * 5
+  let bx = (W - stripW) / 2
+  for (const b of sizes) {
+    doc.setFillColor(255, 255, 255).setDrawColor(233, 220, 193).setLineWidth(0.3)
+      .roundedRect(bx, 57, b.dw + pad * 2, chipH, 2.5, 2.5, 'FD')
+    doc.addImage(b.data, 'PNG', bx + pad, 57 + (chipH - lh) / 2, b.dw, lh)
+    bx += b.dw + pad * 2 + 5
+  }
 
-  // items table
+  // ---- prepared for / from: two soft cards
+  const cardW = (W - 2 * M - 6) / 2
+  const card = (x, cap, name, lines) => {
+    doc.setFillColor(246, 248, 247).roundedRect(x, 79, cardW, 27, 3, 3, 'F')
+    doc.setFont('DejaVu', 'bold').setFontSize(7).setTextColor(...GRAY).setCharSpace(0.5).text(cap, x + 6, 85.5)
+    doc.setCharSpace(0)
+    doc.setFont('DejaVu', 'bold').setFontSize(10).setTextColor(...INK).text(name, x + 6, 91.5)
+    doc.setFont('DejaVu', 'normal').setFontSize(8.5).setTextColor(...GRAY).text(lines, x + 6, 96.5)
+  }
+  const custLines = [cust.phone, ...(cust.site ? doc.splitTextToSize(cust.site, cardW - 12).slice(0, 2) : [])].filter(Boolean)
+  card(M, 'PREPARED FOR', cust.name, custLines)
+  card(M + cardW + 6, 'FROM', 'Virag Bora · QuickCart dealer', ['304 Maple Heights, HSR Layout', 'Bengaluru 560102'])
+
+  // ---- items table
   autoTable(doc, {
-    startY: 60 + Math.max(0, custLines.length - 2) * 4.5,
-    margin: { left: M, right: M },
+    startY: 113,
+    margin: { left: M, right: M, bottom: 18 },
     head: [['#', 'Item', 'Pack / spec', 'Qty', 'Rate', 'Amount']],
     body: items.map(({ p, n }, i) => [i + 1, p.name, p.qty || '—', n, inr(p.price), inr(p.price * n)]),
-    styles: { font: 'DejaVu', fontSize: 8.5, textColor: INK, cellPadding: 2.4 },
+    styles: { font: 'DejaVu', fontSize: 8.5, textColor: INK, cellPadding: 2.6 },
     headStyles: { fillColor: GREEN, textColor: 255, fontStyle: 'bold', fontSize: 8 },
-    alternateRowStyles: { fillColor: [246, 248, 247] },
+    alternateRowStyles: { fillColor: [250, 247, 240] },
     columnStyles: {
       0: { cellWidth: 8, halign: 'right' },
       3: { cellWidth: 12, halign: 'right' },
@@ -4487,41 +4514,39 @@ async function generateEstimate({ cust, items, bill }) {
     },
   })
 
-  // totals — same numbers as the on-screen bill
+  // ---- totals card — same numbers as the on-screen bill
   let y = doc.lastAutoTable.finalY + 8
-  if (y > 240) { doc.addPage(); y = 20 }
-  const row = (label, val, opts = {}) => {
-    doc.setFont('DejaVu', opts.bold ? 'bold' : 'normal').setFontSize(opts.bold ? 10.5 : 9)
-    doc.setTextColor(...(opts.green ? GREEN : opts.bold ? INK : GRAY))
-    doc.text(label, 140, y, { align: 'right' })
-    doc.text(val, W - M, y, { align: 'right' })
-    y += opts.bold ? 7 : 5.5
+  const nRows = 2 + (bill.bulkSave > 0 ? 1 : 0) + (bill.schemeOff > 0 ? 1 : 0)
+  const boxH = nRows * 5.5 + 19
+  if (y + boxH > H - 22) { doc.addPage(); y = 20 }
+  const bxX = 110, bxW = W - M - bxX
+  doc.setFillColor(246, 248, 247).roundedRect(bxX, y - 5, bxW, boxH, 3, 3, 'F')
+  const row = (label, val, green) => {
+    doc.setFont('DejaVu', 'normal').setFontSize(9).setTextColor(...(green ? GREEN : GRAY))
+    doc.text(label, bxX + 6, y)
+    doc.text(val, bxX + bxW - 6, y, { align: 'right' })
+    y += 5.5
   }
+  y += 2.5
   row('Item total', inr(bill.itemTotal))
-  if (bill.bulkSave > 0) row('Bulk price savings', '−' + inr(bill.bulkSave), { green: true })
-  if (bill.schemeOff > 0) row(`Volume scheme (${bill.slabPct}%)`, '−' + inr(bill.schemeOff), { green: true })
+  if (bill.bulkSave > 0) row('Bulk price savings', '−' + inr(bill.bulkSave), true)
+  if (bill.schemeOff > 0) row(`Volume scheme (${bill.slabPct}%)`, '−' + inr(bill.schemeOff), true)
   row('Delivery' + (bill.express ? ' (express · 1 hr)' : ''), bill.fee === 0 ? 'FREE' : inr(bill.fee))
-  doc.setDrawColor(...GREEN).setLineWidth(0.4).line(118, y - 3, W - M, y - 3)
-  y += 1.5
-  row('Estimate total', inr(bill.toPay), { bold: true })
+  doc.setFillColor(...GREEN).roundedRect(bxX + 3, y - 2.5, bxW - 6, 9.5, 2, 2, 'F')
+  doc.setFont('DejaVu', 'bold').setFontSize(10).setTextColor(255, 255, 255).text('Estimate total', bxX + 7.5, y + 3.5)
+  doc.setTextColor(...GOLD).text(inr(bill.toPay), bxX + bxW - 9.5, y + 3.5, { align: 'right' })
   doc.setFont('DejaVu', 'normal').setFontSize(7.5).setTextColor(...GRAY)
-    .text('Trade estimate only — GST as applicable. Prices valid 7 days from the date above.', M, y + 2)
+    .text(['Trade estimate only — GST as applicable.', 'Prices valid 7 days from the date above.'], M, y + 1)
 
-  // footer: authorized brand strip
-  let fy = Math.max(y + 16, 262)
-  if (fy > 275) { doc.addPage(); fy = 262 }
-  doc.setFontSize(7.5).setTextColor(...GRAY).text('AUTHORIZED DEALER FOR', W / 2, fy, { align: 'center' })
-  const lh = 8
-  const sizes = brands.map(b => ({ ...b, dw: (b.w / b.h) * lh }))
-  const totalW = sizes.reduce((s, b) => s + b.dw, 0) + (sizes.length - 1) * 9
-  let bx = (W - totalW) / 2
-  for (const b of sizes) {
-    doc.setFillColor(246, 247, 248).roundedRect(bx - 2, fy + 3 - 1.5, b.dw + 4, lh + 3, 1.5, 1.5, 'F')
-    doc.addImage(b.data, 'PNG', bx, fy + 3, b.dw, lh)
-    bx += b.dw + 9
+  // ---- footer band on every page
+  const pages = doc.getNumberOfPages()
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i)
+    doc.setFillColor(...GOLD).rect(0, H - 11.8, W, 0.8, 'F')
+    doc.setFillColor(...GREEN).rect(0, H - 11, W, 11, 'F')
+    doc.setFont('DejaVu', 'normal').setFontSize(7.5).setTextColor(225, 238, 230)
+      .text(`Generated with QuickCart · ${today} · trade prices · 90-min delivery`, W / 2, H - 4.8, { align: 'center' })
   }
-  doc.setFontSize(7).setTextColor(...GRAY)
-    .text(`Generated with QuickCart · ${today}`, W / 2, fy + 15, { align: 'center' })
 
   doc.save(`${no} ${cust.name.trim()} estimate.pdf`)
 }
