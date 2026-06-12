@@ -3215,6 +3215,7 @@ function VisitForm({ kind }) {
   const [ct, setCt] = useState('')
   const [pin, setPin] = useState('')
   const [notes, setNotes] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
   const valid = cName.trim() && cPh.length === 10 && date && slot
     && (kind === 'display' || (l1.trim() && ct.trim() && pin.length === 6))
   const submit = (e) => {
@@ -3229,6 +3230,7 @@ function VisitForm({ kind }) {
     }, ...reqs])
     setCName(''); setCPh(''); setDate(null); setSlot(null)
     setL1(''); setL2(''); setLm(''); setCt(''); setPin(''); setNotes('')
+    setFormOpen(false)
   }
   const hero = kind === 'display' ? (
     <div className="sub-photo">
@@ -3247,10 +3249,22 @@ function VisitForm({ kind }) {
   return (
     <>
       {hero}
-      <div className="cp-card">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
-          CUSTOMER DETAILS
-        </Text>
+      {!formOpen && (
+        <button className="qs-cta" style={{ marginTop: 0, marginBottom: 12 }} onClick={() => setFormOpen(true)}>
+          <span>{kind === 'site' ? 'Submit a site visit request' : 'Book a showroom slot'}</span>
+          <PlusIcon width={16} height={16} />
+        </button>
+      )}
+      {formOpen && (
+      <div className="cp-card" style={{ animation: 'stepin .22s cubic-bezier(.22, 1, .36, 1)' }}>
+        <Flex align="center" justify="between">
+          <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+            CUSTOMER DETAILS
+          </Text>
+          <button className="reco-x" onClick={() => setFormOpen(false)} aria-label="Close form">
+            <Cross2Icon width={12} height={12} />
+          </button>
+        </Flex>
         <input
           className="cp-input" style={{ marginTop: 8 }} placeholder="Customer / firm name"
           value={cName} onChange={(e) => setCName(e.target.value)}
@@ -3307,7 +3321,8 @@ function VisitForm({ kind }) {
           Submit request
         </Button>
       </div>
-      {reqs.length > 0 && (
+      )}
+      {reqs.length > 0 ? (
         <div className="cp-card">
           <Flex align="center" justify="between">
             <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
@@ -3318,6 +3333,15 @@ function VisitForm({ kind }) {
             )}
           </Flex>
           {reqs.map(r => <VisitRow key={r.id} r={r} now={now} kind={kind} />)}
+        </div>
+      ) : (
+        <div className="cp-card">
+          <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+            YOUR REQUESTS
+          </Text>
+          <Text size="1" color="gray" as="div" mt="2">
+            No requests yet — tap the button above to book {kind === 'site' ? 'a site visit' : 'a slot'}.
+          </Text>
         </div>
       )}
     </>
