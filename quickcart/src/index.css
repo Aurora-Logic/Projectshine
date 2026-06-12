@@ -4206,3 +4206,12 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   animation: stepin .25s cubic-bezier(.22, 1, .36, 1);
 }
 .fab.search.mini, .fab.top3.mini { transform: scale(.8); }
+
+/* navbar reverted to basics: pill + scroll-in back-to-top */
+.navrow { align-items: flex-end; }
+.fab {
+  width: 50px;
+  height: 50px;
+  aspect-ratio: auto;
+  align-self: auto;
+}

@@ -2018,12 +2018,13 @@ function CartBar({ cart }) {
   )
 }
 
-function NavBar({ onCategories, onUtilities, onReorder, active = 'home', mini = false }) {
+function NavBar({ onCategories, onUtilities, onReorder, onAccount, active = 'home', mini = false }) {
   const items = [
     { icon: HomeIcon, label: 'Home', key: 'home', go: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
     { icon: DashboardIcon, label: 'Categories', key: 'categories', go: onCategories },
     { icon: GearIcon, label: 'Utilities', key: 'utilities', go: onUtilities },
     { icon: CounterClockwiseClockIcon, label: 'Reorder', key: 'reorder', go: onReorder },
+    { icon: PersonIcon, label: 'Account', key: 'account', go: onAccount },
   ]
   return (
     <div className={`navbar ${mini ? 'mini' : ''}`}>
@@ -5236,8 +5237,6 @@ export default function App() {
   // rAF-throttled with hysteresis (on >110, off <70) so the header never flaps mid-scroll.
   // navMini: Apple-style — scrolling DOWN shrinks the navbar, scrolling UP restores it.
   const [navMini, setNavMini] = useState(window.location.hash === '#navmini')
-  const [navSearch, setNavSearch] = useState(window.location.hash === '#navsearch')
-  const [navQ, setNavQ] = useState('')
   useEffect(() => {
     if (['#compact', '#navmini'].includes(window.location.hash)) return
     let ticking = false
@@ -5560,52 +5559,20 @@ export default function App() {
           )}
           <CartBar cart={cart} />
           <div className="navrow">
-            {navSearch ? (
-              <div className="nav-search">
-                <MagnifyingGlassIcon width={16} height={16} color="var(--gray-9)" style={{ flex: 'none' }} />
-                <input
-                  autoFocus placeholder="Search fittings, brands, sizes…" value={navQ}
-                  onChange={(e) => setNavQ(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      setSheet({ items: FEED_POOL, query: navQ.trim() })
-                      setNavSearch(false)
-                      setNavQ('')
-                    }
-                  }}
-                />
-                <button className="reco-x" onClick={() => { setNavSearch(false); setNavQ('') }} aria-label="Close search">
-                  <Cross2Icon width={13} height={13} />
-                </button>
-              </div>
-            ) : (
-              <NavBar
-                onCategories={() => setPlp('All')}
-                onUtilities={() => { /* Utilities page comes later */ }}
-                onReorder={() => setReorderOpen(true)}
-                active={reorderOpen ? 'reorder' : plp ? 'categories' : 'home'}
-                mini={navMini}
-              />
-            )}
-            {scrolled && !navSearch && (
-              <button className={`fab top3 ${navMini ? 'mini' : ''}`} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Back to top">
-                <ChevronUpIcon width={19} height={19} />
-              </button>
-            )}
+            <NavBar
+              onCategories={() => setPlp('All')}
+              onUtilities={() => { /* Utilities page comes later */ }}
+              onReorder={() => setReorderOpen(true)}
+              onAccount={() => { acctInitSub.current = null; setAcctOpen(true) }}
+              active={acctOpen ? 'account' : reorderOpen ? 'reorder' : plp ? 'categories' : 'home'}
+              mini={navMini}
+            />
             <button
-              className={`fab search show ${navMini && !navSearch ? 'mini' : ''}`}
-              onClick={() => {
-                if (navSearch) {
-                  if (navQ.trim()) setSheet({ items: FEED_POOL, query: navQ.trim() })
-                  setNavSearch(false)
-                  setNavQ('')
-                } else {
-                  setNavSearch(true)
-                }
-              }}
-              aria-label="Search"
+              className={`fab ${scrolled ? 'show' : ''} ${navMini ? 'mini' : ''}`}
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              aria-label="Back to top"
             >
-              <MagnifyingGlassIcon width={20} height={20} />
+              <ChevronUpIcon width={20} height={20} />
             </button>
           </div>
         </div>
