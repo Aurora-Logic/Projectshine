@@ -2057,7 +2057,49 @@ function QtySheet({ q, onClose, onConfirm }) {
 
 function ProductPage({ p, onClose, onChange }) {
   const openQty = useContext(QtyCtx)
+  const openPdp = useContext(PdpCtx)
   const [added, setAdded] = useState(0)
+  // Zara-style gestures: horizontal swipe anywhere on the page moves to the
+  // prev/next product in this range; vertical swipe (or tap) on the photo
+  // cycles through photo crops. touch-action: pan-x on the hero hands
+  // vertical drags there to us instead of the page scroll.
+  const [shot, setShot] = useState(0)
+  const shots = useMemo(() => [
+    img(p.ph, 720),
+    `${img(p.ph, 720)}&h=720&crop=entropy`,
+    `${img(p.ph, 720)}&h=900&crop=edges`,
+  ], [p])
+  const sibs = useMemo(() => {
+    const c = catOf(p)
+    const list = FEED_POOL.filter(x => catOf(x) === c)
+    return list.length > 1 ? list : FEED_POOL
+  }, [p])
+  const goSib = (dir) => {
+    const i = sibs.findIndex(x => x.id === p.id)
+    const next = sibs[(i + dir + sibs.length) % sibs.length]
+    if (next && next.id !== p.id && openPdp) openPdp(next)
+  }
+  const touch = useRef(null)
+  const onTouchStart = (e) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY } }
+  const onTouchEnd = (e) => {
+    const t = touch.current
+    touch.current = null
+    if (!t) return
+    const dx = e.changedTouches[0].clientX - t.x
+    const dy = e.changedTouches[0].clientY - t.y
+    if (Math.abs(dx) > 70 && Math.abs(dx) > 2 * Math.abs(dy)) goSib(dx < 0 ? 1 : -1)
+  }
+  const onHeroEnd = (e) => {
+    const t = touch.current
+    if (!t) return
+    const dx = e.changedTouches[0].clientX - t.x
+    const dy = e.changedTouches[0].clientY - t.y
+    if (Math.abs(dy) > 45 && Math.abs(dy) > 1.5 * Math.abs(dx)) {
+      e.stopPropagation()
+      touch.current = null
+      setShot(s => (s + (dy < 0 ? 1 : -1) + shots.length) % shots.length)
+    }
+  }
   const recos = useMemo(() => recosFor(p), [p])
   const club = recos[0]
   const more = recos.slice(1, 5)
@@ -2081,10 +2123,14 @@ function ProductPage({ p, onClose, onChange }) {
         <Text size="2" weight="bold" style={{ flex: 1, minWidth: 0 }} truncate>Product details</Text>
         {BRAND_LOGOS[p.brand] && <img src={BRAND_LOGOS[p.brand]} alt={p.brand} style={{ height: 16, flex: 'none' }} />}
       </div>
-      <div className="pdp-body">
-        <div className="pdp-hero">
-          <Img src={img(p.ph, 720)} alt={p.name} />
+      <div className="pdp-body" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        <div className="pdp-hero" onTouchEnd={onHeroEnd} onClick={() => setShot(s => (s + 1) % shots.length)}>
+          <Img key={shot} src={shots[shot]} alt={p.name} />
           {(p.tag || off > 0) && <span className="pbadge" style={{ top: 14, left: 14 }}>{p.tag || `${off}% OFF`}</span>}
+          <div className="pdp-dots">
+            {shots.map((_, i) => <span key={i} className={i === shot ? 'on' : ''} />)}
+          </div>
+          <span className="pdp-shotn">{shot + 1}/{shots.length}</span>
         </div>
         <Box px="4" pt="4">
           <Heading size="5" style={{ letterSpacing: '-0.3px', lineHeight: 1.25 }}>{p.name}</Heading>
@@ -2572,13 +2618,6 @@ export default function App() {
 
         {qsheet && <QtySheet q={qsheet} onClose={closeQty} onConfirm={confirmQty} />}
 
-        <button
-          className={`backtop ${scrolled ? 'show' : ''}`}
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        >
-          <ChevronUpIcon width={14} height={14} /> Back to top
-        </button>
-
         <div className="footer">
           {reco && (
             <div className="reco">
@@ -2603,12 +2642,21 @@ export default function App() {
             </div>
           )}
           <CartBar cart={cart} />
-          <NavBar
-            onCategories={() => setPlp('All')}
-            onUtilities={() => { /* Utilities page comes later */ }}
-            active={plp ? 'categories' : 'home'}
-            mini={navMini}
-          />
+          <div className="navrow">
+            <NavBar
+              onCategories={() => setPlp('All')}
+              onUtilities={() => { /* Utilities page comes later */ }}
+              active={plp ? 'categories' : 'home'}
+              mini={navMini}
+            />
+            <button
+              className={`fab ${scrolled ? 'show' : ''} ${navMini ? 'mini' : ''}`}
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              aria-label="Back to top"
+            >
+              <ChevronUpIcon width={20} height={20} />
+            </button>
+          </div>
         </div>
       </div>
       </PdpCtx.Provider>

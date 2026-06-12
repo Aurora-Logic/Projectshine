@@ -367,7 +367,7 @@ body {
   flex-direction: column;
   /* offscreen cards skip layout/paint entirely — big scroll win */
   content-visibility: auto;
-  contain-intrinsic-size: 134px 290px;
+  contain-intrinsic-size: 134px 264px;
 }
 .pcard.grid { width: auto; }
 .pcard .price-block { margin-top: auto; padding-top: 4px; }
@@ -1212,31 +1212,6 @@ body {
 }
 
 /* ---------- Back to top ---------- */
-.backtop {
-  position: fixed;
-  bottom: 132px;
-  left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  z-index: 35;
-  background: var(--gray-12);
-  color: #fff;
-  border: none;
-  border-radius: 999px;
-  padding: 9px 16px;
-  font-size: 12px;
-  font-weight: 700;
-  font-family: inherit;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, .25);
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .25s, transform .25s;
-}
-.backtop.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
-
 /* ---------- Sky simulator (dev tool, open with #sim) ---------- */
 .sim-panel {
   position: fixed;
@@ -2351,3 +2326,69 @@ body {
   padding: 0 16px;
 }
 .pcard, .flash-card, .rmini { cursor: pointer; }
+
+/* iOS Safari paints <button> text in system blue unless color is explicit —
+   bestseller tiles, filter tiles, chips are all buttons */
+button { color: inherit; -webkit-tap-highlight-color: transparent; }
+
+/* Cards keep their natural height — offscreen cv placeholders (264px) no
+   longer stretch the visible cards in the same row (mid-card gap on open) */
+.hscroll { align-items: flex-start; }
+
+/* ---------- Back-to-top FAB docked beside the navbar ---------- */
+.navrow { display: flex; align-items: flex-end; }
+.navrow .navbar { flex: 1; min-width: 0; }
+.fab {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  background: var(--teal-9);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 10px calc(14px + env(safe-area-inset-bottom)) -60px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .22);
+  cursor: pointer;
+  flex: none;
+  transform: scale(0);
+  transform-origin: 50% 100%;
+  transition: transform .28s cubic-bezier(.4, 0, .2, 1), margin-left .28s cubic-bezier(.4, 0, .2, 1);
+  pointer-events: none;
+}
+.fab.show { transform: scale(1); margin-left: 0; pointer-events: auto; }
+.fab.mini.show { transform: scale(.8); }
+.fab:active { transform: scale(.92); }
+
+/* ---------- PDP gallery: vertical-swipe shots (Zara) ---------- */
+.pdp-hero { touch-action: pan-x; }
+.pdp-dots {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pdp-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, .55);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+  transition: background .2s, height .2s;
+}
+.pdp-dots span.on { background: #fff; height: 16px; }
+.pdp-shotn {
+  position: absolute;
+  right: 10px;
+  bottom: 12px;
+  background: rgba(0, 0, 0, .45);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 99px;
+}
