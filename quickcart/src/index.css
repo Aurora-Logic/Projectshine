@@ -713,15 +713,18 @@ body {
 
 /* ---------- Collapsing header ---------- */
 .loc-row {
-  max-height: 44px;
+  max-height: 50px;
   opacity: 1;
   overflow: hidden;
-  transition: max-height .18s cubic-bezier(.4, 0, .2, 1), opacity .1s linear, margin .18s cubic-bezier(.4, 0, .2, 1), visibility 0s linear 0s;
+  /* 6px headroom so the cart badge (top: -3px on the avatar) isn't clipped */
+  padding-top: 6px;
+  transition: max-height .18s cubic-bezier(.4, 0, .2, 1), opacity .1s linear, margin .18s cubic-bezier(.4, 0, .2, 1), padding .18s cubic-bezier(.4, 0, .2, 1), visibility 0s linear 0s;
 }
 .topbar.compact .loc-row {
   max-height: 0;
   opacity: 0;
   margin: 0;
+  padding-top: 0;
   visibility: hidden;
   pointer-events: none;
   transition: none;
@@ -2437,3 +2440,68 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   .pdp-in-r, .pdp-in-l, .stepin, .numpop, .linepop { animation: none !important; }
   .pdp-hero .pdp-shot { transition: opacity .15s ease; transform: none; }
 }
+
+/* ---------- Cart sheet + PDP go-to-cart ---------- */
+.pdp-back {
+  position: fixed;
+  inset: 0;
+  margin: 0 auto;
+  max-width: 480px;
+  background: #fff;
+  z-index: 77;
+}
+.qs-cta.ghost { background: var(--teal-3); color: var(--teal-11); }
+.cta-count {
+  background: rgba(255, 255, 255, .25);
+  border-radius: 99px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.cart-sheet { display: flex; flex-direction: column; max-height: 78vh; }
+.cs-list { overflow-y: auto; min-height: 0; margin-top: 6px; }
+.cs-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gray-3);
+}
+.cs-row:last-child { border-bottom: none; }
+.cs-row img {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--gray-3);
+  flex: none;
+}
+.cs-step {
+  display: flex;
+  align-items: center;
+  background: var(--teal-9);
+  border-radius: 10px;
+  padding: 2px;
+  flex: none;
+}
+.cs-step button {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.cs-bill {
+  background: var(--gray-2);
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-top: 12px;
+  flex: none;
+}
+.cart-badge { z-index: 2; }
+.cartbar { cursor: pointer; }

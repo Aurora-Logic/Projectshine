@@ -148,6 +148,7 @@ function bulkNudge(p, qty) {
 /* App-wide intents: any ADD opens the bulk qty sheet; any card tap opens the product page */
 const QtyCtx = createContext(null)
 const PdpCtx = createContext(null)
+const CartCtx = createContext(null)
 
 const BRAND_NAMES = { ebco: 'Ebco', zipco: 'Zipco', peka: 'Peka', worksmart: 'Worksmart by Ebco', livsmart: 'Livsmart by Ebco' }
 
@@ -281,6 +282,7 @@ function CartGlyph(props) {
 }
 
 function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCount, plain }) {
+  const openCart = useContext(CartCtx)
   const [hint, setHint] = useState(0)
   useEffect(() => {
     const t = setInterval(() => setHint(h => (h + 1) % SEARCH_HINTS.length), 2500)
@@ -300,7 +302,7 @@ function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCoun
             304, Maple Heights{plain ? '' : ` · ${weather.icon}`}
           </Text>
         </Box>
-        <div className="avatar" aria-label="Cart">
+        <div className="avatar" aria-label="Cart" onClick={openCart || undefined}>
           <CartGlyph />
           {cartCount > 0 && <span className="cart-badge">{cartCount > 9 ? '9+' : cartCount}</span>}
         </div>
@@ -1941,11 +1943,12 @@ function EndlessFeed({ onChange, pool }) {
 }
 
 function CartBar({ cart }) {
+  const openCart = useContext(CartCtx)
   const note = cart.total >= FREE_DELIVERY_AT
     ? 'FREE delivery unlocked'
     : `Add ₹${FREE_DELIVERY_AT - cart.total} more for FREE delivery`
   return (
-    <div className={`cartbar ${cart.count > 0 ? 'show' : ''}`}>
+    <div className={`cartbar ${cart.count > 0 ? 'show' : ''}`} onClick={openCart || undefined}>
       <Flex>
         {cart.photos.slice(-3).map(ph => (
           <Img key={ph} className="thumb" src={img(ph, 120)} alt="" />
@@ -2054,13 +2057,94 @@ function QtySheet({ q, onClose, onConfirm }) {
   )
 }
 
+/* ---------------- Cart sheet — line items, bill, bulk savings ---------------- */
+
+function CartSheet({ cart, onClose, onChange }) {
+  const items = Object.values(cart.items)
+  const fee = cart.total >= FREE_DELIVERY_AT ? 0 : 49
+  const savings = items.reduce((s, { p, n }) => {
+    const t = bulkTier(p)
+    return t && n >= t.thr ? s + (p.price - t.bp) * n : s
+  }, 0)
+  return (
+    <div className="qsheet-overlay" onClick={onClose}>
+      <div className="qsheet cart-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="qsheet-grab" />
+        <Flex align="center" justify="between">
+          <Heading size="4" style={{ letterSpacing: '-0.3px' }}>Your cart</Heading>
+          <Text size="1" weight="bold" color="gray">{cart.count} item{cart.count === 1 ? '' : 's'}</Text>
+        </Flex>
+        {items.length === 0 ? (
+          <Box py="6" style={{ textAlign: 'center' }}>
+            <Text size="2" color="gray">Your cart is empty — add products to get rolling</Text>
+          </Box>
+        ) : (
+          <>
+            <div className="cs-list">
+              {items.map(({ p, n }) => {
+                const t = bulkTier(p)
+                const bulkOn = t && n >= t.thr
+                return (
+                  <div className="cs-row" key={p.id}>
+                    <Img src={img(p.ph, 120)} alt="" />
+                    <Box flexGrow="1" style={{ minWidth: 0 }}>
+                      <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{p.name}</Text>
+                      <Text as="div" style={{ fontSize: 10.5, color: bulkOn ? 'var(--teal-11)' : 'var(--gray-10)', fontWeight: bulkOn ? 700 : 500 }}>
+                        ₹{p.price.toLocaleString('en-IN')}{bulkOn ? ` · ${t.pct}% bulk off on invoice` : ''}
+                      </Text>
+                    </Box>
+                    <div className="cs-step">
+                      <button onClick={() => onChange(-1, p)} aria-label="Less"><MinusIcon width={12} height={12} /></button>
+                      <Text key={n} className="numpop" size="1" weight="bold" style={{ width: 26, textAlign: 'center', color: '#fff' }}>{n}</Text>
+                      <button onClick={() => onChange(1, p, { noReco: true })} aria-label="More"><PlusIcon width={12} height={12} /></button>
+                    </div>
+                    <Text size="1" weight="bold" style={{ width: 60, textAlign: 'right', flex: 'none' }}>₹{(n * p.price).toLocaleString('en-IN')}</Text>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="cs-bill">
+              <Flex justify="between">
+                <Text size="1" color="gray">Item total</Text>
+                <Text size="1" weight="bold">₹{cart.total.toLocaleString('en-IN')}</Text>
+              </Flex>
+              <Flex justify="between" mt="1">
+                <Text size="1" color="gray">Delivery</Text>
+                <Text size="1" weight="bold" style={fee === 0 ? { color: 'var(--teal-10)' } : undefined}>
+                  {fee === 0 ? 'FREE' : `₹${fee}`}
+                </Text>
+              </Flex>
+              {fee > 0 && (
+                <Text size="1" as="div" mt="1" style={{ color: 'var(--amber-11)', fontWeight: 700 }}>
+                  Add ₹{(FREE_DELIVERY_AT - cart.total).toLocaleString('en-IN')} more for FREE delivery
+                </Text>
+              )}
+              {savings > 0 && (
+                <Flex justify="between" mt="1">
+                  <Text size="1" weight="bold" style={{ color: 'var(--teal-11)' }}>Bulk savings on invoice</Text>
+                  <Text size="1" weight="bold" style={{ color: 'var(--teal-11)' }}>−₹{savings.toLocaleString('en-IN')}</Text>
+                </Flex>
+              )}
+            </div>
+            <button className="qs-cta">
+              <span>Proceed to checkout</span>
+              <span>₹{(cart.total + fee).toLocaleString('en-IN')}</span>
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 /* ---------------- Product details page ---------------- */
 
 let PDP_DIR = 0 // swipe direction handoff to the next ProductPage mount (slide-in side)
 
-function ProductPage({ p, onClose, onChange }) {
+function ProductPage({ p, onClose, onChange, cart }) {
   const openQty = useContext(QtyCtx)
   const openPdp = useContext(PdpCtx)
+  const openCart = useContext(CartCtx)
   const [added, setAdded] = useState(0)
   // Zara-style gestures: horizontal swipe anywhere on the page moves to the
   // prev/next product in this range; vertical swipe (or tap) on the photo
@@ -2088,25 +2172,34 @@ function ProductPage({ p, onClose, onChange }) {
   const onTouchStart = (e) => {
     touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, axis: null }
   }
-  // the page follows the finger (damped) during a horizontal drag, so the
-  // commit / settle-back continues the motion instead of jump-cutting
-  const onTouchMove = (e) => {
-    const t = touch.current
-    if (!t) return
-    const dx = e.touches[0].clientX - t.x
-    const dy = e.touches[0].clientY - t.y
-    if (!t.axis) {
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
-      t.axis = Math.abs(dx) > 1.2 * Math.abs(dy) ? 'h' : 'v'
+  // the page follows the finger (damped) during a horizontal drag — attached
+  // non-passive so preventDefault can freeze vertical scroll while the gesture
+  // is horizontal (otherwise the page bobs up and down during the swipe)
+  const bodyRef = useRef(null)
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el) return
+    const onMove = (e) => {
+      const t = touch.current
+      if (!t) return
+      const dx = e.touches[0].clientX - t.x
+      const dy = e.touches[0].clientY - t.y
+      if (!t.axis) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
+        t.axis = Math.abs(dx) > 1.2 * Math.abs(dy) ? 'h' : 'v'
+      }
+      if (t.axis !== 'h') return
+      e.preventDefault()
+      const r = rootRef.current
+      if (r) {
+        r.style.transition = 'none'
+        r.style.transform = `translateX(${dx * 0.4}px)`
+        r.style.opacity = String(Math.max(0.65, 1 - Math.abs(dx) / 700))
+      }
     }
-    if (t.axis !== 'h') return
-    const el = rootRef.current
-    if (el) {
-      el.style.transition = 'none'
-      el.style.transform = `translateX(${dx * 0.4}px)`
-      el.style.opacity = String(Math.max(0.65, 1 - Math.abs(dx) / 700))
-    }
-  }
+    el.addEventListener('touchmove', onMove, { passive: false })
+    return () => el.removeEventListener('touchmove', onMove)
+  }, [])
   const settleBack = () => {
     const el = rootRef.current
     if (!el) return
@@ -2168,13 +2261,15 @@ function ProductPage({ p, onClose, onChange }) {
     [oos ? 'Lead time' : 'Availability', oos ? `Ships in ${p.lead} days` : `In stock · ${p.stock}+ pcs`],
   ].filter(Boolean)
   return (
+    <>
+    <div className="pdp-back" />
     <div ref={rootRef} className={`pdp ${enter === 1 ? 'pdp-in-r' : enter === -1 ? 'pdp-in-l' : ''}`}>
       <div className="pdp-head">
         <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
         <Text size="2" weight="bold" style={{ flex: 1, minWidth: 0 }} truncate>Product details</Text>
         {BRAND_LOGOS[p.brand] && <img src={BRAND_LOGOS[p.brand]} alt={p.brand} style={{ height: 16, flex: 'none' }} />}
       </div>
-      <div className="pdp-body" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchCancel}>
+      <div ref={bodyRef} className="pdp-body" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={onTouchCancel}>
         <div className="pdp-hero" onTouchEnd={onHeroEnd} onClick={() => setShot(s => (s + 1) % shots.length)}>
           {shots.map((s, i) => (
             <Img key={i} src={s} alt={p.name} className={`pdp-shot ${i === shot ? 'cur' : ''}`} />
@@ -2284,25 +2379,46 @@ function ProductPage({ p, onClose, onChange }) {
         )}
       </div>
       <div className="pdp-cta">
-        <Box style={{ minWidth: 0, flex: 'none' }}>
-          <Text size="3" weight="bold" as="div">₹{p.price.toLocaleString('en-IN')}</Text>
-          <Text size="1" color="gray" as="div" truncate>
-            {added > 0 ? `${added} in cart` : p.mrp ? `MRP ₹${p.mrp.toLocaleString('en-IN')}` : 'per unit'}
-          </Text>
-        </Box>
-        <button
-          className="qs-cta" style={{ marginTop: 0, flex: 1, justifyContent: 'center' }}
-          onClick={() => openQty && openQty(p, (n) => setAdded(a => a + n))}
-        >
-          {added > 0 ? 'Add more' : 'Add to cart'}
-        </button>
+        {added > 0 ? (
+          <>
+            <button
+              className="qs-cta ghost" style={{ marginTop: 0, flex: 1, justifyContent: 'center' }}
+              onClick={() => openQty && openQty(p, (n) => setAdded(a => a + n))}
+            >
+              Add more
+            </button>
+            <button
+              className="qs-cta" style={{ marginTop: 0, flex: 1.35, justifyContent: 'space-between' }}
+              onClick={() => openCart && openCart()}
+            >
+              <span>Go to cart</span>
+              <span className="cta-count">{cart ? cart.count : added}</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <Box style={{ minWidth: 0, flex: 'none' }}>
+              <Text size="3" weight="bold" as="div">₹{p.price.toLocaleString('en-IN')}</Text>
+              <Text size="1" color="gray" as="div" truncate>
+                {p.mrp ? `MRP ₹${p.mrp.toLocaleString('en-IN')}` : 'per unit'}
+              </Text>
+            </Box>
+            <button
+              className="qs-cta" style={{ marginTop: 0, flex: 1, justifyContent: 'center' }}
+              onClick={() => openQty && openQty(p, (n) => setAdded(a => a + n))}
+            >
+              Add to cart
+            </button>
+          </>
+        )}
       </div>
     </div>
+    </>
   )
 }
 
 export default function App() {
-  const [cart, setCart] = useState({ count: 0, total: 0, photos: [] })
+  const [cart, setCart] = useState({ count: 0, total: 0, photos: [], items: {} })
   // #compact hash forces the scrolled header state (handy for design review)
   const [scrolled, setScrolled] = useState(window.location.hash === '#compact')
   const [quizOpen, setQuizOpen] = useState(false)
@@ -2349,6 +2465,7 @@ export default function App() {
     window.location.hash === '#search' ? { items: FEED_POOL } : null)
   const [pdp, setPdp] = useState(() => (window.location.hash === '#pdp' ? FEED_POOL[0] : null))
   const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
+  const [cartOpen, setCartOpen] = useState(window.location.hash === '#cart')
   const [plp, setPlp] = useState(() => {
     if (window.location.hash.startsWith('#fsheet')) return 'Hinges'
     if (window.location.hash === '#strip') return 'All'
@@ -2371,6 +2488,8 @@ export default function App() {
   pdpRef.current = pdp
   const qtyRef = useRef(qsheet)
   qtyRef.current = qsheet
+  const cartRef = useRef(cartOpen)
+  cartRef.current = cartOpen
   const plpOpen = plp !== null
   const closePlp = () => {
     if (window.history.state?.qcPlp) window.history.back()
@@ -2379,7 +2498,7 @@ export default function App() {
   useEffect(() => {
     if (!plpOpen) return
     if (!window.history.state?.qcPlp) window.history.pushState({ qcPlp: true }, '')
-    const onPop = () => { if (!sheetRef.current && !pdpRef.current && !qtyRef.current) setPlp(null) }
+    const onPop = () => { if (!sheetRef.current && !pdpRef.current && !qtyRef.current && !cartRef.current) setPlp(null) }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [plpOpen])
@@ -2391,7 +2510,7 @@ export default function App() {
   useEffect(() => {
     if (!sheetOpen) return
     if (!window.history.state?.qcSheet) window.history.pushState({ qcSheet: true }, '')
-    const onPop = () => { if (!pdpRef.current && !qtyRef.current) setSheet(null) }
+    const onPop = () => { if (!pdpRef.current && !qtyRef.current && !cartRef.current) setSheet(null) }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [sheetOpen])
@@ -2403,7 +2522,7 @@ export default function App() {
   useEffect(() => {
     if (!pdpOpen) return
     if (!window.history.state?.qcPdp) window.history.pushState({ qcPdp: true }, '')
-    const onPop = () => { if (!qtyRef.current) setPdp(null) }
+    const onPop = () => { if (!qtyRef.current && !cartRef.current) setPdp(null) }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [pdpOpen])
@@ -2420,9 +2539,22 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop)
   }, [qtyOpen])
 
+  const closeCart = () => {
+    if (window.history.state?.qcCart) window.history.back()
+    else setCartOpen(false)
+  }
+  useEffect(() => {
+    if (!cartOpen) return
+    if (!window.history.state?.qcCart) window.history.pushState({ qcCart: true }, '')
+    const onPop = () => setCartOpen(false)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [cartOpen])
+
   // stable intents — memoized cards subscribe via context, never re-render
   const openQty = useCallback((p, apply, opts) => setQsheet({ p, apply, opts }), [])
   const openPdp = useCallback((p) => setPdp(p), [])
+  const openCart = useCallback(() => setCartOpen(true), [])
   const confirmQty = (n, e) => {
     const q = qsheet
     if (!q) return
@@ -2483,11 +2615,18 @@ export default function App() {
   // stable identity so memoized ProductCards skip re-render on cart changes
   const recoSrc = useRef(null)
   const changeCart = useCallback((delta, p, opts) => {
-    setCart(c => ({
-      count: c.count + delta,
-      total: c.total + delta * p.price,
-      photos: delta > 0 && !c.photos.includes(p.ph) ? [...c.photos, p.ph] : c.photos,
-    }))
+    setCart(c => {
+      const items = { ...c.items }
+      const n = (items[p.id]?.n || 0) + delta
+      if (n <= 0) delete items[p.id]
+      else items[p.id] = { p, n }
+      return {
+        count: Math.max(0, c.count + delta),
+        total: Math.max(0, c.total + delta * p.price),
+        photos: delta > 0 && !c.photos.includes(p.ph) ? [...c.photos, p.ph] : c.photos,
+        items,
+      }
+    })
     if (delta > 0 && !opts?.noReco) {
       const items = recosFor(p)
       if (items.length) {
@@ -2503,6 +2642,16 @@ export default function App() {
       setRecoStrip(null)
     }
   }, [])
+
+  // #cart hash: preload a mixed cart so the sheet can be reviewed
+  useEffect(() => {
+    if (window.location.hash !== '#cart') return
+    const t = setTimeout(() => {
+      changeCart(12, BUY_AGAIN[0], { noReco: true })
+      changeCart(2, DEALS[0], { noReco: true })
+    }, 400)
+    return () => clearTimeout(t)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // #reco / #strip hashes: auto-add an item so recommendations can be reviewed
   useEffect(() => {
@@ -2534,6 +2683,7 @@ export default function App() {
     <Theme accentColor="teal" grayColor="slate" radius="large">
       <QtyCtx.Provider value={openQty}>
       <PdpCtx.Provider value={openPdp}>
+      <CartCtx.Provider value={openCart}>
       <div className="app">
         <TopBar
           compact={scrolled} weather={{ icon: T.icon }} dp={sky.dp} cond={sky.cond}
@@ -2667,9 +2817,11 @@ export default function App() {
 
         <SearchSheet sheet={sheet} onClose={closeSheet} onChange={changeCart} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
 
-        {pdp && <ProductPage key={pdp.id} p={pdp} onClose={closePdp} onChange={changeCart} />}
+        {pdp && <ProductPage key={pdp.id} p={pdp} onClose={closePdp} onChange={changeCart} cart={cart} />}
 
         {qsheet && <QtySheet q={qsheet} onClose={closeQty} onConfirm={confirmQty} />}
+
+        {cartOpen && <CartSheet cart={cart} onClose={closeCart} onChange={changeCart} />}
 
         <div className="footer">
           {reco && (
@@ -2712,6 +2864,7 @@ export default function App() {
           </div>
         </div>
       </div>
+      </CartCtx.Provider>
       </PdpCtx.Provider>
       </QtyCtx.Provider>
     </Theme>
