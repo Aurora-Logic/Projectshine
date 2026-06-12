@@ -6,7 +6,7 @@ import {
   MagnifyingGlassIcon, ChevronDownIcon, ChevronRightIcon, ChevronUpIcon, PersonIcon,
   LightningBoltIcon, StarFilledIcon, MinusIcon, PlusIcon, TimerIcon, Cross2Icon,
   HomeIcon, DashboardIcon, CounterClockwiseClockIcon, RocketIcon, ArrowLeftIcon,
-  MixerHorizontalIcon, GearIcon, FileTextIcon, DiscIcon,
+  MixerHorizontalIcon, GearIcon, FileTextIcon, DiscIcon, CheckIcon,
 } from '@radix-ui/react-icons'
 import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
@@ -321,6 +321,7 @@ function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCoun
 
       <div className="rewards-strip" onClick={() => scrollToId('leaderboard')}>
         <StarFilledIcon width={14} height={14} color="var(--amber-9)" style={{ flex: 'none' }} />
+        <span className="tier-mini" style={{ background: '#98A2B3' }} />
         <Text size="1" weight="bold" truncate style={{ flex: 1, minWidth: 0 }}>
           Silver dealer · ahead of {Math.round(((MY_RANK.of - MY_RANK.rank) / MY_RANK.of) * 100)}% in your region
         </Text>
@@ -563,7 +564,9 @@ const ProductCard = memo(function ProductCard({ p, grid, onChange }) {
         {(() => {
           const n = bulkNudge(p, qty)
           return n ? (
-            <div key={n.text} className={`qnudge ${n.done ? 'done' : ''}`}>{n.text}</div>
+            <div key={n.text} className={`qnudge ${n.done ? 'done' : ''}`}>
+              {n.done && <CheckIcon width={11} height={11} style={{ flex: 'none' }} />}{n.text}
+            </div>
           ) : null
         })()}
       </div>
@@ -1778,7 +1781,11 @@ function FlashCard({ p, onChange }) {
         </Text>
         {(() => {
           const n = bulkNudge(p, qty)
-          return n ? <div key={n.text} className={`qnudge ${n.done ? 'done' : ''}`}>{n.text}</div> : null
+          return n ? (
+            <div key={n.text} className={`qnudge ${n.done ? 'done' : ''}`}>
+              {n.done && <CheckIcon width={11} height={11} style={{ flex: 'none' }} />}{n.text}
+            </div>
+          ) : null
         })()}
       </div>
     </div>
@@ -1791,7 +1798,9 @@ function FlashSale({ items, onChange, onSeeAll }) {
     <div className="band-flash cv" id="deals">
       <Flex align="center" justify="between" px="4">
         <Flex align="center" gap="3" style={{ minWidth: 0 }}>
-          <Heading size="4" style={{ color: '#fff', letterSpacing: '-0.2px' }}>Flash sale</Heading>
+          <Heading size="4" style={{ color: '#fff', letterSpacing: '-0.2px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <LightningBoltIcon width={17} height={17} color="#FFD43B" /> Flash sale
+        </Heading>
           <DealTimer />
         </Flex>
         <Text size="2" weight="bold" style={{ color: 'rgba(255,255,255,.9)', cursor: 'pointer', flex: 'none' }} onClick={onSeeAll}>
@@ -2047,7 +2056,8 @@ function QtySheet({ q, onClose, onConfirm }) {
         </div>
         {tier && (
           <div className={`qs-meter ${unlocked ? 'done' : ''}`}>
-            <Text size="1" weight="bold" as="div" style={{ color: unlocked ? 'var(--green-11)' : 'var(--amber-11)' }}>
+            <Text size="1" weight="bold" as="div" style={{ color: unlocked ? 'var(--green-11)' : 'var(--amber-11)', display: 'flex', alignItems: 'center', gap: 5 }}>
+              {unlocked && <CheckIcon width={12} height={12} style={{ flex: 'none' }} />}
               {unlocked
                 ? `${tier.pct}% bulk price unlocked — ₹${saved.toLocaleString('en-IN')} savings on invoice`
                 : `Add ${tier.thr - n} more to unlock ₹${tier.bp.toLocaleString('en-IN')}/pc (${tier.pct}% off)`}
@@ -2306,7 +2316,9 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
             {deals.length > 0 && (
               <div className="cp-card cp-flash">
                 <Flex align="center" justify="between">
-                  <Text size="2" weight="bold">Flash deals before you checkout</Text>
+                  <Text size="2" weight="bold" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <LightningBoltIcon width={14} height={14} color="#FFD43B" /> Flash deals before you checkout
+                  </Text>
                   <DealTimer />
                 </Flex>
                 <div className="cp-deals">
@@ -2351,7 +2363,8 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
                   )}
                 </>
               ) : (
-                <Text size="2" weight="bold" as="div" mt="1" style={{ color: 'var(--violet-11)' }}>
+                <Text size="2" weight="bold" as="div" mt="1" style={{ color: 'var(--violet-11)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <CheckIcon width={14} height={14} style={{ flex: 'none' }} />
                   Top slab unlocked · {slab.off}% off the entire invoice — ₹{schemeOff.toLocaleString('en-IN')} saved
                 </Text>
               )}
@@ -2377,7 +2390,8 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
               <button className={`dlv-row express ${express ? 'sel' : ''}`} onClick={() => setExpress(true)}>
                 <span className={`radio ${express ? 'on' : ''}`} />
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <Text size="2" weight="bold" as="div">
+                  <Text size="2" weight="bold" as="div" style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                    <LightningBoltIcon width={13} height={13} color="var(--amber-9)" style={{ flex: 'none' }} />
                     Express · at your shop in 1 hour <span className="fast-tag">FASTEST</span>
                   </Text>
                   <Text size="1" color="gray" as="div">Rush dispatch from the nearest depot</Text>

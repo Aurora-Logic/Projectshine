@@ -2807,3 +2807,6 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   .oc-pulse { animation: none; }
 }
+
+/* unlocked nudges carry a check icon */
+.qnudge { display: inline-flex; align-items: center; gap: 4px; }
