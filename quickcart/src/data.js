@@ -370,10 +370,10 @@ export const REORDER = [
 ]
 
 export const PAST_ORDERS = [
-  { id: 'QC-471203', date: 'Tue, 2 Jun', ts: new Date('2026-06-02').getTime(), items: [['ba1', 20], ['ba3', 50], ['dl1', 24]] },
-  { id: 'QC-458819', date: 'Sun, 17 May', ts: new Date('2026-05-17').getTime(), items: [['ba2', 30], ['ba1', 20], ['ws1', 8], ['ba5', 12]] },
-  { id: 'QC-446102', date: 'Sat, 25 Apr', ts: new Date('2026-04-25').getTime(), items: [['ne1', 5], ['ba3', 40]] },
-  { id: 'QC-431877', date: 'Fri, 13 Mar', ts: new Date('2026-03-13').getTime(), items: [['dl1', 24], ['ba4', 10], ['ls1', 6]] },
+  { id: 'QC-471203', date: 'Tue, 2 Jun', ts: new Date('2026-06-02').getTime(), items: [['ba1', 20, 350], ['ba3', 50, 78], ['dl1', 24, 479]] },
+  { id: 'QC-458819', date: 'Sun, 17 May', ts: new Date('2026-05-17').getTime(), items: [['ba2', 30, 265], ['ba1', 20, 350], ['ws1', 8, 1899], ['ba5', 12, 240]] },
+  { id: 'QC-446102', date: 'Sat, 25 Apr', ts: new Date('2026-04-25').getTime(), items: [['ne1', 5, 1450], ['ba3', 40, 95]] },
+  { id: 'QC-431877', date: 'Fri, 13 Mar', ts: new Date('2026-03-13').getTime(), items: [['dl1', 24, 479], ['ba4', 10, 240], ['ls1', 6, 850]] },
 ]
 
 /* Performance dashboard data (₹ thousands for the trend) */

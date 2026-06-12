@@ -2344,11 +2344,22 @@ function AcctLists({ onChange }) {
 function downloadInvoice(o) {
   let gst = { gstin: '29ABCDE1234F1Z5', name: 'Bora Hardware & Plywood' }
   try { gst = { ...gst, ...(JSON.parse(localStorage.getItem('qc-gst') || 'null') || {}) } } catch { /* defaults */ }
-  const total = o.items.reduce((s, { p, n }) => s + p.price * n, 0)
+  const bill = o.bill || null
+  const total = bill ? bill.toPay
+    : o.items.reduce((s, it) => s + (it.unit ?? unitPriceFor(it.p, it.n)) * it.n, 0)
   const taxable = Math.round(total / 1.18)
   const tax = total - taxable
-  const rows = o.items.map(({ p, n }) => `
-    <tr><td>${p.name}</td><td class="r">${n}</td><td class="r">₹${p.price.toLocaleString('en-IN')}</td><td class="r">₹${(p.price * n).toLocaleString('en-IN')}</td></tr>`).join('')
+  const rows = o.items.map((it) => {
+    const u = it.unit ?? unitPriceFor(it.p, it.n)
+    return `
+    <tr><td>${it.p.name}</td><td class="r">${it.n}</td><td class="r">₹${u.toLocaleString('en-IN')}</td><td class="r">₹${(u * it.n).toLocaleString('en-IN')}</td></tr>`
+  }).join('')
+    + (bill && bill.schemeOff > 0 ? `
+    <tr><td colspan="3" class="r mut">Volume scheme discount</td><td class="r">−₹${bill.schemeOff.toLocaleString('en-IN')}</td></tr>` : '')
+    + (bill && bill.coupon ? `
+    <tr><td colspan="3" class="r mut">Coupon · ${bill.coupon.label}</td><td class="r">−₹${bill.coupon.off.toLocaleString('en-IN')}</td></tr>` : '')
+    + (bill && (bill.deliveryFee > 0 || bill.expressFee > 0) ? `
+    <tr><td colspan="3" class="r mut">Delivery${bill.expressFee ? ' + express' : ''}</td><td class="r">₹${(bill.deliveryFee + bill.expressFee).toLocaleString('en-IN')}</td></tr>` : '')
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${o.id}</title><style>
     body{font-family:-apple-system,Segoe UI,sans-serif;margin:32px;color:#1a1a1a}
     h1{font-size:20px;margin:0;color:#0E4A2F} .mut{color:#777;font-size:12px}
@@ -2365,7 +2376,7 @@ function downloadInvoice(o) {
     <tr><td colspan="3" class="r mut">Taxable value</td><td class="r">₹${taxable.toLocaleString('en-IN')}</td></tr>
     <tr><td colspan="3" class="r mut">CGST 9% + SGST 9%</td><td class="r">₹${tax.toLocaleString('en-IN')}</td></tr>
     <tr class="tot"><td colspan="3" class="r">Grand total</td><td class="r">₹${total.toLocaleString('en-IN')}</td></tr></table>
-    <p class="mut">Input credit available on this invoice. Computer-generated — no signature required.</p>
+    <p class="mut">${o.payMode ? `Settled to ${o.payMode}${o.dueTs ? ` · due ${new Date(o.dueTs).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}. ` : ''}Input credit available on this invoice. Computer-generated — no signature required.</p>
   </body></html>`
   const blob = new Blob([html], { type: 'text/html' })
   const a = document.createElement('a')
@@ -2410,8 +2421,9 @@ function AcctCredit() {
   const [method, setMethod] = useState('UPI')
   const [done, setDone] = useState(null)
   const [ledgerMsg, setLedgerMsg] = useState(false)
-  const bills = CREDIT.bills.filter(b => !paid.includes(b.id))
-  const settled = CREDIT.bills.filter(b => paid.includes(b.id))
+  const cs = creditState()
+  const bills = cs.open
+  const settled = cs.all.filter(b => paid.includes(b.id))
   const outstanding = bills.reduce((s, b) => s + b.amt, 0)
   const avail = CREDIT.limit - outstanding
   const overdue = bills.filter(b => b.days < 0)
@@ -2946,11 +2958,16 @@ const ordPgRef = { current: false }
 
 function OrderDetailPage({ order, onClose, onChange }) {
   const pieces = order.items.reduce((s, { n }) => s + n, 0)
-  const total = order.items.reduce((s, { p, n }) => s + p.price * n, 0)
-  const saved = order.items.reduce((s, { p, n }) => {
-    const t = bulkTier(p)
-    return t && n >= t.thr ? s + (p.price - t.bp) * n : s
-  }, 0)
+  const bill = order.bill || null
+  // snapshotted bill wins; legacy seeds fall back to effective pricing
+  const total = bill ? bill.toPay
+    : order.items.reduce((s, it) => s + (it.unit ?? unitPriceFor(it.p, it.n)) * it.n, 0)
+  const saved = bill
+    ? bill.bulkSave + bill.schemeOff + (bill.coupon?.off || 0)
+    : order.items.reduce((s, { p, n }) => {
+      const t = bulkTier(p)
+      return t && n >= t.thr ? s + (p.price - t.bp) * n : s
+    }, 0)
   const live = order.status !== 'Delivered'
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -3026,23 +3043,53 @@ function OrderDetailPage({ order, onClose, onChange }) {
         </div>
         <div className="cp-card">
           <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>ITEMS</Text>
-          {order.items.map(({ p, n }) => (
-            <div className="cs-row" key={`op-${p.id}`}>
-              <Img src={img(p.ph, 120)} alt="" />
-              <Box flexGrow="1" style={{ minWidth: 0 }}>
-                <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{p.name}</Text>
-                <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>{n} × ₹{p.price.toLocaleString('en-IN')}</Text>
-              </Box>
-              <Text size="1" weight="bold" style={{ minWidth: 60, textAlign: 'right', flex: 'none', whiteSpace: 'nowrap' }}>
-                ₹{(n * p.price).toLocaleString('en-IN')}
-              </Text>
-            </div>
-          ))}
+          {order.items.map((it) => {
+            const u = it.unit ?? unitPriceFor(it.p, it.n)
+            return (
+              <div className="cs-row" key={`op-${it.p.id}`}>
+                <Img src={img(it.p.ph, 120)} alt="" />
+                <Box flexGrow="1" style={{ minWidth: 0 }}>
+                  <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{it.p.name}</Text>
+                  <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>{it.n} × ₹{u.toLocaleString('en-IN')}</Text>
+                </Box>
+                <Text size="1" weight="bold" style={{ minWidth: 60, textAlign: 'right', flex: 'none', whiteSpace: 'nowrap' }}>
+                  ₹{(it.n * u).toLocaleString('en-IN')}
+                </Text>
+              </div>
+            )
+          })}
           <div className="cp-divider" />
-          <Flex justify="between">
+          {bill && (
+            <>
+              {bill.schemeOff > 0 && (
+                <Flex justify="between">
+                  <Text size="1" color="gray">Volume scheme</Text>
+                  <Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>−₹{bill.schemeOff.toLocaleString('en-IN')}</Text>
+                </Flex>
+              )}
+              {bill.coupon && (
+                <Flex justify="between" mt="1">
+                  <Text size="1" color="gray">Coupon · {bill.coupon.label}</Text>
+                  <Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>−₹{bill.coupon.off.toLocaleString('en-IN')}</Text>
+                </Flex>
+              )}
+              {(bill.deliveryFee > 0 || bill.expressFee > 0) && (
+                <Flex justify="between" mt="1">
+                  <Text size="1" color="gray">Delivery{bill.expressFee ? ' + express' : ''}</Text>
+                  <Text size="1" weight="bold">₹{(bill.deliveryFee + bill.expressFee).toLocaleString('en-IN')}</Text>
+                </Flex>
+              )}
+            </>
+          )}
+          <Flex justify="between" mt={bill ? '1' : '0'}>
             <Text size="2" weight="bold">Order total</Text>
             <Text size="2" weight="bold">₹{total.toLocaleString('en-IN')}</Text>
           </Flex>
+          {order.payMode && order.dueTs && (
+            <Text size="1" as="div" mt="1" style={{ color: 'var(--green-11)', fontWeight: 700 }}>
+              {order.payMode} · due {new Date(order.dueTs).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+            </Text>
+          )}
         </div>
         <Flex gap="2">
           <button className="qs-cta ghost" style={{ marginTop: 0, flex: 1, justifyContent: 'center', gap: 7 }} onClick={() => downloadInvoice(order)}>
@@ -3085,7 +3132,7 @@ function AcctOrders({ lastOrder, onChange }) {
     }] : []),
     ...PAST_ORDERS.map(o => ({
       ...o, status: 'Delivered',
-      items: o.items.map(([id, n]) => ({ p: FEED_POOL.find(p => p.id === id), n })).filter(x => x.p),
+      items: o.items.map(([id, n, unit]) => ({ p: FEED_POOL.find(p => p.id === id), n, unit })).filter(x => x.p),
     })),
   ]
   const nowTs = Date.now()
@@ -3886,12 +3933,10 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
         </div>
 
         {(() => {
-          let paidIds = []
-          try { paidIds = JSON.parse(localStorage.getItem('qc-paid') || '[]') } catch { /* none */ }
-          const openBills = CREDIT.bills.filter(b => !paidIds.includes(b.id))
-          const out = openBills.reduce((s, b) => s + b.amt, 0)
-          const avail = CREDIT.limit - out
-          const od = openBills.filter(b => b.days < 0).length
+          const cs = creditState()
+          const out = cs.outstanding
+          const avail = cs.limit - out
+          const od = cs.open.filter(b => b.days < 0).length
           return (
             <button className="credit-snap" onClick={() => setSub('credit')}>
               <Flex align="center" justify="between">
@@ -4214,7 +4259,7 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
   useEffect(() => {
     if (window.location.hash === '#pastorder') {
       const o = PAST_ORDERS[0]
-      setView({ ...o, items: o.items.map(([id, n]) => ({ p: FEED_POOL.find(p => p.id === id), n })).filter(x => x.p) })
+      setView({ ...o, items: o.items.map(([id, n, unit]) => ({ p: FEED_POOL.find(p => p.id === id), n, unit })).filter(x => x.p) })
     }
   }, [])
   const ready = useNextFrame()
@@ -4255,7 +4300,7 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
     }] : []),
     ...PAST_ORDERS.map(o => ({
       ...o,
-      items: o.items.map(([id, n]) => ({ p: FEED_POOL.find(p => p.id === id), n })).filter(x => x.p),
+      items: o.items.map(([id, n, unit]) => ({ p: FEED_POOL.find(p => p.id === id), n, unit })).filter(x => x.p),
     })),
   ]
   const repeat = (o, e) => {

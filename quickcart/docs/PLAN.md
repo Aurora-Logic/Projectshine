@@ -1,6 +1,6 @@
 # QuickCart — Master Plan (single working doc)
 
-**Updated:** 13 Jun 2026 (Sprint 0 + quick wins landed; A1.7/A1.10 partial — see notes) · Consolidates the full audit (142 verified findings), its fix roadmap, and the client's 12-feature brief. Work from this file only; tick items as they land.
+**Updated:** 13 Jun 2026 (Sprints 0–1 landed: A0 complete, A1 complete) · Consolidates the full audit (142 verified findings), its fix roadmap, and the client's 12-feature brief. Work from this file only; tick items as they land.
 
 **Effort tags:** S ≤ 1h · M = half-day · L = multi-day
 
@@ -28,15 +28,15 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 
 ### A1 · Money & trust coherence (dealer-credibility pass)
 
-- [ ] **A1.1 M** Single source of truth for cart: store only `items`; derive `count/total/photos`; steppers read `cart.items[p.id]?.n` via context — delete local `useState(0)` in ProductCard/FlashCard/ComboCard. (Fixes stale steppers + count/total corruption.)
-- [ ] **A1.2 S** `EndlessFeed` must stop rewriting product ids (`f0-`+id) — batch goes in the React `key`; same SKU merges into one cart line so bulk tiers aggregate.
-- [ ] **A1.3 S** One bulk-price story: chip, CTA, cart row, bill must agree (effective price + struck full price, or explicit "−₹X on invoice" everywhere).
-- [ ] **A1.4 M** Snapshot the bill on the order record (`itemTotal, bulkSave, schemeOff, deliveryFee, expressFee, toPay`); render order detail + GST invoice from the snapshot. Kills ₹5,240-paid vs ₹5,660-invoiced.
-- [ ] **A1.5 M** Close the reward loop: persist `qc-coupon` on wheel win → bill line → consume on placement; fest "₹150 OFF" becomes a real threshold mechanic or honest copy; streak derives from stored check-ins.
-- [ ] **A1.6 M** Credit at checkout: "BILLED TO CREDIT · due 12 Jul · ₹3.96L left after this order" card + GST split in bill; echo on order-placed; append PO to open bills in the ledger.
-- [x] **A1.7 S–M** *(price-snapshotting of PAST_ORDERS rides with A1.4)* Reconcile seeds: QC-446102 bill ↔ its order; drop the `+12 / +₹10.4L` orders-header padding; delete stored `tag` (compute %); derive weekday labels from `ts`; snapshot prices into `PAST_ORDERS`.
-- [ ] **A1.8 S** One delivery-speed promise across hero/login/checkout/tracking; store on the order, echo it.
-- [ ] **A1.9 S** Search: tokenize + AND-match, normalize hyphens/plurals, include `brand`/`mat`; fallback only after token match fails.
+- [x] **A1.1 M** Single source of truth for cart: store only `items`; derive `count/total/photos`; steppers read `cart.items[p.id]?.n` via context — delete local `useState(0)` in ProductCard/FlashCard/ComboCard. (Fixes stale steppers + count/total corruption.)
+- [x] **A1.2 S** `EndlessFeed` must stop rewriting product ids (`f0-`+id) — batch goes in the React `key`; same SKU merges into one cart line so bulk tiers aggregate.
+- [x] **A1.3 S** One bulk-price story: chip, CTA, cart row, bill must agree (effective price + struck full price, or explicit "−₹X on invoice" everywhere).
+- [x] **A1.4 M** Snapshot the bill on the order record (`itemTotal, bulkSave, schemeOff, deliveryFee, expressFee, toPay`); render order detail + GST invoice from the snapshot. Kills ₹5,240-paid vs ₹5,660-invoiced.
+- [x] **A1.5 M** Close the reward loop: persist `qc-coupon` on wheel win → bill line → consume on placement; fest "₹150 OFF" becomes a real threshold mechanic or honest copy; streak derives from stored check-ins.
+- [x] **A1.6 M** Credit at checkout: "BILLED TO CREDIT · due 12 Jul · ₹3.96L left after this order" card + GST split in bill; echo on order-placed; append PO to open bills in the ledger.
+- [x] **A1.7 S–M** *(complete incl. PAST_ORDERS price snapshots)* Reconcile seeds: QC-446102 bill ↔ its order; drop the `+12 / +₹10.4L` orders-header padding; delete stored `tag` (compute %); derive weekday labels from `ts`; snapshot prices into `PAST_ORDERS`.
+- [x] **A1.8 S** One delivery-speed promise across hero/login/checkout/tracking; store on the order, echo it.
+- [x] **A1.9 S** Search: tokenize + AND-match, normalize hyphens/plurals, include `brand`/`mat`; fallback only after token match fails.
 - [x] **A1.10 S×5** Honest fixes: slide calculator must use selected length; visit "Visited" gated on booked datetime; clamp qty to stock (fix ba2/dl1 seeds); truthful "Add to this order" copy; `en-IN` format in CartBar.
 
 ### A2 · Mobile & native-feel polish
