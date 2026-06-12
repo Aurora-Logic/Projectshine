@@ -12,7 +12,7 @@ import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
   FEED_POOL, CATEGORIES, BANNERS, COMBOS, CLEARANCE_TILES, QUIZ,
   LEADERS, SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
-  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES,
+  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS,
 } from './data.js'
 import './App.css'
 
@@ -306,9 +306,9 @@ function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCoun
       <div className="rewards-strip" onClick={() => scrollToId('leaderboard')}>
         <StarFilledIcon width={14} height={14} color="var(--amber-9)" style={{ flex: 'none' }} />
         <Text size="1" weight="bold" truncate style={{ flex: 1, minWidth: 0 }}>
-          You’re #{MY_RANK.rank} of {MY_RANK.of} dealers · ↑{MY_RANK.moved} this week
+          🥈 Silver dealer · ahead of {Math.round(((MY_RANK.of - MY_RANK.rank) / MY_RANK.of) * 100)}% in your region
         </Text>
-        <Text size="1" weight="bold" color="amber" style={{ flex: 'none' }}>View board</Text>
+        <Text size="1" weight="bold" color="amber" style={{ flex: 'none' }}>View journey</Text>
         <ChevronRightIcon width={13} height={13} color="var(--amber-11)" style={{ flex: 'none' }} />
       </div>
 
@@ -1554,7 +1554,6 @@ function SpinDialog({ open, onOpenChange }) {
 function Leaderboard() {
   const [animate, setAnimate] = useState(false)
   const ref = useRef(null)
-
   useEffect(() => {
     const ob = new IntersectionObserver(
       entries => { if (entries[0].isIntersecting) setAnimate(true) },
@@ -1565,31 +1564,51 @@ function Leaderboard() {
   }, [])
 
   const myVol = TARGETS.monthly.done
-  const max = Math.max(...LEADERS.map(l => l.vol), myVol)
-  const toTop5 = Math.max(0, LEADERS[LEADERS.length - 1].vol - myVol + 1)
+  let curIdx = 0
+  TIERS.forEach((t, i) => { if (myVol >= t.min) curIdx = i })
+  const next = TIERS[curIdx + 1]
+  const segProg = next ? (myVol - TIERS[curIdx].min) / (next.min - TIERS[curIdx].min) : 1
+  const fillPct = Math.min(100, ((curIdx + segProg) / (TIERS.length - 1)) * 100)
+  const pctile = Math.round(((MY_RANK.of - MY_RANK.rank) / MY_RANK.of) * 100)
 
   return (
-    <Box pt="5" id="leaderboard">
-      <SectionHead title="Top dealers — HSR region" extra={<span className="save-pill">WEEKLY</span>} />
-      <Box px="4" mt="-2">
-        <Text size="1" color="gray" as="div">
-          Ranked by monthly purchase volume. Top 3 earn extra margin this month.
-        </Text>
-      </Box>
-      <div className={`lb-card ${animate ? 'go' : ''}`} ref={ref}>
-        <div className="lbv">
-          {[
-            ...LEADERS.map((l, i) => ({ rank: i + 1, name: l.name.split(' ')[0], value: l.vol, color: l.c, top: i === 0 })),
-            { rank: 12, name: 'You', value: myVol, me: true },
-          ].map((e, i) => (
-            <LeaderCol key={e.name} entry={e} index={i} max={max} animate={animate} />
+    <Box pt="5" id="leaderboard" className="cv">
+      <SectionHead
+        title="Your dealer journey" extra={<span className="save-pill">THIS MONTH</span>}
+        sub="Grow monthly volume to unlock better margins — your progress is yours alone."
+      />
+      <div className="tj-card" ref={ref}>
+        <div className="tj-track">
+          <div className="tj-line">
+            <div className="tj-fill" style={{ width: animate ? `${fillPct}%` : '0%' }} />
+          </div>
+          {TIERS.map((t, i) => (
+            <div key={t.name} className={`tj-node ${i < curIdx ? 'hit' : ''} ${i === curIdx ? 'cur' : ''}`}>
+              <div className="tj-dot">{t.icon}</div>
+              <Text size="1" weight={i === curIdx ? 'bold' : 'medium'} style={{ fontSize: 10.5 }}>{t.name}</Text>
+              <Text style={{ fontSize: 9.5, color: 'var(--gray-9)' }}>{t.min === 0 ? '—' : fmtL(t.min)}</Text>
+            </div>
           ))}
         </div>
+        <Flex align="center" justify="between" mt="4">
+          <Box>
+            <Text size="3" weight="bold" as="div">{TIERS[curIdx].icon} {TIERS[curIdx].name} dealer</Text>
+            <Text size="1" color="gray" as="div" mt="1">Ahead of {pctile}% of dealers in your region</Text>
+          </Box>
+          {next && (
+            <Box style={{ textAlign: 'right' }}>
+              <Text size="2" weight="bold" as="div" style={{ color: 'var(--teal-11)' }}>
+                {fmtL(next.min - myVol)} to {next.name}
+              </Text>
+              <Text size="1" color="gray" as="div" mt="1">{next.perk}</Text>
+            </Box>
+          )}
+        </Flex>
       </div>
       <div className="lb-tip">
         <RocketIcon width={15} height={15} color="var(--amber-11)" style={{ flex: 'none' }} />
         <Text size="1" weight="bold" style={{ flex: 1, color: 'var(--amber-11)' }}>
-          {fmtL(toTop5)} more in purchases to crack the top 5 — every order counts
+          {next ? `${fmtL(next.min - myVol)} more this month unlocks ${next.name} — ${next.perk}` : 'Top tier reached — enjoy Platinum benefits'}
         </Text>
         <Button size="1" radius="full" color="amber" variant="solid" highContrast
           style={{ fontWeight: 800, flex: 'none' }} onClick={() => scrollToId('deals')}>
@@ -1616,25 +1635,29 @@ function BestSellers({ onCat }) {
   const [idx, setIdx] = useState(0)
   const onScroll = () => {
     const el = ref.current
-    if (el) setIdx(Math.min(BESTS.length - 1, Math.round(el.scrollLeft / 212)))
+    if (el) setIdx(Math.min(BESTS.length - 1, Math.round(el.scrollLeft / 180)))
   }
   return (
     <Box pt="5" className="cv">
       <SectionHead title="Bestsellers" onSeeAll={() => onCat('All')} />
       <div className="hscroll" ref={ref} onScroll={onScroll}>
         {BESTS.map(([cat, label]) => {
-          const imgs = FEED_POOL.filter(CAT_RULES[cat]).slice(0, 4)
-          for (const p of FEED_POOL) {
+          // four DISTINCT photos per collage (several products share context shots)
+          const imgs = []
+          const seen = new Set()
+          for (const p of [...FEED_POOL.filter(CAT_RULES[cat]), ...FEED_POOL]) {
             if (imgs.length >= 4) break
-            if (!imgs.includes(p)) imgs.push(p)
+            if (!seen.has(p.ph)) { seen.add(p.ph); imgs.push(p) }
           }
           const count = (CATEGORIES.find(c => c[1] === cat) || [])[2] || 99
           return (
             <button key={cat} className="bs-card" onClick={() => onCat(cat)}>
-              <div className="bs-grid">
-                {imgs.map(p => <Img key={p.id} src={img(p.ph, 200)} alt="" loading="lazy" />)}
+              <div className="bs-gridwrap">
+                <div className="bs-grid">
+                  {imgs.map(p => <Img key={p.id} src={img(p.ph, 180)} alt="" loading="lazy" />)}
+                </div>
+                <span className="bs-more">+{count} more</span>
               </div>
-              <span className="bs-more">+{count} more</span>
               <Text as="div" weight="bold" style={{ fontSize: 15, letterSpacing: '-0.2px', padding: '14px 4px 2px' }}>
                 {label}
               </Text>

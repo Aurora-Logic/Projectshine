@@ -212,7 +212,7 @@ body {
   overflow: hidden;
   visibility: hidden;
   pointer-events: none;
-  transition: max-height .18s cubic-bezier(.4, 0, .2, 1), opacity .1s linear, margin .18s cubic-bezier(.4, 0, .2, 1), visibility 0s linear .18s;
+  transition: none;
 }
 .tab-t {
   flex: none;
@@ -335,7 +335,7 @@ body {
   border-width: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: max-height .18s cubic-bezier(.4, 0, .2, 1), opacity .1s linear, margin .18s cubic-bezier(.4, 0, .2, 1), padding .18s cubic-bezier(.4, 0, .2, 1), visibility 0s linear .18s;
+  transition: none;
 }
 
 /* ---------- Photo tiles & cards ---------- */
@@ -724,7 +724,7 @@ body {
   margin: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: max-height .18s cubic-bezier(.4, 0, .2, 1), opacity .1s linear, margin .18s cubic-bezier(.4, 0, .2, 1), visibility 0s linear .18s;
+  transition: none;
 }
 
 /* ---------- Banner carousel ---------- */
@@ -1835,6 +1835,19 @@ body {
   background-size: 20px 12px;
   height: 12px;
 }
+.fest-edge.bubbles {
+  background-image:
+    radial-gradient(circle at 8px 0, var(--hdr-d, #142F27) 7px, transparent 7.6px),
+    radial-gradient(circle at 22px 0, var(--hdr-d, #142F27) 10px, transparent 10.6px);
+  background-size: 30px 14px;
+}
+.fest-edge.castle {
+  background-image:
+    linear-gradient(var(--hdr-d, #142F27), var(--hdr-d, #142F27)),
+    linear-gradient(90deg, var(--hdr-d, #142F27) 0 12px, transparent 12px 24px);
+  background-size: 24px 5px, 24px 12px;
+  height: 12px;
+}
 .fest-edge.teeth {
   background-image: linear-gradient(90deg, var(--hdr-d, #142F27) 0 12px, transparent 12px 22px);
   background-size: 22px 10px;
@@ -1951,7 +1964,7 @@ body {
 /* ---------- Bestsellers collage ---------- */
 .bs-card {
   flex: none;
-  width: 200px;
+  width: 168px;
   border: none;
   background: none;
   font-family: inherit;
@@ -1973,15 +1986,16 @@ body {
 }
 .bs-grid img {
   width: 100%;
-  height: 80px;
+  height: 64px;
   object-fit: cover;
-  border-radius: 12px;
+  border-radius: 11px;
 }
+.bs-gridwrap { position: relative; }
 .bs-more {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  top: 178px;
+  bottom: -11px;
   background: var(--gray-12);
   color: #fff;
   font-size: 11px;
@@ -2016,3 +2030,54 @@ body {
   pointer-events: none;
 }
 .sheet-reco .rstrip { pointer-events: auto; }
+
+/* ---------- Dealer tier journey ---------- */
+.tj-card {
+  margin: 12px 16px 0;
+  border: 1px solid var(--gray-4);
+  border-radius: 18px;
+  background: #fff;
+  padding: 16px 14px 14px;
+}
+.tj-track { position: relative; display: flex; justify-content: space-between; }
+.tj-line {
+  position: absolute;
+  top: 16px;
+  left: 28px;
+  right: 28px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--gray-4);
+}
+.tj-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--teal-9), var(--teal-11));
+  transition: width .9s cubic-bezier(.22, 1, .36, 1);
+}
+.tj-node {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 64px;
+}
+.tj-dot {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--gray-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.tj-node.hit .tj-dot { border-color: var(--teal-9); background: var(--teal-3); }
+.tj-node.cur .tj-dot {
+  border-color: var(--teal-9);
+  background: var(--teal-9);
+  box-shadow: 0 0 0 4px var(--teal-4);
+}
