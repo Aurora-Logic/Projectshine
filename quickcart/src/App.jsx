@@ -1383,13 +1383,13 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
               {QUIZ.map((_, i) => (
                 <i key={i} className={i < qi ? 'done' : i === qi ? 'cur' : ''} />
               ))}
-              <Text size="1" weight="bold" style={{ color: '#F5C242', marginLeft: 8 }}>
+              <Text size="1" weight="bold" style={{ color: '#F5C242', marginLeft: 8, whiteSpace: 'nowrap' }}>
                 ₹{correct * 25} in the bank
               </Text>
             </div>
             <div className="cz-chip"><span>{Math.ceil(tleft)}</span></div>
           </Flex>
-          <div className="qbar" style={{ background: 'rgba(255,255,255,.18)' }}>
+          <div className="qbar" style={{ background: 'rgba(255,255,255,.18)', marginTop: 12 }}>
             <div
               className="qbar-fill"
               style={{ width: `${(tleft / QUIZ_SECONDS) * 100}%`, background: 'linear-gradient(90deg, #F5C242, #FFE9A8)' }}
@@ -1439,7 +1439,7 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
 
 function QuizCard({ onFinish, skin }) {
   return (
-    <div className="quiz-card czn" id="quiz">
+    <div className={`quiz-card czn cz-${skin.name.toLowerCase()}`} id="quiz">
       <QuizFlow skin={skin} onFinish={onFinish} onLeaderboard={() => scrollToId('leaderboard')} />
     </div>
   )
@@ -1448,7 +1448,7 @@ function QuizCard({ onFinish, skin }) {
 function QuizDialog({ open, onOpenChange, onFinish, skin }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content className="quiz-dialog czn" maxWidth="380px" aria-describedby={undefined}>
+      <Dialog.Content className={`quiz-dialog czn cz-${skin.name.toLowerCase()}`} maxWidth="380px" aria-describedby={undefined}>
         <Dialog.Title size="3" mb="3" align="center" style={{ color: '#F5C242', letterSpacing: '2px', textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>
           THE NIGHTLY TABLE
         </Dialog.Title>
@@ -1582,7 +1582,7 @@ function SpinDialog({ open, onOpenChange }) {
     }, 4200)
   }
 
-  // thin gold separators between casino segments
+  // thin gold separators between prize segments
   const gradient = WHEEL.map((s, i) =>
     `#F5C242 ${i * segs}deg ${i * segs + 1.4}deg, ${s.color} ${i * segs + 1.4}deg ${(i + 1) * segs}deg`
   ).join(', ')
@@ -1788,10 +1788,10 @@ function BestSellers({ onCat }) {
 }
 
 /* Hero v2: client "fest" takeover — promo card + 2x2 category tiles, scalloped edge */
-function FestHero({ onCat, palette }) {
+function FestHero({ onCat, palette, layout = 'a' }) {
   return (
     <div className="fest-wrap">
-      <div className="fest-grid">
+      <div className={`fest-grid f-${layout}`}>
         <button className="fest-promo" onClick={() => onCat(FEST.cat)}>
           <Text as="div" weight="bold" style={{ fontSize: 21, lineHeight: 1.15, color: '#2b2200' }}>{FEST.title}</Text>
           <Text as="div" weight="bold" style={{ fontSize: 19, color: '#2b2200' }}>{FEST.off}</Text>
@@ -4745,6 +4745,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
 /* ---------------- Product details page ---------------- */
 
 let PDP_DIR = 0 // swipe direction handoff to the next ProductPage mount (slide-in side)
+const PDP_SWAPF = { current: false } // product switched while the page was already open
 
 function ProductPage({ p, onClose, onChange, cart }) {
   const openQty = useContext(QtyCtx)
@@ -4773,7 +4774,13 @@ function ProductPage({ p, onClose, onChange, cart }) {
     return next && next.id !== p.id ? next : null
   }
   const rootRef = useRef(null)
-  const [enter] = useState(() => { const d = PDP_DIR; PDP_DIR = 0; return d })
+  const [enter] = useState(() => {
+    const d = PDP_DIR
+    PDP_DIR = 0
+    const sw = PDP_SWAPF.current
+    PDP_SWAPF.current = false
+    return d === 1 ? 'pdp-in-r' : d === -1 ? 'pdp-in-l' : sw ? 'pdp-swap' : ''
+  })
   const touch = useRef(null)
   const onTouchStart = (e) => {
     touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, axis: null }
@@ -4879,7 +4886,7 @@ function ProductPage({ p, onClose, onChange, cart }) {
   return (
     <>
     <div className="pdp-back" />
-    <div ref={rootRef} className={`pdp ${enter === 1 ? 'pdp-in-r' : enter === -1 ? 'pdp-in-l' : ''}`}>
+    <div ref={rootRef} className={`pdp ${enter}`}>
       <div className="pdp-head">
         <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
         <Text size="3" weight="bold" style={{ flex: 1, minWidth: 0, letterSpacing: '-0.2px' }} truncate>Product details</Text>
@@ -5073,6 +5080,16 @@ export default function App() {
   const [simSkin, setSimSkin] = useState(null)
   const simEnabled = window.location.hash === '#sim'
   const heroVariant = window.location.hash === '#hero-classic' ? 'classic' : 'fest'
+  // fest grid layout also rotates per open: a classic · b mirrored ·
+  // c banner+4col · d tiles-then-banner · e 4-stack left + promo right
+  const [festL] = useState(() => {
+    const m = window.location.hash.match(/^#fest-([a-e])$/)
+    if (m) return m[1]
+    const L = ['a', 'b', 'c', 'd', 'e']
+    const i = (Number(localStorage.getItem('qc-fest-idx') || -1) + 1) % L.length
+    localStorage.setItem('qc-fest-idx', String(i))
+    return L[i]
+  })
   const [heroPal, setHeroPal] = useState(() => {
     const m = window.location.hash.match(/^#hero-(\w+)$/)
     const hit = m && HERO_PALETTES.find(p => p.name.toLowerCase() === m[1].toLowerCase())
@@ -5246,7 +5263,10 @@ export default function App() {
 
   // stable intents — memoized cards subscribe via context, never re-render
   const openQty = useCallback((p, apply, opts) => setQsheet({ p, apply, opts }), [])
-  const openPdp = useCallback((p) => setPdp(p), [])
+  const openPdp = useCallback((p) => setPdp(prev => {
+    if (prev) PDP_SWAPF.current = true
+    return p
+  }), [])
   const openCart = useCallback(() => setCartOpen(true), [])
   const confirmQty = (n, e) => {
     const q = qsheet
@@ -5387,7 +5407,7 @@ export default function App() {
         />
 
         {heroVariant === 'fest' ? (
-          <FestHero onCat={(c) => setPlp(c)} palette={heroPal} />
+          <FestHero onCat={(c) => setPlp(c)} palette={heroPal} layout={festL} />
         ) : (
           <div className="header-extend" style={glow ? { '--banner-glow': glow } : undefined}>
             <BannerCarousel quizSkin={quizSkin} onGlow={setGlow} />

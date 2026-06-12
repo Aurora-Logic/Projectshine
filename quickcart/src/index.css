@@ -4216,7 +4216,7 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   align-self: auto;
 }
 
-/* ==================== CASINO NIGHT (quiz + spin) ==================== */
+/* ==================== GAME NIGHT (quiz + spin) ==================== */
 .czn {
   background:
     radial-gradient(140% 120% at 50% 0%, rgba(255, 221, 130, .14) 0%, transparent 42%),
@@ -4438,7 +4438,7 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 }
 .wheel-pointer { border-top-color: #FFE9A8; }
 
-/* game row cards join the casino */
+/* game row cards join the game night */
 .game-spin {
   background:
     radial-gradient(130% 130% at 22% 0%, #A3303C 0%, #6B1622 65%) !important;
@@ -4452,3 +4452,50 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   .blb-row i, .rim-blb { animation: none; }
 }
+
+/* ---------- Fest grid layout variants (rotate per open) ---------- */
+.fest-grid.f-b { grid-template-columns: 1fr 42%; }
+.fest-grid.f-b .fest-promo { order: 2; }
+.fest-grid.f-b .fest-tiles { order: 1; }
+.fest-grid.f-c, .fest-grid.f-d { grid-template-columns: 1fr; }
+.fest-grid.f-c .fest-tiles { grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr; }
+.fest-grid.f-c .fest-tile { min-height: 92px; }
+.fest-grid.f-c .fest-tl { font-size: 10px; }
+.fest-grid.f-d .fest-tiles { order: 1; }
+.fest-grid.f-d .fest-promo { order: 2; }
+.fest-grid.f-e { grid-template-columns: 1fr 56%; }
+.fest-grid.f-e .fest-tiles { grid-template-columns: 1fr; grid-template-rows: repeat(4, 1fr); }
+.fest-grid.f-e .fest-tile { min-height: 66px; }
+.fest-grid.f-e .fest-promo { order: 2; }
+
+/* ---------- PDP in-place swap: soft crossfade, no re-push ---------- */
+.pdp.pdp-swap { animation: pdpswap .2s ease; }
+@keyframes pdpswap {
+  from { opacity: .35; }
+}
+
+/* ---------- Game-night felt variations (rotates with the daily edition) ---------- */
+.czn {
+  background:
+    radial-gradient(140% 120% at 50% 0%, rgba(255, 221, 130, .14) 0%, transparent 42%),
+    radial-gradient(120% 140% at 50% 100%, var(--felt-d, #06251B) 0%, var(--felt-m, #0E3B2E) 55%, var(--felt-l, #11473A) 100%);
+}
+.cz-royal { --felt-d: #14103A; --felt-m: #241B66; --felt-l: #2D2382; }
+.cz-magma { --felt-d: #36080C; --felt-m: #5C1219; --felt-l: #701B23; }
+.cz-ocean { --felt-d: #061D33; --felt-m: #0C3355; --felt-l: #104169; }
+.cz-midnight { --felt-d: #0B0C11; --felt-m: #191B24; --felt-l: #232530; }
+.cz-coral { --felt-d: #3A1404; --felt-m: #61290C; --felt-l: #763312; }
+.cz-berry { --felt-d: #320A28; --felt-m: #531643; --felt-l: #671D54; }
+/* options/buttons go translucent so they sit on any felt */
+.cz-opt {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .12), rgba(0, 0, 0, .28));
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .14);
+}
+.cz-opt:active:not(:disabled) { box-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
+.cz-btn:not(.gold) {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .15), rgba(0, 0, 0, .3));
+  box-shadow: 0 5px 0 rgba(0, 0, 0, .55), 0 9px 18px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .18);
+}
+.cz-btn:not(.gold):active { box-shadow: 0 1px 0 rgba(0, 0, 0, .55); }
+.cz-q { box-shadow: 0 5px 0 rgba(0, 0, 0, .35), 0 10px 22px rgba(0, 0, 0, .3); }
+.cz-ticket::before, .cz-ticket::after { background: var(--felt-m, #0B3328); }
