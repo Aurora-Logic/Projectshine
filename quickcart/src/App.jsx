@@ -2668,6 +2668,7 @@ function Donut({ cats }) {
 
 function AcctDash({ onReorder }) {
   const [per, setPer] = useState(12)
+  const [tab, setTab] = useState('trend')
   const ready = useNextFrame()
   const k = DASH.kpis
   const big = useCountUp(k.month, true, 1100)
@@ -2676,15 +2677,9 @@ function AcctDash({ onReorder }) {
   const mn = Math.min(...last6.map(d => d[1]))
   const best = DASH.months.reduce((a, b) => (b[1] > a[1] ? b : a))
   const pctile = Math.round(((MY_RANK.of - MY_RANK.rank) / MY_RANK.of) * 100)
-  const badges = [
-    [StarFilledIcon, 'Top 25%', 'in HSR Layout', 'amber', false],
-    [RocketIcon, '3 months', 'growth streak', 'violet', false],
-    [CheckIcon, '₹10L+', 'lifetime volume', 'green', false],
-    [LockClosedIcon, 'Gold tier', `${fmtL(200000 - k.month)} to go`, 'gray', true],
-  ]
   return (
     <>
-      <div className="dash-hero">
+      <div className="dash-hero d3h">
         <Flex align="center" gap="4">
           <svg width="70" height="70" viewBox="0 0 70 70" style={{ flex: 'none' }}>
             <circle cx="35" cy="35" r="28" stroke="rgba(255,255,255,.22)" strokeWidth="7" fill="none" />
@@ -2724,204 +2719,85 @@ function AcctDash({ onReorder }) {
         </div>
       </div>
 
-      <div className="badge-row">
-        {badges.map(([Icon, t, s, c, locked]) => (
-          <div key={t} className={`bdg ${locked ? 'locked' : ''}`}>
-            <span className="bdg-ic" style={{ background: `var(--${c}-3)`, color: `var(--${c}-11)` }}>
-              <Icon width={14} height={14} />
-            </span>
-            <Text size="1" weight="bold" as="div" style={{ fontSize: 10.5 }}>{t}</Text>
-            <Text as="div" style={{ fontSize: 8.5, color: 'var(--gray-10)' }}>{s}</Text>
-          </div>
-        ))}
-      </div>
-
       <div className="kpi-grid">
-        <div className="kpi" style={{ background: 'var(--blue-2)', borderColor: 'var(--blue-4)' }}>
+        <div className="kpi d3k" style={{ background: 'var(--blue-2)', borderColor: 'var(--blue-4)', '--kedge': 'var(--blue-5)' }}>
           <Text size="1" style={{ color: 'var(--blue-11)', fontWeight: 700 }}>Orders</Text>
           <Text size="4" weight="bold" as="div">{k.orders}</Text>
           <Text size="1" as="div" style={{ color: 'var(--green-10)', fontWeight: 700 }}>▲ 3 vs May</Text>
         </div>
-        <div className="kpi" style={{ background: 'var(--violet-2)', borderColor: 'var(--violet-4)' }}>
+        <div className="kpi d3k" style={{ background: 'var(--violet-2)', borderColor: 'var(--violet-4)', '--kedge': 'var(--violet-5)' }}>
           <Text size="1" style={{ color: 'var(--violet-11)', fontWeight: 700 }}>Avg order</Text>
           <Text size="4" weight="bold" as="div">₹{(k.aov / 1000).toFixed(1)}k</Text>
           <Text size="1" as="div" style={{ color: 'var(--green-10)', fontWeight: 700 }}>▲ 6% vs last qtr</Text>
         </div>
-        <div className="kpi" style={{ background: 'var(--green-2)', borderColor: 'var(--green-4)' }}>
+        <div className="kpi d3k" style={{ background: 'var(--green-2)', borderColor: 'var(--green-4)', '--kedge': 'var(--green-5)' }}>
           <Text size="1" style={{ color: 'var(--green-11)', fontWeight: 700 }}>Saved</Text>
           <Text size="4" weight="bold" as="div">₹{(k.saved / 1000).toFixed(1)}k</Text>
           <Text size="1" as="div" style={{ color: 'var(--green-10)', fontWeight: 700 }}>▲ ₹2.1k vs May</Text>
         </div>
-        <div className="kpi" style={{ background: 'var(--amber-2)', borderColor: 'var(--amber-4)' }}>
+        <div className="kpi d3k" style={{ background: 'var(--amber-2)', borderColor: 'var(--amber-4)', '--kedge': 'var(--amber-5)' }}>
           <Text size="1" style={{ color: 'var(--amber-11)', fontWeight: 700 }}>Best month</Text>
           <Text size="4" weight="bold" as="div">{fmtL(best[1] * 1000)}</Text>
           <Text size="1" color="gray" as="div">{best[0]} — your record</Text>
         </div>
       </div>
 
-      <div className="insight warm">
-        <span className="bdg-ic" style={{ background: 'var(--amber-3)', color: 'var(--amber-11)', flex: 'none' }}>
-          <RocketIcon width={14} height={14} />
-        </span>
-        <Text size="1" style={{ lineHeight: 1.45 }}>
-          <b>{fmtL(best[1] * 1000 - k.month)}</b> away from beating your best month ever ({best[0]} · {fmtL(best[1] * 1000)}).
-          One Quadro order does it.
-        </Text>
-      </div>
-      <div className="insight cool">
-        <span className="bdg-ic" style={{ background: 'var(--blue-3)', color: 'var(--blue-11)', flex: 'none' }}>
-          <BarChartIcon width={14} height={14} />
-        </span>
-        <Box flexGrow="1">
-          <Text size="1" style={{ lineHeight: 1.45 }}>Ahead of <b>{pctile}%</b> of dealers in your region</Text>
-          <div className="pct-bar"><div style={{ width: ready ? `${pctile}%` : '0%' }} /></div>
-        </Box>
-      </div>
-      <button className="insight act" onClick={onReorder}>
-        <span className="bdg-ic" style={{ background: 'var(--green-3)', color: 'var(--green-11)', flex: 'none' }}>
-          <CounterClockwiseClockIcon width={14} height={14} />
-        </span>
-        <Text size="1" style={{ lineHeight: 1.45, flex: 1, textAlign: 'left' }}>
-          <b>4 regulars are due</b> for reorder — restock them in one tap
-        </Text>
-        <ChevronRightIcon width={14} height={14} color="var(--gray-8)" style={{ flex: 'none' }} />
-      </button>
-      <div className="cp-card">
-        <Flex align="center" justify="between">
-          <Text size="2" weight="bold">Purchases</Text>
-          <div className="seg" style={{ margin: 0 }}>
-            {[[6, '6M'], [12, '1Y']].map(([n, l]) => (
-              <button key={l} className={`seg-b ${per === n ? 'on' : ''}`} onClick={() => setPer(n)}>{l}</button>
-            ))}
-          </div>
-        </Flex>
-        <Bars key={per} data={DASH.months.slice(-per)} />
-      </div>
-      <div className="cp-card">
-        <Text size="2" weight="bold">Category mix</Text>
-        <Donut cats={DASH.cats} />
-      </div>
-      <div className="cp-card">
-        <Text size="2" weight="bold">Brand split</Text>
-        {DASH.brands.map(([b, pct], i) => (
-          <Flex key={b} align="center" gap="3" mt={i === 0 ? '3' : '2'}>
-            <Text size="1" weight="bold" style={{ width: 76, flex: 'none' }}>{b}</Text>
-            <div className="hbar"><div style={{ width: ready ? `${pct}%` : '0%' }} /></div>
-            <Text size="1" color="gray" style={{ width: 34, textAlign: 'right', flex: 'none' }}>{pct}%</Text>
-          </Flex>
+      <div className="hl-rail">
+        {[
+          [StarFilledIcon, 'amber', 'Top 25%', 'in HSR Layout', null],
+          [CounterClockwiseClockIcon, 'green', '4 regulars due', 'tap to restock', onReorder],
+          [BarChartIcon, 'blue', `Ahead of ${pctile}%`, 'of regional dealers', null],
+          [RocketIcon, 'violet', '3-month streak', 'consistent growth', null],
+          [CheckIcon, 'green', '₹10L+ lifetime', 'milestone crossed', null],
+          [RocketIcon, 'amber', `${fmtL(best[1] * 1000 - k.month)} to go`, `to beat your ${best[0]} record`, null],
+        ].map(([Icon, c, t, s, onClick]) => (
+          <button
+            key={t} className={`hl ${onClick ? 'act' : ''}`}
+            onClick={onClick || undefined}
+          >
+            <span className="bdg-ic" style={{ background: `var(--${c}-3)`, color: `var(--${c}-11)`, marginBottom: 6 }}>
+              <Icon width={14} height={14} />
+            </span>
+            <Text weight="bold" as="div" style={{ fontSize: 12.5 }}>{t}</Text>
+            <Text as="div" style={{ fontSize: 10, color: 'var(--gray-10)' }}>{s}</Text>
+          </button>
         ))}
       </div>
-      <TargetsCard />
-      <Box pb="4" />
-    </>
-  )
-}
 
-/* GST invoice generated on-device and downloaded as a file */
-function downloadInvoice(o) {
-  let gst = { gstin: '29ABCDE1234F1Z5', name: 'Bora Hardware & Plywood' }
-  try { gst = { ...gst, ...(JSON.parse(localStorage.getItem('qc-gst') || 'null') || {}) } } catch { /* defaults */ }
-  const total = o.items.reduce((s, { p, n }) => s + p.price * n, 0)
-  const taxable = Math.round(total / 1.18)
-  const tax = total - taxable
-  const rows = o.items.map(({ p, n }) => `
-    <tr><td>${p.name}</td><td class="r">${n}</td><td class="r">₹${p.price.toLocaleString('en-IN')}</td><td class="r">₹${(p.price * n).toLocaleString('en-IN')}</td></tr>`).join('')
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${o.id}</title><style>
-    body{font-family:-apple-system,Segoe UI,sans-serif;margin:32px;color:#1a1a1a}
-    h1{font-size:20px;margin:0;color:#0E4A2F} .mut{color:#777;font-size:12px}
-    table{width:100%;border-collapse:collapse;margin-top:18px;font-size:13px}
-    th,td{padding:8px 10px;border-bottom:1px solid #e5e5e5;text-align:left} .r{text-align:right}
-    th{background:#F1F8F4;font-size:11px;letter-spacing:.4px;text-transform:uppercase}
-    .tot td{font-weight:700;border-top:2px solid #0E4A2F;border-bottom:none}
-    .top{display:flex;justify-content:space-between;align-items:flex-start}
-  </style></head><body>
-    <div class="top"><div><h1>QuickCart</h1><div class="mut">Furniture hardware for dealers<br/>GSTIN 29QCKRT5678K1Z9 · Bengaluru</div></div>
-    <div class="mut" style="text-align:right">TAX INVOICE<br/><b style="color:#1a1a1a">PO ${o.id}</b><br/>${o.date}</div></div>
-    <p class="mut" style="margin-top:16px">Billed to<br/><b style="color:#1a1a1a">${gst.name}</b><br/>GSTIN ${gst.gstin.toUpperCase()}</p>
-    <table><tr><th>Item</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th></tr>${rows}
-    <tr><td colspan="3" class="r mut">Taxable value</td><td class="r">₹${taxable.toLocaleString('en-IN')}</td></tr>
-    <tr><td colspan="3" class="r mut">CGST 9% + SGST 9%</td><td class="r">₹${tax.toLocaleString('en-IN')}</td></tr>
-    <tr class="tot"><td colspan="3" class="r">Grand total</td><td class="r">₹${total.toLocaleString('en-IN')}</td></tr></table>
-    <p class="mut">Input credit available on this invoice. Computer-generated — no signature required.</p>
-  </body></html>`
-  const blob = new Blob([html], { type: 'text/html' })
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = `Invoice-${o.id}.html`
-  a.click()
-  URL.revokeObjectURL(a.href)
-}
-
-/* Order detail: track, stats, lines, invoice download, repeat */
-function OrderDetailSheet({ order, onClose, onChange }) {
-  const pieces = order.items.reduce((s, { n }) => s + n, 0)
-  const total = order.items.reduce((s, { p, n }) => s + p.price * n, 0)
-  const saved = order.items.reduce((s, { p, n }) => {
-    const t = bulkTier(p)
-    return t && n >= t.thr ? s + (p.price - t.bp) * n : s
-  }, 0)
-  const live = order.status !== 'Delivered'
-  const elapsed = live && order.ts ? (Date.now() - order.ts) / 1000 : Infinity
-  let si = 0
-  ORDER_STAGES.forEach(([, t], i) => { if (elapsed >= t) si = i })
-  const fill = (si / (ORDER_STAGES.length - 1)) * 100
-  const repeat = (e) => {
-    order.items.forEach(({ p, n }) => onChange(n, p, { noReco: true }))
-    sparkle(e)
-    onClose()
-  }
-  return (
-    <div className="qsheet-overlay" onClick={onClose}>
-      <div className="qsheet cart-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="qsheet-grab" />
-        <Flex align="center" justify="between">
-          <Box>
-            <Heading size="4" style={{ letterSpacing: '-0.3px' }}>{order.date}</Heading>
-            <Text size="1" color="gray" as="div">PO {order.id} · {order.addrLabel || 'Shop'}</Text>
-          </Box>
-          <span className={`st-chip ${live ? '' : 'ok'}`}>{live ? ORDER_STAGES[si][0] : 'Delivered'}</span>
-        </Flex>
-        <div className="oc-track" style={{ marginTop: 14 }}>
-          <div className="oc-line"><div style={{ width: live ? `${fill}%` : '100%' }} /></div>
-          <div className="oc-steps">
-            {ORDER_STAGES.map(([label], i) => (
-              <div key={label} className="oc-step">
-                <span className={`oc-dot ${(!live || i <= si) ? 'on' : ''}`} />
-                <Text style={{ fontSize: 9 }} color={(!live || i <= si) ? undefined : 'gray'}>{label}</Text>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="ods-stats">
-          <div><Text size="2" weight="bold" as="div">{pieces}</Text><span>pieces</span></div>
-          <div><Text size="2" weight="bold" as="div">{order.items.length}</Text><span>SKUs</span></div>
-          <div><Text size="2" weight="bold" as="div">₹{(total / 1000).toFixed(1)}k</Text><span>value</span></div>
-          <div><Text size="2" weight="bold" as="div" style={{ color: 'var(--green-11)' }}>₹{saved.toLocaleString('en-IN')}</Text><span>saved</span></div>
-        </div>
-        <div className="cs-list">
-          {order.items.map(({ p, n }) => (
-            <div className="cs-row" key={`od-${p.id}`}>
-              <Img src={img(p.ph, 120)} alt="" />
-              <Box flexGrow="1" style={{ minWidth: 0 }}>
-                <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{p.name}</Text>
-                <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>{n} × ₹{p.price.toLocaleString('en-IN')}</Text>
-              </Box>
-              <Text size="1" weight="bold" style={{ minWidth: 60, textAlign: 'right', flex: 'none', whiteSpace: 'nowrap' }}>
-                ₹{(n * p.price).toLocaleString('en-IN')}
-              </Text>
-            </div>
+      <div className="cp-card d3-card">
+        <div className="seg" style={{ marginTop: 0, marginBottom: 14 }}>
+          {[['trend', 'Trend'], ['mix', 'Category mix'], ['brands', 'Brands']].map(([kk, l]) => (
+            <button key={kk} className={`seg-b ${tab === kk ? 'on' : ''}`} onClick={() => setTab(kk)}>{l}</button>
           ))}
         </div>
-        <Flex gap="2" mt="3">
-          <button className="qs-cta ghost" style={{ marginTop: 0, flex: 1, justifyContent: 'center', gap: 7 }} onClick={() => downloadInvoice(order)}>
-            <FileTextIcon width={14} height={14} /> Invoice
-          </button>
-          <button className="qs-cta" style={{ marginTop: 0, flex: 1.3, justifyContent: 'center' }} onClick={repeat}>
-            Repeat order
-          </button>
-        </Flex>
+        {tab === 'trend' && (
+          <>
+            <Flex align="center" justify="between">
+              <Text size="2" weight="bold">Purchases</Text>
+              <div className="seg" style={{ margin: 0 }}>
+                {[[6, '6M'], [12, '1Y']].map(([n, l]) => (
+                  <button key={l} className={`seg-b ${per === n ? 'on' : ''}`} onClick={() => setPer(n)}>{l}</button>
+                ))}
+              </div>
+            </Flex>
+            <Bars key={per} data={DASH.months.slice(-per)} />
+          </>
+        )}
+        {tab === 'mix' && <Donut cats={DASH.cats} />}
+        {tab === 'brands' && (
+          <Box pt="1">
+            {DASH.brands.map(([b, pct], i) => (
+              <Flex key={b} align="center" gap="3" mt={i === 0 ? '1' : '2'}>
+                <Text size="1" weight="bold" style={{ width: 76, flex: 'none' }}>{b}</Text>
+                <div className="hbar"><div style={{ width: ready ? `${pct}%` : '0%' }} /></div>
+                <Text size="1" color="gray" style={{ width: 34, textAlign: 'right', flex: 'none' }}>{pct}%</Text>
+              </Flex>
+            ))}
+          </Box>
+        )}
       </div>
-    </div>
+      <Box pb="4" />
+    </>
   )
 }
 
