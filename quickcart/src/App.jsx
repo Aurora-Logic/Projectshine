@@ -9,7 +9,8 @@ import {
   MixerHorizontalIcon, GearIcon, FileTextIcon, DiscIcon, CheckIcon,
   BarChartIcon, BellIcon, LockClosedIcon, ExitIcon, RulerSquareIcon, SewingPinIcon,
   EyeOpenIcon, ChatBubbleIcon, MobileIcon, EnvelopeClosedIcon, CalendarIcon,
-  IdCardIcon, BookmarkIcon, ChevronLeftIcon,
+  IdCardIcon, BookmarkIcon, ChevronLeftIcon, SpeakerLoudIcon, ExclamationTriangleIcon,
+  UploadIcon,
 } from '@radix-ui/react-icons'
 import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
@@ -3791,6 +3792,325 @@ function VisitForm({ kind }) {
   )
 }
 
+/* ---------------- Brand support: branding / demo / carpenter / promo ---------------- */
+
+const MKT_TYPES = ['Branding kit', 'In-shop demo', 'Carpenter meet', 'Promo items']
+const MKT_STAGES = (type) =>
+  type === 'In-shop demo' || type === 'Carpenter meet'
+    ? ['Received', 'Approved', 'Scheduled']
+    : ['Received', 'Approved', 'Dispatched']
+const mktStage = (r, now) => {
+  const el = (now - r.ts) / 1000
+  const raw = el < 90 ? 0 : el < 240 ? 1 : 2
+  return r.date && now < r.date ? Math.min(raw, 1) : raw
+}
+
+function AcctBrand() {
+  const [reqs, setReqs] = usePersisted('qc-mkt', [])
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 5000)
+    return () => clearInterval(t)
+  }, [])
+  const [formOpen, setFormOpen] = useState(false)
+  const [type, setType] = useState('Branding kit')
+  const [qty, setQty] = useState('')
+  const [date, setDate] = useState(null)
+  const [notes, setNotes] = useState('')
+  const needsDate = type === 'In-shop demo' || type === 'Carpenter meet'
+  const needsQty = !needsDate
+  const valid = needsDate ? !!date : String(qty).trim() !== ''
+  const submit = (e) => {
+    sparkle(e)
+    setReqs([{
+      id: `B${String(Date.now()).slice(-5)}`, type,
+      qty: needsQty ? +qty || 0 : null,
+      date: needsDate && date ? date.getTime() : null,
+      notes: notes.trim(), ts: Date.now(),
+    }, ...reqs])
+    setQty('')
+    setDate(null)
+    setNotes('')
+    setFormOpen(false)
+  }
+  return (
+    <>
+      <div className="sub-hero orange">
+        <SpeakerLoudIcon width={15} height={15} color="var(--orange-11)" style={{ flex: 'none' }} />
+        <Text size="1" weight="bold" style={{ color: 'var(--orange-11)' }}>
+          Boards, demos, carpenter meets and promo stock — on the brand
+        </Text>
+      </div>
+      {!formOpen && (
+        <button className="qs-cta" style={{ marginTop: 0, marginBottom: 12 }} onClick={() => setFormOpen(true)}>
+          <span>Request brand support</span>
+          <PlusIcon width={16} height={16} />
+        </button>
+      )}
+      {formOpen && (
+        <div className="cp-card" style={{ animation: 'stepin .22s cubic-bezier(.22, 1, .36, 1)' }}>
+          <Flex align="center" justify="between">
+            <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              WHAT DO YOU NEED?
+            </Text>
+            <button className="reco-x" onClick={() => setFormOpen(false)} aria-label="Close form">
+              <Cross2Icon width={12} height={12} />
+            </button>
+          </Flex>
+          <div className="claim-types">
+            {MKT_TYPES.map(t => (
+              <button key={t} className={`seg-b ${type === t ? 'on' : ''}`} onClick={() => setType(t)}>{t}</button>
+            ))}
+          </div>
+          {needsQty ? (
+            <>
+              <Text size="1" color="gray" as="div" mt="2">
+                {type === 'Branding kit' ? 'Boards / standees needed' : 'Approx. pieces needed'}
+              </Text>
+              <input
+                className="cp-input" style={{ marginTop: 4 }} type="number" min="1" placeholder="e.g. 2"
+                value={qty} onChange={(e) => setQty(e.target.value)}
+              />
+            </>
+          ) : (
+            <>
+              <Text size="1" color="gray" as="div" mt="2" mb="1">Preferred date</Text>
+              <CalPicker value={date} onChange={setDate} />
+            </>
+          )}
+          <textarea
+            className="cp-note" rows={2}
+            placeholder={needsDate ? 'Audience, location, what to cover…' : 'Sizes, languages, placement…'}
+            value={notes} onChange={(e) => setNotes(e.target.value)}
+          />
+          <Button mt="3" size="2" color="green" style={{ fontWeight: 800, width: '100%' }} disabled={!valid} onClick={submit}>
+            Submit request
+          </Button>
+        </div>
+      )}
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          YOUR REQUESTS{reqs.length ? ` · ${reqs.length}` : ''}
+        </Text>
+        {reqs.length === 0 && (
+          <Text size="1" color="gray" as="div" mt="2">Nothing yet — tap the button above to raise one.</Text>
+        )}
+        {reqs.map(r => {
+          const STAGES = MKT_STAGES(r.type)
+          const si = mktStage(r, now)
+          return (
+            <div className="vr-row" key={r.id}>
+              <div className="vr-av">{r.type.slice(0, 1)}</div>
+              <Box flexGrow="1" style={{ minWidth: 0 }}>
+                <Text size="2" weight="bold" as="div" className="clamp1">{r.type}</Text>
+                <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>
+                  {[r.qty ? `${r.qty} pcs` : '', r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '', `#${r.id}`].filter(Boolean).join(' · ')}
+                </Text>
+                <Flex gap="1" mt="1" align="center">
+                  {STAGES.map((s, i) => <span key={s} className={`vr-dot ${i <= si ? 'on' : ''}`} />)}
+                  <Text weight="bold" style={{ marginLeft: 6, color: si === 2 ? 'var(--green-11)' : 'var(--amber-11)', fontSize: 10 }}>
+                    {STAGES[si]}
+                  </Text>
+                </Flex>
+              </Box>
+            </div>
+          )
+        })}
+      </div>
+    </>
+  )
+}
+
+/* ---------------- Claims & returns: CN / return / wrong / damaged ---------------- */
+
+const CLAIM_TYPES = ['Pending CN', 'Material return', 'Wrong delivery', 'Damaged']
+const CLAIM_TERMINAL = {
+  'Pending CN': 'CN issued',
+  'Material return': 'Pickup scheduled',
+  'Wrong delivery': 'Replacement dispatched',
+  'Damaged': 'Replacement dispatched',
+}
+const claimStage = (r, now) => {
+  const el = (now - r.ts) / 1000
+  return el < 120 ? 0 : el < 300 ? 1 : 2
+}
+
+function AcctClaims({ lastOrder }) {
+  const [claims, setClaims] = usePersisted('qc-claims', [])
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 5000)
+    return () => clearInterval(t)
+  }, [])
+  const orders = [
+    ...(lastOrder ? [{
+      id: lastOrder.id, date: 'Today',
+      items: (lastOrder.items || []).map(it => ({ p: it.p, n: it.n })),
+    }] : []),
+    ...PAST_ORDERS.map(o => ({
+      id: o.id, date: o.date,
+      items: o.items.map(([id, n]) => ({ p: FEED_POOL.find(p => p.id === id), n })).filter(x => x.p),
+    })),
+  ]
+  const [formOpen, setFormOpen] = useState(false)
+  const [orderId, setOrderId] = useState(null)
+  const [type, setType] = useState('Pending CN')
+  const [picked, setPicked] = useState({})
+  const [photos, setPhotos] = useState([])
+  const [notes, setNotes] = useState('')
+  const order = orders.find(o => o.id === orderId)
+  const pickedCount = Object.values(picked).filter(n => n > 0).length
+  const valid = order && pickedCount > 0
+  const toggle = (it) => {
+    setPicked(prev => ({ ...prev, [it.p.id]: prev[it.p.id] ? 0 : it.n }))
+  }
+  const stepPick = (it, d) => {
+    setPicked(prev => ({
+      ...prev,
+      [it.p.id]: Math.max(0, Math.min(it.n, (prev[it.p.id] || 0) + d)),
+    }))
+  }
+  const onPhotos = (e) => {
+    const files = [...(e.target.files || [])].slice(0, 4)
+    setPhotos(files.map(f => ({ name: f.name, url: URL.createObjectURL(f) })))
+  }
+  const submit = (e) => {
+    sparkle(e)
+    setClaims([{
+      id: `CL${String(Date.now()).slice(-5)}`,
+      orderId: order.id, orderDate: order.date, type,
+      items: order.items
+        .filter(it => (picked[it.p.id] || 0) > 0)
+        .map(it => ({ name: it.p.name, n: picked[it.p.id] })),
+      photos: photos.length, notes: notes.trim(), ts: Date.now(),
+    }, ...claims])
+    setFormOpen(false)
+    setOrderId(null)
+    setPicked({})
+    setPhotos([])
+    setNotes('')
+  }
+  return (
+    <>
+      <div className="sub-hero blue">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--blue-11)', fontSize: 10, letterSpacing: '.6px' }}>
+          CLAIMS & RETURNS
+        </Text>
+        <Text size="2" weight="bold" as="div" mt="1">Wrong, damaged or pending CN — sorted from here</Text>
+        <Text size="1" color="gray" as="div">Pickups are free · CNs reflect in your credit ledger</Text>
+      </div>
+      {!formOpen && (
+        <button className="qs-cta" style={{ marginTop: 0, marginBottom: 12 }} onClick={() => setFormOpen(true)}>
+          <span>Raise a claim</span>
+          <PlusIcon width={16} height={16} />
+        </button>
+      )}
+      {formOpen && (
+        <div className="cp-card" style={{ animation: 'stepin .22s cubic-bezier(.22, 1, .36, 1)' }}>
+          <Flex align="center" justify="between">
+            <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              WHICH ORDER?
+            </Text>
+            <button className="reco-x" onClick={() => setFormOpen(false)} aria-label="Close form">
+              <Cross2Icon width={12} height={12} />
+            </button>
+          </Flex>
+          <div className="claim-orders">
+            {orders.map(o => (
+              <button key={o.id} className={`claim-ord ${orderId === o.id ? 'on' : ''}`} onClick={() => { setOrderId(o.id); setPicked({}) }}>
+                <Text size="1" weight="bold" as="div">{o.date}</Text>
+                <Text as="div" style={{ fontSize: 9.5, color: 'var(--gray-10)' }}>PO {o.id}</Text>
+              </button>
+            ))}
+          </div>
+          <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+            CLAIM TYPE
+          </Text>
+          <div className="claim-types">
+            {CLAIM_TYPES.map(t => (
+              <button key={t} className={`seg-b ${type === t ? 'on' : ''}`} onClick={() => setType(t)}>{t}</button>
+            ))}
+          </div>
+          {order && (
+            <>
+              <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                AFFECTED ITEMS
+              </Text>
+              {order.items.map(it => {
+                const sel = (picked[it.p.id] || 0) > 0
+                return (
+                  <div key={it.p.id} className={`claim-item ${sel ? 'on' : ''}`}>
+                    <button className="claim-check" onClick={() => toggle(it)} aria-label={sel ? 'Deselect' : 'Select'}>
+                      {sel && <CheckIcon width={12} height={12} />}
+                    </button>
+                    <Box flexGrow="1" style={{ minWidth: 0 }} onClick={() => toggle(it)}>
+                      <Text size="1" weight="bold" as="div" className="clamp1">{it.p.name}</Text>
+                      <Text as="div" style={{ fontSize: 10, color: 'var(--gray-10)' }}>ordered {it.n}</Text>
+                    </Box>
+                    {sel && (
+                      <div className="cs-step">
+                        <button onClick={() => stepPick(it, -1)} aria-label="Less"><MinusIcon width={12} height={12} /></button>
+                        <Text size="1" weight="bold" style={{ width: 24, textAlign: 'center', color: '#fff' }}>{picked[it.p.id]}</Text>
+                        <button onClick={() => stepPick(it, 1)} aria-label="More"><PlusIcon width={12} height={12} /></button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </>
+          )}
+          <label className="photo-add">
+            <UploadIcon width={14} height={14} />
+            {photos.length ? `${photos.length} photo${photos.length > 1 ? 's' : ''} attached` : 'Add photos (damage, labels, package)'}
+            <input type="file" accept="image/*" multiple onChange={onPhotos} style={{ display: 'none' }} />
+          </label>
+          {photos.length > 0 && (
+            <Flex gap="2" mt="2">
+              {photos.map(ph => <img key={ph.url} src={ph.url} alt="" className="photo-thumb" />)}
+            </Flex>
+          )}
+          <textarea
+            className="cp-note" rows={2} placeholder="What went wrong?"
+            value={notes} onChange={(e) => setNotes(e.target.value)}
+          />
+          <Button mt="3" size="2" color="green" style={{ fontWeight: 800, width: '100%' }} disabled={!valid} onClick={submit}>
+            Submit claim
+          </Button>
+        </div>
+      )}
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          YOUR CLAIMS{claims.length ? ` · ${claims.length}` : ''}
+        </Text>
+        {claims.length === 0 && (
+          <Text size="1" color="gray" as="div" mt="2">No claims — long may it last.</Text>
+        )}
+        {claims.map(r => {
+          const STAGES = ['Raised', 'Under review', CLAIM_TERMINAL[r.type]]
+          const si = claimStage(r, now)
+          return (
+            <div className="vr-row" key={r.id}>
+              <div className="vr-av" style={{ background: 'var(--blue-3)', color: 'var(--blue-11)' }}>{r.type.slice(0, 1)}</div>
+              <Box flexGrow="1" style={{ minWidth: 0 }}>
+                <Text size="2" weight="bold" as="div" className="clamp1">{r.type} · PO {r.orderId}</Text>
+                <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>
+                  {r.items.length} item{r.items.length > 1 ? 's' : ''}{r.photos ? ` · ${r.photos} photos` : ''} · #{r.id}
+                </Text>
+                <Flex gap="1" mt="1" align="center">
+                  {STAGES.map((s, i) => <span key={s} className={`vr-dot ${i <= si ? 'on' : ''}`} />)}
+                  <Text weight="bold" style={{ marginLeft: 6, color: si === 2 ? 'var(--green-11)' : 'var(--amber-11)', fontSize: 10 }}>
+                    {STAGES[si]}
+                  </Text>
+                </Flex>
+              </Box>
+            </div>
+          )
+        })}
+      </div>
+    </>
+  )
+}
+
 function AcctSupport() {
   const rows = [
     [MobileIcon, 'Call dealer desk', '080 4512 3456 · Mon–Sat, 9–7', 'tel:+918045123456'],
@@ -3907,8 +4227,10 @@ const ACCT_TILES = [
 
 const ACCT_FLAT = [
   ['calc', RulerSquareIcon, 'Calculators'],
+  ['claims', ExclamationTriangleIcon, 'Claims & returns'],
   ['site', SewingPinIcon, 'Submit site visit'],
   ['display', EyeOpenIcon, 'Display centre visit'],
+  ['brand', SpeakerLoudIcon, 'Brand support'],
   ['estpdf', FileTextIcon, 'Estimate PDF settings'],
   ['support', ChatBubbleIcon, 'Support'],
   ['notif', BellIcon, 'Notification preferences'],
@@ -3919,7 +4241,7 @@ const ACCT_TITLES = {
   dash: 'Performance dashboard', orders: 'My orders', credit: 'Credit ledger',
   lists: 'Project lists', schemes: 'Schemes & discounts',
   gst: 'GST details', calc: 'Calculators', site: 'Submit site visit',
-  display: 'Display centre visit', support: 'Support', addr: 'Address book',
+  display: 'Display centre visit', support: 'Support', claims: 'Claims & returns', brand: 'Brand support', addr: 'Address book',
   notif: 'Notification preferences', privacy: 'Account privacy',
   estpdf: 'Estimate PDF settings',
 }
@@ -4018,6 +4340,8 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
     if (h === '#credit') return 'credit'
     if (h === '#lists') return 'lists'
     if (h === '#orders' || h === '#ordpg') return 'orders'
+    if (h === '#claims') return 'claims'
+    if (h === '#brand') return 'brand'
     if (h === '#site') return 'site'
     return initialSub || null
   })
@@ -4045,6 +4369,8 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
       case 'calc': return <AcctCalc />
       case 'site': return <VisitForm kind="site" />
       case 'display': return <VisitForm kind="display" />
+      case 'claims': return <AcctClaims lastOrder={lastOrder} />
+      case 'brand': return <AcctBrand />
       case 'support': return <AcctSupport />
       case 'addr': return <AcctAddr />
       case 'notif': return <AcctNotif />
@@ -4783,16 +5109,28 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   const mw = Math.min(40, (mark.w / mark.h) * 16)
   doc.addImage(mark.data, 'PNG', W - M - mw, 8, mw, 16)
 
+  // ---- brand strip on page 1 (keeps every page's bottom free for line items)
+  doc.setFont('PJS', 'bold').setFontSize(6.5).setTextColor(...GRAY).setCharSpace(0.5)
+  doc.text('AUTHORIZED DEALER FOR', M, 32)
+  doc.setCharSpace(0)
+  const lh = 9
+  let bx = M
+  for (const b of brands) {
+    const dw = (b.w / b.h) * lh
+    doc.addImage(b.data, 'PNG', bx, 34.5, dw, lh)
+    bx += dw + 10
+  }
+
   // ---- information columns
   doc.setFont('PJS', 'bold').setFontSize(9).setTextColor(...INK)
-  doc.text('Customer Information', M, 36).text('Dealer Information', 112, 36)
+  doc.text('Customer Information', M, 52).text('Dealer Information', 112, 52)
   doc.setFont('PJS', 'normal').setFontSize(8.5).setTextColor(...GRAY)
   const custLines = [cust.name, cust.phone, ...(cust.site ? doc.splitTextToSize(cust.site, 80) : [])].filter(Boolean)
-  doc.text(custLines, M, 42)
-  doc.text([`Virag Bora — ${brand.name}`, '304 Maple Heights, HSR Layout', 'Bengaluru 560102 · +91 98450 00000'], 112, 42)
+  doc.text(custLines, M, 58)
+  doc.text([`Virag Bora — ${brand.name}`, '304 Maple Heights, HSR Layout', 'Bengaluru 560102 · +91 98450 00000'], 112, 58)
 
   // ---- title row between hairlines: Estimate big, number/date body-size
-  const tTop = 42 + Math.max(custLines.length, 3) * 4.3 + 5
+  const tTop = 58 + Math.max(custLines.length, 3) * 4.3 + 5
   doc.setDrawColor(...HAIR).setLineWidth(0.3).line(M, tTop, W - M, tTop)
   doc.setFont('PJS', 'bold').setFontSize(17).setTextColor(...INK).text('Estimate', M, tTop + 9.5)
   doc.setFont('PJS', 'normal').setFontSize(10).setTextColor(...GRAY)
@@ -4803,7 +5141,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   // ---- items table: hairline rows, product thumbnails
   autoTable(doc, {
     startY: tTop + 19,
-    margin: { left: M, right: M, bottom: 44 },
+    margin: { left: M, right: M, bottom: 24 },
     head: [['Qty', '', 'Item no', 'Description', 'Unit price', 'Amount']],
     body: items.map(({ p, n }) => [n, '', p.id.toUpperCase(), `${p.name}\n${p.qty || ''}`, inr(p.price), inr(p.price * n)]),
     theme: 'plain',
@@ -4840,7 +5178,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
     ['Delivery' + (bill.express ? ' (express · 1 hr)' : ''), bill.fee === 0 ? 'FREE' : inr(bill.fee)],
   ].filter(Boolean)
   const blockH = (rows.length + 1) * 7.5 + 14
-  if (y + blockH > H - 46) { doc.addPage(); paper(); y = 30 }
+  if (y + blockH > H - 24) { doc.addPage(); paper(); y = 30 }
   const tx = 118
   for (const [label, val] of rows) {
     doc.setFont('PJS', 'normal').setFontSize(8.5).setTextColor(...GRAY)
@@ -4855,19 +5193,6 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   doc.setDrawColor(...INK).setLineWidth(0.35).line(tx, y + 3, W - M, y + 3)
   doc.setFont('PJS', 'normal').setFontSize(8).setTextColor(...INK)
     .text(doc.splitTextToSize('Please confirm this estimate within 7 days — GST as applicable.', W - M - tx), tx, y + 9.5)
-
-  // ---- last page: brand logos row tucked right above the footer rule
-  const ly = 259
-  doc.setFont('PJS', 'bold').setFontSize(6.5).setTextColor(...GRAY).setCharSpace(0.5)
-  doc.text('AUTHORIZED DEALER FOR', M, ly)
-  doc.setCharSpace(0)
-  const lh = 9
-  let bx = M
-  for (const b of brands) {
-    const dw = (b.w / b.h) * lh
-    doc.addImage(b.data, 'PNG', bx, ly + 2.5, dw, lh)
-    bx += dw + 10
-  }
 
   // ---- footer on every page: hairline + contact columns + side text
   const pages = doc.getNumberOfPages()
@@ -5148,7 +5473,6 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
               </Text>
               <textarea
                 className="cp-note" rows={2}
-                placeholder="e.g. Call before dispatch · unload at godown gate · bill to GSTIN"
                 value={note} onChange={(e) => saveNote(e.target.value)}
               />
             </div>
@@ -5688,7 +6012,7 @@ export default function App() {
   const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
   const [cartOpen, setCartOpen] = useState(window.location.hash === '#cart')
   const [reorderOpen, setReorderOpen] = useState(['#reorder', '#pastorder'].includes(window.location.hash))
-  const [acctOpen, setAcctOpen] = useState(['#account', '#dash', '#credit', '#lists', '#orders', '#site', '#ordpg'].includes(window.location.hash))
+  const [acctOpen, setAcctOpen] = useState(['#account', '#dash', '#credit', '#lists', '#orders', '#site', '#ordpg', '#claims', '#brand'].includes(window.location.hash))
   const acctSubRef = useRef(false)
   const acctInitSub = useRef(null)
   const [authed, setAuthed] = useState(() => {
