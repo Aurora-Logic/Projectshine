@@ -5587,6 +5587,11 @@ export default function App() {
                 mini={navMini}
               />
             )}
+            {scrolled && !navSearch && (
+              <button className={`fab top3 ${navMini ? 'mini' : ''}`} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Back to top">
+                <ChevronUpIcon width={19} height={19} />
+              </button>
+            )}
             <button
               className={`fab search show ${navMini && !navSearch ? 'mini' : ''}`}
               onClick={() => {
@@ -5603,11 +5608,6 @@ export default function App() {
               <MagnifyingGlassIcon width={20} height={20} />
             </button>
           </div>
-          {scrolled && !navSearch && (
-            <button className="fab top2 show" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Back to top">
-              <ChevronUpIcon width={18} height={18} />
-            </button>
-          )}
         </div>
       </div>
       </CartCtx.Provider>
