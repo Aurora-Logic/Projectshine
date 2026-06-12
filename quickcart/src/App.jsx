@@ -1831,7 +1831,7 @@ function FlashCard({ p, onChange }) {
   return (
     <div className="flash-card" onClick={openPdp ? () => openPdp(p) : undefined}>
       <div className="pimg-wrap" style={{ aspectRatio: 'auto', height: 104 }}>
-        <Img className="pimg" src={img(p.ph, 320)} alt={p.name} style={{ borderRadius: 0 }} />
+        <Img className="pimg" src={img(p.ph, 320)} alt={p.name} />
         {pct > 0 && <span className="flash-off">-{pct}%</span>}
         <AddControl qty={qty} onAdd={add} onRemove={remove} onBulk={openQty ? () => openQty(p, (n) => setQty(q => q + n)) : undefined} />
       </div>
@@ -5240,7 +5240,11 @@ export default function App() {
   // navMini: Apple-style — scrolling DOWN shrinks the navbar, scrolling UP restores it.
   const [navMini, setNavMini] = useState(window.location.hash === '#navmini')
   useEffect(() => {
-    if (['#compact', '#navmini'].includes(window.location.hash)) return
+    // --hdr-p drives the header-row collapse as a pure function of scroll
+    // position (0 → 1 over the first 80px). Heights derived from scroll can
+    // never be caught mid-flight the way time-based transitions were.
+    const setP = (p) => document.documentElement.style.setProperty('--hdr-p', String(p))
+    if (['#compact', '#navmini'].includes(window.location.hash)) { setP(1); return }
     let ticking = false
     let lastY = window.scrollY
     const onScroll = () => {
@@ -5248,6 +5252,7 @@ export default function App() {
       ticking = true
       requestAnimationFrame(() => {
         const y = window.scrollY
+        setP(Math.min(1, Math.max(0, y / 80)))
         setScrolled(s => (s ? y > 70 : y > 110))
         const dy = y - lastY
         if (Math.abs(dy) > 6) {
@@ -5258,6 +5263,7 @@ export default function App() {
       })
     }
     window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll() // initialize for reloads that restore a scroll position
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 

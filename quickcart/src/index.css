@@ -1,6 +1,8 @@
 * { box-sizing: border-box; }
 
-html, body { margin: 0; padding: 0; }
+/* overflow-anchor off: the header height tracks scroll position, and Chrome's
+   scroll anchoring fights that feedback loop (header detaches from the top) */
+html, body { margin: 0; padding: 0; overflow-anchor: none; }
 
 body {
   background: #f1f2f0;
@@ -27,15 +29,18 @@ body {
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Cpath d='M8 4v10M22 18v10M36 32v10M36 2v6M8 28v6M22 40v4' stroke='%23ffffff' stroke-opacity='0.12' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
 }
+/* Opaque sticky header above all page content (pages/sheets start at z-70).
+   Collapse is scroll-driven via --hdr-p (set per scroll frame in App):
+   heights are a function of scroll position, never of time, and no transform
+   is ever applied here — transforms on sticky ancestors break pinning. */
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: 50;
   background-color: var(--hdr-c, #1A43AE);
   background-image: linear-gradient(168deg, var(--hdr-a, #2F66DD) 0%, var(--hdr-b, #2353C4) 50%, var(--hdr-c, #1A43AE) 100%);
-  padding: 14px 16px 0;
-  transition: background-color .6s ease;
-  transition: border-radius .25s ease, box-shadow .25s ease, padding .25s ease;
+  padding: 14px 16px calc(var(--hdr-p, 0) * 14px);
+  transition: background-color .6s ease, border-radius .25s ease, box-shadow .25s ease;
 }
 .topbar.compact {
   padding-bottom: 14px;
@@ -195,17 +200,20 @@ body {
   justify-content: center;
   border: 2px solid rgba(255, 255, 255, .85);
 }
+/* brand tabs: clipped vertically while collapsing and faded out early
+   (gone by ~half scroll progress) so the semi-transparent tab slabs can
+   never linger over the banner cards below the header */
 .tabs-t {
   display: flex;
   align-items: flex-end;
   gap: 6px;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
-  margin: 14px -16px 0;
+  margin: calc((1 - var(--hdr-p, 0)) * 14px) -16px 0;
   padding: 0 12px;
-  max-height: 120px;
-  opacity: 1;
-  transition: max-height .18s cubic-bezier(.4, 0, .2, 1), opacity .1s linear, margin .18s cubic-bezier(.4, 0, .2, 1), visibility 0s linear 0s;
+  max-height: calc((1 - var(--hdr-p, 0)) * 120px);
+  opacity: clamp(0, calc(1 - var(--hdr-p, 0) * 1.6), 1);
 }
 .tabs-t::-webkit-scrollbar { display: none; }
 .topbar.compact .tabs-t {
@@ -215,7 +223,6 @@ body {
   overflow: hidden;
   visibility: hidden;
   pointer-events: none;
-  transition: none;
 }
 .tab-t {
   flex: none;
@@ -321,13 +328,12 @@ body {
   background: var(--amber-2);
   border: 1px solid var(--amber-4);
   border-radius: 100px;
-  padding: 8px 12px;
-  margin-top: 20px;
+  padding: calc((1 - var(--hdr-p, 0)) * 8px) 12px;
+  margin-top: calc((1 - var(--hdr-p, 0)) * 20px);
   cursor: pointer;
-  max-height: 64px;
-  opacity: 1;
+  max-height: calc((1 - var(--hdr-p, 0)) * 64px);
+  opacity: clamp(0, calc(1 - var(--hdr-p, 0) * 1.4), 1);
   overflow: hidden;
-  transition: max-height .18s cubic-bezier(.4, 0, .2, 1), opacity .1s linear, margin .18s cubic-bezier(.4, 0, .2, 1), padding .18s cubic-bezier(.4, 0, .2, 1), visibility 0s linear 0s;
 }
 .topbar.compact .rewards-strip {
   max-height: 0;
@@ -338,7 +344,6 @@ body {
   border-width: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: none;
 }
 
 /* ---------- Photo tiles & cards ---------- */
@@ -374,12 +379,12 @@ body {
 }
 .pcard.grid { width: auto; }
 .pcard .price-block { margin-top: auto; padding-top: 4px; }
+/* no overflow:hidden here — the ADD pill straddles the photo's bottom edge,
+   so the rounding lives on .pimg itself and nothing clips the pill */
 .pimg-wrap {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 16px 16px 0 0;
-  overflow: hidden;
   flex: none;
   min-height: 0;
 }
@@ -388,7 +393,7 @@ body {
   inset: 0;
   width: 100%;
   height: 100%;
-  border-radius: 0;
+  border-radius: 16px 16px 0 0;
   object-fit: cover;
   background: var(--gray-3);
   display: block;
@@ -421,7 +426,7 @@ body {
 }
 .padd {
   position: absolute;
-  right: 8px;
+  right: 0;
   bottom: -8px;
   width: 70px;
   height: 32px;
@@ -715,12 +720,12 @@ body {
 
 /* ---------- Collapsing header ---------- */
 .loc-row {
-  max-height: 50px;
-  opacity: 1;
+  max-height: calc((1 - var(--hdr-p, 0)) * 50px);
+  margin-bottom: calc((1 - var(--hdr-p, 0)) * 12px);
+  opacity: clamp(0, calc(1 - var(--hdr-p, 0) * 1.4), 1);
   overflow: hidden;
   /* 6px headroom so the cart badge (top: -3px on the avatar) isn't clipped */
-  padding-top: 6px;
-  transition: max-height .18s cubic-bezier(.4, 0, .2, 1), opacity .1s linear, margin .18s cubic-bezier(.4, 0, .2, 1), padding .18s cubic-bezier(.4, 0, .2, 1), visibility 0s linear 0s;
+  padding-top: calc((1 - var(--hdr-p, 0)) * 6px);
 }
 .topbar.compact .loc-row {
   max-height: 0;
@@ -729,7 +734,6 @@ body {
   padding-top: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: none;
 }
 
 /* ---------- Banner carousel ---------- */
@@ -1691,7 +1695,8 @@ body {
   .day-dot.today, .lb-card.go .lb-av, .cardin, .bsheet, .plp, .sheet {
     animation: none !important;
   }
-  .lbv-bar, .cartbar, .loc-row, .tabs-t, .rewards-strip, .bar-fill {
+  /* loc-row/tabs-t/rewards-strip no longer transition — they track scroll position */
+  .lbv-bar, .cartbar, .bar-fill {
     transition-duration: .01s !important;
   }
 }
@@ -4631,10 +4636,9 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   box-shadow: inset 0 0 0 1.5px var(--green-7), 0 4px 12px rgba(0, 0, 0, .2);
 }
 
-/* segments breathe; ADD pill sits clearly outside the photo edge */
+/* segments breathe */
 .seg { padding: 3px; gap: 3px; }
 .seg-b { padding: 7px 12px; }
-.padd { bottom: -14px; }
 .pimg-wrap { isolation: isolate; }
 .pimg { z-index: 0; }
 .pbadge { z-index: 2; }
