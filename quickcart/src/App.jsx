@@ -4348,11 +4348,42 @@ function AcctEstPdf() {
 
       <div className="cp-card">
         <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
-          PDF TEXT COLOURS
+          PDF COLOURS
         </Text>
+        <ColorRow label="PAPER BACKGROUND" value={brand.paper} onChange={(v) => set('paper', v)} swatches={EST_PAPERS} />
+        <ColorRow label="COMPANY NAME" value={brand.wordmark} onChange={(v) => set('wordmark', v)} />
         <ColorRow label="FOOTER TEXT" value={brand.footer} onChange={(v) => set('footer', v)} />
         <ColorRow label="SIDE VERTICAL TEXT" value={brand.side} onChange={(v) => set('side', v)} />
-        <Text size="1" color="gray" as="div" mt="3">Item rows and totals always stay ink-on-paper for readability.</Text>
+        <Text size="1" color="gray" as="div" mt="3">Hairlines tint themselves to the paper; item rows and totals stay ink for readability.</Text>
+      </div>
+
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          CONTENT
+        </Text>
+        <Flex align="center" justify="between" mt="2">
+          <div>
+            <Text size="2" weight="bold" as="div">Product photos</Text>
+            <Text size="1" color="gray" as="div">Off packs more line items per page</Text>
+          </div>
+          <Toggle on={brand.photos !== false} onToggle={() => set('photos', brand.photos === false)} />
+        </Flex>
+        <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          VALID FOR
+        </Text>
+        <Flex gap="2" mt="2">
+          {[3, 7, 14, 30].map(dv => (
+            <Button
+              key={dv} size="1" radius="full"
+              variant={(brand.validDays || 7) === dv ? 'solid' : 'soft'}
+              color={(brand.validDays || 7) === dv ? 'green' : 'gray'}
+              style={{ fontWeight: 800 }}
+              onClick={() => set('validDays', dv)}
+            >
+              {dv} days
+            </Button>
+          ))}
+        </Flex>
       </div>
     </>
   )
