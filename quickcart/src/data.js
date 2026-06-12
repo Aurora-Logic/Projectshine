@@ -339,10 +339,10 @@ export const HERO_PALETTES = [
 
 /* Dealer tier ladder (monthly volume) — replaces named leaderboard (peer-volume visibility caused dealer conflict) */
 export const TIERS = [
-  { name: 'Bronze', min: 0, icon: '🥉', perk: 'Standard pricing' },
-  { name: 'Silver', min: 100000, icon: '🥈', perk: '+1% margin' },
-  { name: 'Gold', min: 200000, icon: '🥇', perk: '+2% margin · priority dispatch' },
-  { name: 'Platinum', min: 400000, icon: '💎', perk: '+3% margin · dedicated support' },
+  { name: 'Bronze', min: 0, c: '#C9803B', perk: 'Standard pricing' },
+  { name: 'Silver', min: 100000, c: '#98A2B3', perk: '+1% margin' },
+  { name: 'Gold', min: 200000, c: '#E3B33C', perk: '+2% margin · priority dispatch' },
+  { name: 'Platinum', min: 400000, c: '#5BA9D6', perk: '+3% margin · dedicated support' },
 ]
 
 /* B2B order-value scheme slabs: % off the entire invoice */

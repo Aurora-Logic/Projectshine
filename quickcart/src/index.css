@@ -154,7 +154,10 @@ body {
 .leafy {
   position: absolute;
   left: -30px;
-  font-size: 12px;
+  width: 11px;
+  height: 7px;
+  background: rgba(190, 227, 164, .9);
+  border-radius: 1px 9px 1px 9px;
   opacity: .85;
   animation: leafdrift linear infinite;
 }
@@ -793,7 +796,9 @@ body {
   align-items: center;
   gap: 7px;
   background: #fff;
-  color: #C62A2F;
+  color: #C2410C;
+  white-space: nowrap;
+  flex: none;
   font-size: 15px;
   font-weight: 800;
   border-radius: 999px;
@@ -1874,8 +1879,8 @@ body {
 
 /* ---------- Flash sale ---------- */
 .band-flash {
-  background-color: #B3261E;
-  background-image: linear-gradient(160deg, #E5484D 0%, #C62A2F 55%, #8E1B1F 100%);
+  background-color: #BF4106;
+  background-image: linear-gradient(160deg, #F97316 0%, #D9580D 55%, #9A3412 100%);
   padding: 20px 0 24px;
   margin-top: 24px;
 }
@@ -2574,7 +2579,9 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   background: var(--gray-3);
   display: block;
 }
-.cp-scheme { border: 1.5px solid var(--teal-6); background: var(--teal-1); }
+.cp-scheme { border: 1.5px solid var(--violet-6); background: var(--violet-2); }
+.cp-scheme .qs-mbar { background: var(--violet-4); }
+.cp-scheme .qs-mbar > div { background: var(--violet-9); }
 .cp-note, .cp-input {
   width: 100%;
   border: 1px solid var(--gray-5);
@@ -2665,4 +2672,33 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   align-items: center;
   justify-content: center;
   margin: 0 auto;
+}
+
+/* ---------- Emoji-free chrome bits ---------- */
+.merch-ic {
+  flex: none;
+  display: flex;
+  align-items: center;
+  color: var(--blue-11);
+}
+.media-ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-9);
+  background: var(--gray-3);
+}
+.tier-mini {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, .25);
+}
+.tj-node:not(.hit):not(.cur) .tj-dot { filter: grayscale(.45); opacity: .55; }
+.tj-dot { box-shadow: inset 0 -2px 4px rgba(0, 0, 0, .18); }
+.cp-save {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

@@ -6,7 +6,7 @@ import {
   MagnifyingGlassIcon, ChevronDownIcon, ChevronRightIcon, ChevronUpIcon, PersonIcon,
   LightningBoltIcon, StarFilledIcon, MinusIcon, PlusIcon, TimerIcon, Cross2Icon,
   HomeIcon, DashboardIcon, CounterClockwiseClockIcon, RocketIcon, ArrowLeftIcon,
-  MixerHorizontalIcon, GearIcon,
+  MixerHorizontalIcon, GearIcon, FileTextIcon, DiscIcon,
 } from '@radix-ui/react-icons'
 import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
@@ -141,7 +141,7 @@ function bulkNudge(p, qty) {
   const bp = +m[2].replace(/,/g, '')
   const pct = Math.max(1, Math.round((1 - bp / p.price) * 100))
   return qty >= thr
-    ? { done: true, text: `${pct}% bulk price unlocked 🎉` }
+    ? { done: true, text: `${pct}% bulk price unlocked` }
     : { done: false, text: `Add ${thr - qty} more → ${pct}% off` }
 }
 
@@ -264,8 +264,8 @@ const SkyLayer = memo(function SkyLayer({ dp, cond, inDialog }) {
         {[0, 1, 2, 3, 4].map(i => (
           <span key={i} className="gust" style={{ top: 16 + i * 32, animationDuration: `${2.2 + (i % 3) * 0.7}s`, animationDelay: `${i * 0.5}s` }} />
         ))}
-        <span className="leafy" style={{ top: 30, animationDuration: '7s' }}>🍃</span>
-        <span className="leafy" style={{ top: 80, animationDuration: '9s', animationDelay: '2.5s' }}>🍃</span>
+        <span className="leafy" style={{ top: 30, animationDuration: '7s' }} />
+        <span className="leafy" style={{ top: 80, animationDuration: '9s', animationDelay: '2.5s' }} />
       </>}
     </div>
   )
@@ -299,7 +299,7 @@ function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCoun
             <ChevronDownIcon width={14} height={14} color="#fff" style={{ flex: 'none' }} />
           </Flex>
           <Text size="1" truncate as="div" style={{ color: 'rgba(255,255,255,.72)' }}>
-            304, Maple Heights{plain ? '' : ` · ${weather.icon}`}
+            304, Maple Heights
           </Text>
         </Box>
         <div className="avatar" aria-label="Cart" onClick={openCart || undefined}>
@@ -322,7 +322,7 @@ function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCoun
       <div className="rewards-strip" onClick={() => scrollToId('leaderboard')}>
         <StarFilledIcon width={14} height={14} color="var(--amber-9)" style={{ flex: 'none' }} />
         <Text size="1" weight="bold" truncate style={{ flex: 1, minWidth: 0 }}>
-          🥈 Silver dealer · ahead of {Math.round(((MY_RANK.of - MY_RANK.rank) / MY_RANK.of) * 100)}% in your region
+          Silver dealer · ahead of {Math.round(((MY_RANK.of - MY_RANK.rank) / MY_RANK.of) * 100)}% in your region
         </Text>
         <Text size="1" weight="bold" color="amber" style={{ flex: 'none' }}>View journey</Text>
         <ChevronRightIcon width={13} height={13} color="var(--amber-11)" style={{ flex: 'none' }} />
@@ -654,8 +654,8 @@ const CAT_SHELVES = [
 const catShelfSub = (cat) => (SUBCATS[cat] || []).map(s => s[0]).slice(0, 3).join(' · ')
 
 const MERCH_ROWS = [
-  { icon: '🧾', t: 'GST input credit on every invoice', s: 'Business billing built in' },
-  { icon: '🚚', t: 'Free delivery above ₹999', s: 'Straight to your site, no surge' },
+  { icon: 'gst', t: 'GST input credit on every invoice', s: 'Business billing built in' },
+  { icon: 'truck', t: 'Free delivery above ₹999', s: 'Straight to your site, no surge' },
 ]
 
 /* "People also add" strip — shared by PLP and Search */
@@ -881,11 +881,11 @@ function FilterSheet({ group, onGroup, cat = 'All', b, setB, f, setF, count }) {
             {group === 'deal' && (
               <div className="fs-tiles">
                 <button className={`fs-tile ${!f.deals ? 'on' : ''}`} onClick={() => set({ deals: false })}>
-                  <div className="media"><Text size="7">🗂️</Text></div>
+                  <div className="media media-ic"><DashboardIcon width={26} height={26} /></div>
                   <div className="fs-cap"><Text size="2" weight="bold">All items</Text></div>
                 </button>
                 <button className={`fs-tile ${f.deals ? 'on' : ''}`} onClick={() => set({ deals: true })}>
-                  <div className="media"><Text size="7">🏷️</Text></div>
+                  <div className="media media-ic"><LightningBoltIcon width={26} height={26} /></div>
                   <div className="fs-cap"><Text size="2" weight="bold">Deals only</Text></div>
                 </button>
               </div>
@@ -1044,7 +1044,11 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
               {cells.map((c, i) =>
                 c.merchIdx != null ? (
                   <div className="merch-row cardin" key={`m${i}`} style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}>
-                    <Text size="4" style={{ flex: 'none' }}>{MERCH_ROWS[c.merchIdx].icon}</Text>
+                    <span className="merch-ic">
+                      {MERCH_ROWS[c.merchIdx].icon === 'gst'
+                        ? <FileTextIcon width={18} height={18} />
+                        : <RocketIcon width={18} height={18} />}
+                    </span>
                     <Box>
                       <Text size="1" weight="bold" as="div" style={{ color: 'var(--blue-11)' }}>{MERCH_ROWS[c.merchIdx].t}</Text>
                       <Text as="div" style={{ fontSize: 11, color: 'var(--blue-11)', opacity: .8 }}>{MERCH_ROWS[c.merchIdx].s}</Text>
@@ -1463,7 +1467,7 @@ function GameRow({ onSpin }) {
   return (
     <div className="game-row">
       <button className="game-card game-spin" onClick={onSpin}>
-        <Text size="6" as="div">🎡</Text>
+        <DiscIcon width={28} height={28} color="#fff" />
         <Text size="3" weight="bold" as="div" mt="1" style={{ color: '#fff' }}>Spin & Win</Text>
         <Text size="1" as="div" mt="1" style={{ color: 'rgba(255,255,255,.88)' }}>
           1 free spin today · up to ₹250 off
@@ -1623,7 +1627,7 @@ function Leaderboard() {
           </div>
           {TIERS.map((t, i) => (
             <div key={t.name} className={`tj-node ${i < curIdx ? 'hit' : ''} ${i === curIdx ? 'cur' : ''}`}>
-              <div className="tj-dot">{t.icon}</div>
+              <div className="tj-dot" style={{ background: t.c }} />
               <Text size="1" weight={i === curIdx ? 'bold' : 'medium'} style={{ fontSize: 10.5 }}>{t.name}</Text>
               <Text style={{ fontSize: 9.5, color: 'var(--gray-9)' }}>{t.min === 0 ? '—' : fmtL(t.min)}</Text>
             </div>
@@ -1631,7 +1635,10 @@ function Leaderboard() {
         </div>
         <Flex align="center" justify="between" mt="4">
           <Box>
-            <Text size="3" weight="bold" as="div">{TIERS[curIdx].icon} {TIERS[curIdx].name} dealer</Text>
+            <Flex align="center" gap="2">
+              <span className="tier-mini" style={{ background: TIERS[curIdx].c }} />
+              <Text size="3" weight="bold" as="div">{TIERS[curIdx].name} dealer</Text>
+            </Flex>
             <Text size="1" color="gray" as="div" mt="1">Ahead of {pctile}% of dealers in your region</Text>
           </Box>
           {next && (
@@ -1784,7 +1791,7 @@ function FlashSale({ items, onChange, onSeeAll }) {
     <div className="band-flash cv" id="deals">
       <Flex align="center" justify="between" px="4">
         <Flex align="center" gap="3" style={{ minWidth: 0 }}>
-          <Heading size="4" style={{ color: '#fff', letterSpacing: '-0.2px' }}>⚡ Flash sale</Heading>
+          <Heading size="4" style={{ color: '#fff', letterSpacing: '-0.2px' }}>Flash sale</Heading>
           <DealTimer />
         </Flex>
         <Text size="2" weight="bold" style={{ color: 'rgba(255,255,255,.9)', cursor: 'pointer', flex: 'none' }} onClick={onSeeAll}>
@@ -2042,7 +2049,7 @@ function QtySheet({ q, onClose, onConfirm }) {
           <div className={`qs-meter ${unlocked ? 'done' : ''}`}>
             <Text size="1" weight="bold" as="div" style={{ color: unlocked ? 'var(--teal-11)' : 'var(--amber-11)' }}>
               {unlocked
-                ? `${tier.pct}% bulk price unlocked 🎉 ₹${saved.toLocaleString('en-IN')} savings on invoice`
+                ? `${tier.pct}% bulk price unlocked — ₹${saved.toLocaleString('en-IN')} savings on invoice`
                 : `Add ${tier.thr - n} more to unlock ₹${tier.bp.toLocaleString('en-IN')}/pc (${tier.pct}% off)`}
             </Text>
             <div className="qs-mbar"><div style={{ width: `${Math.min(100, (n / tier.thr) * 100)}%` }} /></div>
@@ -2167,7 +2174,10 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
         ) : (
           <>
             {saving > 0 && (
-              <div className="cp-save">🎉 You're saving ₹{saving.toLocaleString('en-IN')} on this order</div>
+              <div className="cp-save">
+                <StarFilledIcon width={13} height={13} style={{ flex: 'none' }} />
+                You're saving ₹{saving.toLocaleString('en-IN')} on this order
+              </div>
             )}
 
             <div className="cp-card">
@@ -2204,7 +2214,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
             {deals.length > 0 && (
               <div className="cp-card">
                 <Flex align="center" justify="between">
-                  <Text size="2" weight="bold">⚡ Flash deals before you checkout</Text>
+                  <Text size="2" weight="bold">Flash deals before you checkout</Text>
                   <DealTimer />
                 </Flex>
                 <div className="cp-deals">
@@ -2231,7 +2241,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
             )}
 
             <div className="cp-card cp-scheme">
-              <Text size="1" weight="bold" as="div" style={{ color: 'var(--teal-11)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              <Text size="1" weight="bold" as="div" style={{ color: 'var(--violet-11)', letterSpacing: '.5px', fontSize: 10.5 }}>
                 VOLUME SCHEME
               </Text>
               {nextSlab ? (
@@ -2243,14 +2253,14 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
                     <div style={{ width: `${Math.min(100, (cart.total / nextSlab.min) * 100)}%` }} />
                   </div>
                   {slab && (
-                    <Text size="1" as="div" mt="1" style={{ color: 'var(--teal-11)', fontWeight: 700 }}>
+                    <Text size="1" as="div" mt="1" style={{ color: 'var(--violet-11)', fontWeight: 700 }}>
                       {slab.off}% scheme active — saving ₹{schemeOff.toLocaleString('en-IN')}
                     </Text>
                   )}
                 </>
               ) : (
-                <Text size="2" weight="bold" as="div" mt="1" style={{ color: 'var(--teal-11)' }}>
-                  Top slab unlocked 🎉 {slab.off}% off the entire invoice — ₹{schemeOff.toLocaleString('en-IN')} saved
+                <Text size="2" weight="bold" as="div" mt="1" style={{ color: 'var(--violet-11)' }}>
+                  Top slab unlocked · {slab.off}% off the entire invoice — ₹{schemeOff.toLocaleString('en-IN')} saved
                 </Text>
               )}
               <Text size="1" color="gray" as="div" mt="1">
@@ -2275,7 +2285,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
               <button className="dlv-row" onClick={() => setExpress(true)}>
                 <span className={`radio ${express ? 'on' : ''}`} />
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <Text size="2" weight="bold" as="div">⚡ Express · at your shop in 1 hour</Text>
+                  <Text size="2" weight="bold" as="div">Express · at your shop in 1 hour</Text>
                   <Text size="1" color="gray" as="div">Rush dispatch from the nearest depot</Text>
                 </span>
                 <Text size="1" weight="bold">+₹200</Text>
