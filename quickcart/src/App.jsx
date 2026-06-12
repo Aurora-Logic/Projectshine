@@ -2130,11 +2130,119 @@ function AcctDash() {
   )
 }
 
+/* GST invoice generated on-device and downloaded as a file */
+function downloadInvoice(o) {
+  let gst = { gstin: '29ABCDE1234F1Z5', name: 'Bora Hardware & Plywood' }
+  try { gst = { ...gst, ...(JSON.parse(localStorage.getItem('qc-gst') || 'null') || {}) } } catch { /* defaults */ }
+  const total = o.items.reduce((s, { p, n }) => s + p.price * n, 0)
+  const taxable = Math.round(total / 1.18)
+  const tax = total - taxable
+  const rows = o.items.map(({ p, n }) => `
+    <tr><td>${p.name}</td><td class="r">${n}</td><td class="r">₹${p.price.toLocaleString('en-IN')}</td><td class="r">₹${(p.price * n).toLocaleString('en-IN')}</td></tr>`).join('')
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${o.id}</title><style>
+    body{font-family:-apple-system,Segoe UI,sans-serif;margin:32px;color:#1a1a1a}
+    h1{font-size:20px;margin:0;color:#0E4A2F} .mut{color:#777;font-size:12px}
+    table{width:100%;border-collapse:collapse;margin-top:18px;font-size:13px}
+    th,td{padding:8px 10px;border-bottom:1px solid #e5e5e5;text-align:left} .r{text-align:right}
+    th{background:#F1F8F4;font-size:11px;letter-spacing:.4px;text-transform:uppercase}
+    .tot td{font-weight:700;border-top:2px solid #0E4A2F;border-bottom:none}
+    .top{display:flex;justify-content:space-between;align-items:flex-start}
+  </style></head><body>
+    <div class="top"><div><h1>QuickCart</h1><div class="mut">Furniture hardware for dealers<br/>GSTIN 29QCKRT5678K1Z9 · Bengaluru</div></div>
+    <div class="mut" style="text-align:right">TAX INVOICE<br/><b style="color:#1a1a1a">PO ${o.id}</b><br/>${o.date}</div></div>
+    <p class="mut" style="margin-top:16px">Billed to<br/><b style="color:#1a1a1a">${gst.name}</b><br/>GSTIN ${gst.gstin.toUpperCase()}</p>
+    <table><tr><th>Item</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th></tr>${rows}
+    <tr><td colspan="3" class="r mut">Taxable value</td><td class="r">₹${taxable.toLocaleString('en-IN')}</td></tr>
+    <tr><td colspan="3" class="r mut">CGST 9% + SGST 9%</td><td class="r">₹${tax.toLocaleString('en-IN')}</td></tr>
+    <tr class="tot"><td colspan="3" class="r">Grand total</td><td class="r">₹${total.toLocaleString('en-IN')}</td></tr></table>
+    <p class="mut">Input credit available on this invoice. Computer-generated — no signature required.</p>
+  </body></html>`
+  const blob = new Blob([html], { type: 'text/html' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `Invoice-${o.id}.html`
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
+/* Order detail: track, stats, lines, invoice download, repeat */
+function OrderDetailSheet({ order, onClose, onChange }) {
+  const pieces = order.items.reduce((s, { n }) => s + n, 0)
+  const total = order.items.reduce((s, { p, n }) => s + p.price * n, 0)
+  const saved = order.items.reduce((s, { p, n }) => {
+    const t = bulkTier(p)
+    return t && n >= t.thr ? s + (p.price - t.bp) * n : s
+  }, 0)
+  const live = order.status !== 'Delivered'
+  const elapsed = live && order.ts ? (Date.now() - order.ts) / 1000 : Infinity
+  let si = 0
+  ORDER_STAGES.forEach(([, t], i) => { if (elapsed >= t) si = i })
+  const fill = (si / (ORDER_STAGES.length - 1)) * 100
+  const repeat = (e) => {
+    order.items.forEach(({ p, n }) => onChange(n, p, { noReco: true }))
+    sparkle(e)
+    onClose()
+  }
+  return (
+    <div className="qsheet-overlay" onClick={onClose}>
+      <div className="qsheet cart-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="qsheet-grab" />
+        <Flex align="center" justify="between">
+          <Box>
+            <Heading size="4" style={{ letterSpacing: '-0.3px' }}>{order.date}</Heading>
+            <Text size="1" color="gray" as="div">PO {order.id} · {order.addrLabel || 'Shop'}</Text>
+          </Box>
+          <span className={`st-chip ${live ? '' : 'ok'}`}>{live ? ORDER_STAGES[si][0] : 'Delivered'}</span>
+        </Flex>
+        <div className="oc-track" style={{ marginTop: 14 }}>
+          <div className="oc-line"><div style={{ width: live ? `${fill}%` : '100%' }} /></div>
+          <div className="oc-steps">
+            {ORDER_STAGES.map(([label], i) => (
+              <div key={label} className="oc-step">
+                <span className={`oc-dot ${(!live || i <= si) ? 'on' : ''}`} />
+                <Text style={{ fontSize: 9 }} color={(!live || i <= si) ? undefined : 'gray'}>{label}</Text>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="ods-stats">
+          <div><Text size="2" weight="bold" as="div">{pieces}</Text><span>pieces</span></div>
+          <div><Text size="2" weight="bold" as="div">{order.items.length}</Text><span>SKUs</span></div>
+          <div><Text size="2" weight="bold" as="div">₹{(total / 1000).toFixed(1)}k</Text><span>value</span></div>
+          <div><Text size="2" weight="bold" as="div" style={{ color: 'var(--green-11)' }}>₹{saved.toLocaleString('en-IN')}</Text><span>saved</span></div>
+        </div>
+        <div className="cs-list">
+          {order.items.map(({ p, n }) => (
+            <div className="cs-row" key={`od-${p.id}`}>
+              <Img src={img(p.ph, 120)} alt="" />
+              <Box flexGrow="1" style={{ minWidth: 0 }}>
+                <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{p.name}</Text>
+                <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>{n} × ₹{p.price.toLocaleString('en-IN')}</Text>
+              </Box>
+              <Text size="1" weight="bold" style={{ minWidth: 60, textAlign: 'right', flex: 'none', whiteSpace: 'nowrap' }}>
+                ₹{(n * p.price).toLocaleString('en-IN')}
+              </Text>
+            </div>
+          ))}
+        </div>
+        <Flex gap="2" mt="3">
+          <button className="qs-cta ghost" style={{ marginTop: 0, flex: 1, justifyContent: 'center', gap: 7 }} onClick={() => downloadInvoice(order)}>
+            <FileTextIcon width={14} height={14} /> Invoice
+          </button>
+          <button className="qs-cta" style={{ marginTop: 0, flex: 1.3, justifyContent: 'center' }} onClick={repeat}>
+            Repeat order
+          </button>
+        </Flex>
+      </div>
+    </div>
+  )
+}
+
 function AcctOrders({ lastOrder, onChange }) {
   const [view, setView] = useState(null)
   const hist = [
     ...(lastOrder ? [{
-      id: lastOrder.id, date: 'Today', status: 'In transit',
+      id: lastOrder.id, date: 'Today', status: 'In transit', ts: lastOrder.ts, addrLabel: lastOrder.addrLabel,
       items: (lastOrder.items || []).map(({ p, n }) => ({ p, n })),
     }] : []),
     ...PAST_ORDERS.map(o => ({
@@ -2154,14 +2262,14 @@ function AcctOrders({ lastOrder, onChange }) {
             </Flex>
             <Box flexGrow="1" style={{ minWidth: 0 }}>
               <Text size="1" weight="bold" as="div">{o.date} · {o.items.length} items · ₹{o.items.reduce((s, { p, n }) => s + p.price * n, 0).toLocaleString('en-IN')}</Text>
-              <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>PO {o.id}</Text>
+              <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>PO {o.id} · tap for invoice & tracking</Text>
             </Box>
             <span className={`st-chip ${o.status === 'Delivered' ? 'ok' : ''}`}>{o.status}</span>
             <ChevronRightIcon width={14} height={14} color="var(--gray-8)" style={{ flex: 'none' }} />
           </div>
         ))}
       </div>
-      {view && <PastOrderSheet key={view.id} order={view} onClose={() => setView(null)} onChange={onChange} />}
+      {view && <OrderDetailSheet key={view.id} order={view} onClose={() => setView(null)} onChange={onChange} />}
     </>
   )
 }

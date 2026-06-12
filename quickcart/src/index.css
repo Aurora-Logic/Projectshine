@@ -3220,3 +3220,18 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 .mrow-ic { width: 30px; height: 30px; border-radius: 9px; }
 .cp-body { padding: 12px 14px 100px; }
 .pdp-head { padding: 13px 16px; }
+
+/* order detail stats strip */
+.ods-stats {
+  display: flex;
+  background: var(--gray-2);
+  border-radius: 12px;
+  padding: 9px 0;
+  margin-top: 12px;
+}
+.ods-stats > div { flex: 1; text-align: center; }
+.ods-stats > div + div { border-left: 1px solid var(--gray-4); }
+.ods-stats span { font-size: 9.5px; color: var(--gray-10); font-weight: 700; }
+
+/* account menu groups read softer than data cards */
+.acctpage > .cp-body > .cp-card { border-radius: 20px; }
