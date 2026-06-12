@@ -4713,8 +4713,17 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
   }
   const saveNote = (v) => { setNote(v); localStorage.setItem('qc-note', v) }
 
-  const baseFee = cart.total >= FREE_DELIVERY_AT || cart.total === 0 ? 0 : 49
+  const [coupon, setCoupon] = usePersisted('qc-coupon', null)
+  const couponOff = coupon
+    ? coupon.kind === 'pct'
+      ? Math.round((cart.total * coupon.value) / 100)
+      : coupon.kind === 'amt' ? Math.min(coupon.value, cart.total) : 0
+    : 0
+  const baseFee = coupon?.kind === 'freedel' || cart.total >= FREE_DELIVERY_AT || cart.total === 0 ? 0 : 49
   const fee = baseFee + (express ? 200 : 0)
+  const credit = creditState()
+  const dueTs = Date.now() + 30 * 864e5
+  const dueLabel = new Date(dueTs).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
   const bulkSave = items.reduce((s, { p, n }) => {
     const t = bulkTier(p)
     return t && n >= t.thr ? s + (p.price - t.bp) * n : s
@@ -4727,8 +4736,8 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
   const slab = [...SCHEMES].reverse().find(s => cart.total >= s.min)
   const nextSlab = SCHEMES.find(s => cart.total < s.min)
   const schemeOff = slab ? Math.round((cart.total * slab.off) / 100) : 0
-  const toPay = Math.max(0, cart.total - schemeOff + fee)
-  const saving = mrpSave + bulkSave + schemeOff
+  const toPay = Math.max(0, cart.total - schemeOff - couponOff + fee)
+  const saving = mrpSave + bulkSave + schemeOff + couponOff
   const addr = addrs.find(a => a.id === sel) || addrs[0]
   const deals = applyF(DEALS, { ...DEFAULT_F, sort: 3 }, 'ALL').filter(d => !cart.items[d.id]).slice(0, 6)
   const tPct = Math.min(100, Math.round(((TARGETS.monthly.done + cart.total) / TARGETS.monthly.target) * 100))
@@ -4913,6 +4922,21 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
             </div>
 
             <div className="cp-card">
+              <Flex align="center" justify="between">
+                <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                  PAYMENT
+                </Text>
+                <span className="st-chip ok">30-DAY CREDIT</span>
+              </Flex>
+              <Text size="2" weight="bold" as="div" mt="2">
+                ₹{toPay.toLocaleString('en-IN')} on credit · due {dueLabel}
+              </Text>
+              <Text size="1" color="gray" as="div" mt="1">
+                Interest-free · ₹{Math.max(0, credit.limit - credit.outstanding - toPay).toLocaleString('en-IN')} credit left after this order
+              </Text>
+            </div>
+
+            <div className="cp-card">
               <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
                 BILL DETAILS
               </Text>
@@ -4929,8 +4953,19 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
                   <Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>−₹{schemeOff.toLocaleString('en-IN')}</Text>
                 </Flex>
               )}
+              {couponOff > 0 && coupon && (
+                <Flex justify="between" mt="1" align="center">
+                  <Flex align="center" gap="1">
+                    <Text size="1" style={{ color: 'var(--green-11)' }}>Coupon · {coupon.label}</Text>
+                    <button className="reco-x" style={{ width: 18, height: 18 }} onClick={() => setCoupon(null)} aria-label="Remove coupon">
+                      <Cross2Icon width={10} height={10} />
+                    </button>
+                  </Flex>
+                  <Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>−₹{couponOff.toLocaleString('en-IN')}</Text>
+                </Flex>
+              )}
               <Flex justify="between" mt="1">
-                <Text size="1" color="gray">Delivery</Text>
+                <Text size="1" color="gray">Delivery{coupon?.kind === 'freedel' ? ' · coupon applied' : ''}</Text>
                 <Text size="1" weight="bold" style={baseFee === 0 ? { color: 'var(--green-10)' } : undefined}>{baseFee === 0 ? 'FREE' : `₹${baseFee}`}</Text>
               </Flex>
               {express && (
@@ -4946,6 +4981,9 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
               )}
               <div className="cp-divider" />
               <Flex justify="between"><Text size="2" weight="bold">To pay</Text><Text size="2" weight="bold">₹{toPay.toLocaleString('en-IN')}</Text></Flex>
+              <Text size="1" as="div" mt="1" color="gray">
+                Includes GST (18%) ₹{(toPay - Math.round(toPay / 1.18)).toLocaleString('en-IN')} · input credit on invoice
+              </Text>
               {mrpSave > 0 && (
                 <Text size="1" as="div" mt="1" color="gray">Plus ₹{mrpSave.toLocaleString('en-IN')} below MRP on these items</Text>
               )}
@@ -4975,11 +5013,21 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
               setPlaced({
                 id: `QC-${String(Date.now()).slice(-6)}`,
                 amt: toPay, count: cart.count, ts: Date.now(), express,
-                addrLabel: addr.label, tPct,
+                addrLabel: addr.label, addr: addr.addr, tPct,
+                payMode: '30-day credit', dueTs,
+                promise: express ? 'Express · ~1 hr' : 'Today by 6 PM',
+                bill: {
+                  itemTotal: cart.total, bulkSave, schemeOff,
+                  coupon: coupon && couponOff > 0 ? { label: coupon.label, off: couponOff } : null,
+                  freeDelCoupon: coupon?.kind === 'freedel' || false,
+                  deliveryFee: baseFee, expressFee: express ? 200 : 0, toPay,
+                },
                 items: Object.values(cart.items).map(({ p, n }) => ({
-                  p: { id: p.id, ph: p.ph, name: p.name, price: p.price, mrp: p.mrp, bulk: p.bulk }, n,
+                  p: { id: p.id, ph: p.ph, name: p.name, price: p.price, mrp: p.mrp, bulk: p.bulk },
+                  n, unit: unitPriceFor(p, n),
                 })),
               })
+              if (coupon) setCoupon(null) // consumed by this order
             }}
           >
             Place order
@@ -5002,6 +5050,9 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
             <div className="od-tick">✓</div>
             <Heading size="5" mt="3" style={{ letterSpacing: '-0.3px' }}>Order placed!</Heading>
             <Text size="2" color="gray" as="div" mt="1">PO {placed.id} · ₹{placed.amt.toLocaleString('en-IN')}</Text>
+            <Text size="1" weight="bold" as="div" mt="1" style={{ color: 'var(--green-11)' }}>
+              On 30-day credit · due {new Date(placed.dueTs).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+            </Text>
             <Text size="1" color="gray" as="div" mt="1">Invoice & dispatch details on WhatsApp + email</Text>
             <Button mt="4" size="3" color="green" radius="full" style={{ fontWeight: 800, width: '100%' }} onClick={() => onPlaced(placed)}>
               Done
@@ -5862,6 +5913,11 @@ export default function App() {
             onPlaced={(rec) => {
               setOrder(rec)
               localStorage.setItem('qc-order', JSON.stringify(rec))
+              try {
+                const bills = JSON.parse(localStorage.getItem('qc-bills') || '[]')
+                bills.push({ id: rec.id, amt: rec.bill?.toPay ?? rec.amt, due: rec.dueTs })
+                localStorage.setItem('qc-bills', JSON.stringify(bills))
+              } catch { /* storage off */ }
               setCartItems({})
               // land on home with the tracking card in view, whatever the stack was
               setCartOpen(false)
