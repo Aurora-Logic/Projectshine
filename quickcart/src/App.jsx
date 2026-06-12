@@ -163,6 +163,28 @@ const bulkTier = (p) => {
   return { thr: +m[1], bp, pct: Math.max(1, Math.round((1 - bp / p.price) * 100)) }
 }
 
+/* Keeps an overlay mounted briefly after close so it can slide out */
+function PageExit({ open, children, variant = 'page', dur = 300 }) {
+  const [state, setState] = useState(open ? 'open' : 'closed')
+  const last = useRef(children)
+  if (open) last.current = children
+  useEffect(() => {
+    if (open) {
+      setState('open')
+      return
+    }
+    setState(s => (s === 'closed' ? s : 'closing'))
+    const t = setTimeout(() => setState('closed'), dur)
+    return () => clearTimeout(t)
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (state === 'closed') return null
+  return (
+    <div className={`pgx ${variant} ${state === 'closing' ? 'out' : ''}`}>
+      {open ? children : last.current}
+    </div>
+  )
+}
+
 const scrollToId = (id) =>
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
@@ -284,7 +306,7 @@ function CartGlyph(props) {
   )
 }
 
-function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCount, plain, onTargets }) {
+function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCount, plain, onTargets, onAccount }) {
   const openCart = useContext(CartCtx)
   const [hint, setHint] = useState(0)
   useEffect(() => {
@@ -309,7 +331,7 @@ function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCoun
           <CartGlyph />
           {cartCount > 0 && <span className="cart-badge">{cartCount > 9 ? '9+' : cartCount}</span>}
         </div>
-        <div className="avatar"><PersonIcon width={19} height={19} /></div>
+        <div className="avatar" onClick={onAccount || undefined}><PersonIcon width={19} height={19} /></div>
       </Flex>
 
       <TextField.Root
@@ -1996,13 +2018,12 @@ function CartBar({ cart }) {
   )
 }
 
-function NavBar({ onCategories, onUtilities, onReorder, onAccount, active = 'home', mini = false }) {
+function NavBar({ onCategories, onUtilities, onReorder, active = 'home', mini = false }) {
   const items = [
     { icon: HomeIcon, label: 'Home', key: 'home', go: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
     { icon: DashboardIcon, label: 'Categories', key: 'categories', go: onCategories },
     { icon: GearIcon, label: 'Utilities', key: 'utilities', go: onUtilities },
     { icon: CounterClockwiseClockIcon, label: 'Reorder', key: 'reorder', go: onReorder },
-    { icon: PersonIcon, label: 'Account', key: 'account', go: onAccount },
   ]
   return (
     <div className={`navbar ${mini ? 'mini' : ''}`}>
@@ -3042,7 +3063,7 @@ function AcctOrders({ lastOrder, onChange }) {
         </Text>
         <Flex align="baseline" gap="2" mt="1">
           <Text weight="bold" style={{ fontSize: 27, letterSpacing: '-0.6px' }}>{hist.length + 12}</Text>
-          <Text size="1" color="gray">orders · {fmtL(totalVal + 1040000)} billed · all invoices below</Text>
+          <Text size="1" color="gray">orders · {fmtL(totalVal + 1040000)} billed · tap any for invoice</Text>
         </Flex>
       </div>
       <div className="seg" style={{ marginTop: 0, marginBottom: 12 }}>
@@ -3093,7 +3114,9 @@ function AcctOrders({ lastOrder, onChange }) {
           </div>
         )
       })}
-      {view && <OrderDetailPage key={view.id} order={view} onClose={closeView} onChange={onChange} />}
+      <PageExit open={view !== null}>
+        {view && <OrderDetailPage key={view.id} order={view} onClose={closeView} onChange={onChange} />}
+      </PageExit>
     </>
   )
 }
@@ -3680,7 +3703,7 @@ function AcctPrivacy() {
 const ACCT_TILES = [
   ['addr', HomeIcon, 'Address', 'Book'],
   ['credit', IdCardIcon, 'Credit', 'Ledger'],
-  ['orders', FileTextIcon, 'My', 'Invoices'],
+  ['orders', FileTextIcon, 'My', 'Orders'],
   ['lists', BookmarkIcon, 'Project', 'Lists'],
 ]
 
@@ -3694,7 +3717,7 @@ const ACCT_FLAT = [
 ]
 
 const ACCT_TITLES = {
-  dash: 'Performance dashboard', orders: 'Order history', credit: 'Credit ledger',
+  dash: 'Performance dashboard', orders: 'My orders', credit: 'Credit ledger',
   lists: 'Project lists', schemes: 'Schemes & discounts',
   gst: 'GST details', calc: 'Calculators', site: 'Submit site visit',
   display: 'Display centre visit', support: 'Support', addr: 'Address book',
@@ -3840,6 +3863,7 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, o
         <Text size="1" color="gray" as="div" style={{ textAlign: 'center', padding: '4px 0 16px' }}>QuickCart · v1.0 · Furniture hardware for dealers</Text>
       </div>
 
+      <PageExit open={sub !== null}>
       {sub && (
         <div className="acct-sub">
           <div className="pdp-head">
@@ -3849,6 +3873,7 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, o
           <div className="cp-body">{renderSub()}</div>
         </div>
       )}
+      </PageExit>
 
       {lo && (
         <div className="order-done" onClick={() => lo === 'confirm' && setLo(null)}>
@@ -5211,6 +5236,8 @@ export default function App() {
   // rAF-throttled with hysteresis (on >110, off <70) so the header never flaps mid-scroll.
   // navMini: Apple-style — scrolling DOWN shrinks the navbar, scrolling UP restores it.
   const [navMini, setNavMini] = useState(window.location.hash === '#navmini')
+  const [navSearch, setNavSearch] = useState(window.location.hash === '#navsearch')
+  const [navQ, setNavQ] = useState('')
   useEffect(() => {
     if (['#compact', '#navmini'].includes(window.location.hash)) return
     let ticking = false
@@ -5325,6 +5352,7 @@ export default function App() {
           brand={brand} onBrand={setBrand} onSearch={() => setSheet({ items: FEED_POOL })}
           cartCount={cart.count} plain={heroVariant === 'fest'}
           onTargets={() => { acctInitSub.current = 'dash'; setAcctOpen(true) }}
+          onAccount={() => { acctInitSub.current = null; setAcctOpen(true) }}
         />
 
         {heroVariant === 'fest' ? (
@@ -5449,35 +5477,48 @@ export default function App() {
           />
         )}
 
-        {plp && (
-          <CategoryPage
-            cat={plp} onPick={setPlp} onClose={closePlp}
-            onChange={changeCart} cart={cart} homeBrand={brand}
-            onSearch={() => setSheet({ items: FEED_POOL })}
-            recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)}
-          />
-        )}
+        <PageExit open={plp !== null}>
+          {plp && (
+            <CategoryPage
+              cat={plp} onPick={setPlp} onClose={closePlp}
+              onChange={changeCart} cart={cart} homeBrand={brand}
+              onSearch={() => setSheet({ items: FEED_POOL })}
+              recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)}
+            />
+          )}
+        </PageExit>
 
-        <SearchSheet sheet={sheet} onClose={closeSheet} onChange={changeCart} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
+        <PageExit open={sheet !== null}>
+          <SearchSheet sheet={sheet} onClose={closeSheet} onChange={changeCart} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
+        </PageExit>
 
-        {reorderOpen && (
-          <ReorderPage onClose={closeReorder} onChange={changeCart} cart={cart} lastOrder={order} />
-        )}
+        <PageExit open={reorderOpen}>
+          {reorderOpen && (
+            <ReorderPage onClose={closeReorder} onChange={changeCart} cart={cart} lastOrder={order} />
+          )}
+        </PageExit>
 
-        {acctOpen && (
+        <PageExit open={acctOpen}>
+          {acctOpen && (
           <AccountPage
             onClose={closeAcct} onChange={changeCart} cart={cart} lastOrder={order}
             subRef={acctSubRef} initialSub={acctInitSub.current}
             onCategory={(cat) => { setAcctOpen(false); setPlp(cat) }}
             onGoReorder={() => { setAcctOpen(false); setReorderOpen(true) }}
           />
-        )}
+          )}
+        </PageExit>
 
-        {pdp && <ProductPage key={pdp.id} p={pdp} onClose={closePdp} onChange={changeCart} cart={cart} />}
+        <PageExit open={pdp !== null}>
+          {pdp && <ProductPage key={pdp.id} p={pdp} onClose={closePdp} onChange={changeCart} cart={cart} />}
+        </PageExit>
 
-        {qsheet && <QtySheet q={qsheet} onClose={closeQty} onConfirm={confirmQty} />}
+        <PageExit open={qsheet !== null} variant="sheetv" dur={240}>
+          {qsheet && <QtySheet q={qsheet} onClose={closeQty} onConfirm={confirmQty} />}
+        </PageExit>
 
-        {cartOpen && (
+        <PageExit open={cartOpen}>
+          {cartOpen && (
           <CartPage
             cart={cart} onClose={closeCart} onChange={changeCart}
             onPlaced={(rec) => {
@@ -5487,7 +5528,8 @@ export default function App() {
               closeCart()
             }}
           />
-        )}
+          )}
+        </PageExit>
 
         {!authed && (
           <LoginGate onDone={() => { localStorage.setItem('qc-auth', '1'); setAuthed(true) }} />
@@ -5518,22 +5560,54 @@ export default function App() {
           )}
           <CartBar cart={cart} />
           <div className="navrow">
-            <NavBar
-              onCategories={() => setPlp('All')}
-              onUtilities={() => { /* Utilities page comes later */ }}
-              onReorder={() => setReorderOpen(true)}
-              onAccount={() => { acctInitSub.current = null; setAcctOpen(true) }}
-              active={acctOpen ? 'account' : reorderOpen ? 'reorder' : plp ? 'categories' : 'home'}
-              mini={navMini}
-            />
+            {navSearch ? (
+              <div className="nav-search">
+                <MagnifyingGlassIcon width={16} height={16} color="var(--gray-9)" style={{ flex: 'none' }} />
+                <input
+                  autoFocus placeholder="Search fittings, brands, sizes…" value={navQ}
+                  onChange={(e) => setNavQ(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      setSheet({ items: FEED_POOL, query: navQ.trim() })
+                      setNavSearch(false)
+                      setNavQ('')
+                    }
+                  }}
+                />
+                <button className="reco-x" onClick={() => { setNavSearch(false); setNavQ('') }} aria-label="Close search">
+                  <Cross2Icon width={13} height={13} />
+                </button>
+              </div>
+            ) : (
+              <NavBar
+                onCategories={() => setPlp('All')}
+                onUtilities={() => { /* Utilities page comes later */ }}
+                onReorder={() => setReorderOpen(true)}
+                active={reorderOpen ? 'reorder' : plp ? 'categories' : 'home'}
+                mini={navMini}
+              />
+            )}
             <button
-              className={`fab ${scrolled ? 'show' : ''} ${navMini ? 'mini' : ''}`}
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              aria-label="Back to top"
+              className={`fab search show ${navMini && !navSearch ? 'mini' : ''}`}
+              onClick={() => {
+                if (navSearch) {
+                  if (navQ.trim()) setSheet({ items: FEED_POOL, query: navQ.trim() })
+                  setNavSearch(false)
+                  setNavQ('')
+                } else {
+                  setNavSearch(true)
+                }
+              }}
+              aria-label="Search"
             >
-              <ChevronUpIcon width={20} height={20} />
+              <MagnifyingGlassIcon width={20} height={20} />
             </button>
           </div>
+          {scrolled && !navSearch && (
+            <button className="fab top2 show" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Back to top">
+              <ChevronUpIcon width={18} height={18} />
+            </button>
+          )}
         </div>
       </div>
       </CartCtx.Provider>

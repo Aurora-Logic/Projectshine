@@ -320,7 +320,7 @@ body {
   gap: 8px;
   background: var(--amber-2);
   border: 1px solid var(--amber-4);
-  border-radius: 10px;
+  border-radius: 100px;
   padding: 8px 12px;
   margin-top: 20px;
   cursor: pointer;
@@ -1856,7 +1856,7 @@ body {
   margin-top: 10px;
   background: rgba(255, 255, 255, .13);
   border: 1px solid rgba(255, 255, 255, .18);
-  border-radius: 10px;
+  border-radius: 100px;
   padding: 8px 12px;
   display: flex;
   align-items: center;
@@ -4116,3 +4116,73 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   cursor: pointer;
 }
 .cal-mcell.sel { background: var(--green-9); color: #fff; }
+
+/* ---------- iOS-style floating search beside the navbar ---------- */
+.fab.search { margin-left: 0; transform: scale(1); pointer-events: auto; }
+.fab.search.mini { transform: scale(.8); }
+.fab.top2 {
+  position: fixed;
+  right: 50%;
+  transform: translateX(229px) scale(1);
+  bottom: calc(86px + env(safe-area-inset-bottom));
+  width: 42px;
+  height: 42px;
+  margin: 0;
+  background: var(--gray-12);
+  z-index: 41;
+  pointer-events: auto;
+  animation: stepin .25s cubic-bezier(.22, 1, .36, 1);
+}
+@media (max-width: 500px) {
+  .fab.top2 { right: 12px; transform: scale(1); }
+}
+.nav-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: #fff;
+  border: 1px solid var(--gray-4);
+  border-radius: 999px;
+  margin: 0 0 calc(10px + env(safe-area-inset-bottom)) 10px;
+  padding: 13px 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .16);
+  transform-origin: 100% 50%;
+  animation: searchin .28s cubic-bezier(.22, 1, .36, 1);
+}
+.nav-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  min-width: 0;
+  background: none;
+}
+@keyframes searchin {
+  from { transform: scaleX(.35); opacity: 0; }
+}
+
+/* ---------- Exit transitions: pages slide back out, sheets drop ---------- */
+.pgx.out { pointer-events: none; }
+.pgx.page.out > * {
+  animation: pushout .3s cubic-bezier(.32, .72, .25, 1) forwards !important;
+}
+@keyframes pushout {
+  to { transform: translateX(100%); }
+}
+.pgx.sheetv.out > * {
+  animation: qfadeout .24s ease forwards !important;
+}
+.pgx.sheetv.out .qsheet {
+  animation: sheetdown .24s cubic-bezier(.4, 0, .8, .6) forwards !important;
+}
+@keyframes sheetdown {
+  to { transform: translateY(100%); }
+}
+@keyframes qfadeout {
+  to { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pgx.out > *, .pgx.sheetv.out .qsheet { animation: none !important; }
+}
