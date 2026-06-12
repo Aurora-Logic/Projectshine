@@ -326,3 +326,12 @@ export const FEST = {
     { l: 'Locks & Latches', cat: 'Locks', ph: '1558002038-1055907df827' },
   ],
 }
+
+/* Hero v2 palette options — flip in #sim, preview via #hero-<name>; finalize or rotate */
+export const HERO_PALETTES = [
+  { name: 'Forest', a: '#2C5F50', b: '#234D41', c: '#1D4237', d: '#142F27' },
+  { name: 'Ocean', a: '#1F5D73', b: '#194B5E', c: '#143D4E', d: '#0D2B38' },
+  { name: 'Dusk', a: '#4A4180', b: '#3B3469', c: '#2F2955', d: '#211D3E' },
+  { name: 'Ember', a: '#73382A', b: '#5E2C20', c: '#4A2218', d: '#341711' },
+  { name: 'Espresso', a: '#5C4332', b: '#4A3628', c: '#3B2B20', d: '#2A1E16' },
+]

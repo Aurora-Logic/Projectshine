@@ -12,7 +12,7 @@ import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
   FEED_POOL, CATEGORIES, BANNERS, COMBOS, CLEARANCE_TILES, QUIZ,
   LEADERS, SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
-  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST,
+  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES,
 } from './data.js'
 import './App.css'
 
@@ -78,7 +78,7 @@ function useSkyTheme() {
 }
 
 /* Dev tool: open the app with #sim — flips skies (48 combos) AND quiz editions live */
-function DevSimulator({ dp, cond, onChange, skinName, onSkin }) {
+function DevSimulator({ dp, cond, onChange, skinName, onSkin, heroPalName, onHeroPal }) {
   return (
     <div className="sim-panel">
       <Text size="1" weight="bold" color="gray">SKY — daypart</Text>
@@ -94,6 +94,15 @@ function DevSimulator({ dp, cond, onChange, skinName, onSkin }) {
         {Object.keys(SKY.morning).map(c => (
           <button key={c} className={`sim-chip ${c === cond ? 'on' : ''}`} onClick={() => onChange({ dp, cond: c })}>
             {c}
+          </button>
+        ))}
+      </div>
+      <Text size="1" weight="bold" color="gray" style={{ display: 'block', marginTop: 10 }}>HERO — palette</Text>
+      <div className="sim-chips">
+        {HERO_PALETTES.map(p => (
+          <button key={p.name} className={`sim-chip ${p.name === heroPalName ? 'on' : ''}`} onClick={() => onHeroPal(p)}>
+            <span style={{ width: 10, height: 10, borderRadius: 99, background: p.a, display: 'inline-block' }} />
+            {p.name}
           </button>
         ))}
       </div>
@@ -1854,6 +1863,11 @@ export default function App() {
   const [simSkin, setSimSkin] = useState(null)
   const simEnabled = window.location.hash === '#sim'
   const heroVariant = window.location.hash === '#hero-classic' ? 'classic' : 'fest'
+  const [heroPal, setHeroPal] = useState(() => {
+    const m = window.location.hash.match(/^#hero-(\w+)$/)
+    const hit = m && HERO_PALETTES.find(p => p.name.toLowerCase() === m[1].toLowerCase())
+    return hit || HERO_PALETTES[0]
+  })
   const sky = sim ?? fetchedSky
   // Campaign takeover ONLY when explicitly scheduled (hash preview / future campaign flag).
   // Default is always weather + time of day — consistent across opens.
@@ -1861,8 +1875,9 @@ export default function App() {
     const m = window.location.hash.match(/^#campaign-(\d)$/)
     return m && CAMPAIGN_HEADERS[+m[1]] ? CAMPAIGN_HEADERS[+m[1]] : null
   }, [])
-  const FEST_T = { a: '#2C5F50', b: '#234D41', c: '#1D4237', d: '#142F27', icon: '' }
-  const T = heroVariant === 'fest' ? FEST_T : ((campaign && !sim) ? campaign : SKY[sky.dp][sky.cond])
+  const T = heroVariant === 'fest'
+    ? { ...heroPal, icon: '' }
+    : ((campaign && !sim) ? campaign : SKY[sky.dp][sky.cond])
   // Quiz edition rotates daily, independent of weather — novelty is the hook
   const quizSkin = simSkin ?? QUIZ_SKINS[Math.floor(Date.now() / 86400000) % QUIZ_SKINS.length]
 
@@ -2124,6 +2139,7 @@ export default function App() {
           <DevSimulator
             dp={sky.dp} cond={sky.cond} onChange={setSim}
             skinName={quizSkin.name} onSkin={setSimSkin}
+            heroPalName={heroPal.name} onHeroPal={setHeroPal}
           />
         )}
 
