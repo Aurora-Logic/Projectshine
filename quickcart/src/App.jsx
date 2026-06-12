@@ -1777,7 +1777,7 @@ function FlashCard({ p, onChange }) {
   return (
     <div className="flash-card" onClick={openPdp ? () => openPdp(p) : undefined}>
       <div className="pimg-wrap" style={{ aspectRatio: 'auto', height: 104 }}>
-        <Img className="pimg" src={img(p.ph, 320)} alt={p.name} style={{ borderRadius: '16px 16px 0 0' }} />
+        <Img className="pimg" src={img(p.ph, 320)} alt={p.name} style={{ borderRadius: 0 }} />
         {pct > 0 && <span className="flash-off">-{pct}%</span>}
         <AddControl qty={qty} onAdd={add} onRemove={remove} onBulk={openQty ? () => openQty(p, (n) => setQty(q => q + n)) : undefined} />
       </div>
