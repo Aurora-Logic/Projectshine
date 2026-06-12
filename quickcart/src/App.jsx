@@ -572,6 +572,18 @@ const SUBCATS = {
 const subcatThumb = (kw) =>
   FEED_POOL.find(p => `${p.name} ${p.qty}`.toLowerCase().includes(kw))?.ph
 
+/* Category-led home shelves (default) — users shop by product, not brand.
+   Brand-led layout is preserved at #brandhome (and git tag v1-brand-home). */
+const CAT_SHELVES = [
+  { t: 'Drawer slides & systems', cat: 'Drawer Slides', band: 'band-green' },
+  { t: 'Hinges & flap fittings', cat: 'Hinges' },
+  { t: 'Kitchen systems', cat: 'Kitchen' },
+  { t: 'Locks & security', cat: 'Locks', band: 'band-pink' },
+  { t: 'Lighting & smart living', cat: 'Lighting' },
+  { t: 'Office fittings', cat: 'Office' },
+]
+const catShelfSub = (cat) => (SUBCATS[cat] || []).map(s => s[0]).slice(0, 3).join(' · ')
+
 const MERCH_ROWS = [
   { icon: '🧾', t: 'GST input credit on every invoice', s: 'Business billing built in' },
   { icon: '🚚', t: 'Free delivery above ₹999', s: 'Straight to your site, no surge' },
@@ -1765,6 +1777,22 @@ export default function App() {
   const h = new Date().getHours()
   const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
 
+  // Home merchandising mode: category-led default; brand-led preserved at #brandhome
+  const homeMode = window.location.hash === '#brandhome' ? 'brand' : 'category'
+  const catShelf = (i) => {
+    const c = CAT_SHELVES[i]
+    if (!c) return null
+    const items = bf(FEED_POOL.filter(CAT_RULES[c.cat]))
+    if (items.length === 0) return null
+    return (
+      <Shelf
+        title={c.t} items={items} onChange={changeCart} band={c.band}
+        sub={catShelfSub(c.cat)} light={false}
+        onSeeAll={() => setPlp(c.cat)}
+      />
+    )
+  }
+
   return (
     <Theme accentColor="teal" grayColor="slate" radius="large">
       <div className="app">
@@ -1818,40 +1846,57 @@ export default function App() {
           <BrandDay onShop={() => setSheet({ items: FEED_POOL, query: BRAND_DAY.query, title: 'Brand of the day' })} />
         )}
 
-        {bf(NEW_EBCO).length > 0 && (
+        {homeMode === 'brand' && bf(NEW_EBCO).length > 0 && (
           <Shelf
             title="New from Ebco" items={bf(NEW_EBCO)} onChange={changeCart} band="band-green"
             onSeeAll={() => setSheet({ items: bf(NEW_EBCO), title: 'New from Ebco' })}
           />
         )}
+        {homeMode === 'category' && catShelf(0)}
 
         {/* engagement break #2: daily spin + streak check-in mid-page */}
         <GameRow onSpin={() => setWheelOpen(true)} />
 
         {brand === 'ALL' && <ClearanceStore />}
 
-        {bf(WORKSMART).length > 0 && (
-          <Shelf
-            title="Worksmart picks" items={bf(WORKSMART)} onChange={changeCart} sub="Office fittings by Ebco"
-            onSeeAll={() => setSheet({ items: bf(WORKSMART), title: 'Worksmart picks' })}
-          />
-        )}
-
-        {bf(LIVESMART).length > 0 && (
-          <Shelf
-            title="Livsmart corner" items={bf(LIVESMART)} onChange={changeCart} sub="Smart living, by Ebco"
-            onSeeAll={() => setSheet({ items: bf(LIVESMART), title: 'Livsmart corner' })}
-          />
+        {homeMode === 'brand' ? (
+          <>
+            {bf(WORKSMART).length > 0 && (
+              <Shelf
+                title="Worksmart picks" items={bf(WORKSMART)} onChange={changeCart} sub="Office fittings by Ebco"
+                onSeeAll={() => setSheet({ items: bf(WORKSMART), title: 'Worksmart picks' })}
+              />
+            )}
+            {bf(LIVESMART).length > 0 && (
+              <Shelf
+                title="Livsmart corner" items={bf(LIVESMART)} onChange={changeCart} sub="Smart living, by Ebco"
+                onSeeAll={() => setSheet({ items: bf(LIVESMART), title: 'Livsmart corner' })}
+              />
+            )}
+          </>
+        ) : (
+          <>
+            {catShelf(1)}
+            {catShelf(2)}
+          </>
         )}
 
         {/* engagement break #3: the status race, deep enough to reward scrolling */}
         <Leaderboard />
 
-        {bf(ZIPCO_PEKO).length > 0 && (
-          <Shelf
-            title="Zipco & Peka corner" items={bf(ZIPCO_PEKO)} onChange={changeCart} band="band-pink"
-            onSeeAll={() => setSheet({ items: bf(ZIPCO_PEKO), title: 'Zipco & Peka' })}
-          />
+        {homeMode === 'brand' ? (
+          bf(ZIPCO_PEKO).length > 0 && (
+            <Shelf
+              title="Zipco & Peka corner" items={bf(ZIPCO_PEKO)} onChange={changeCart} band="band-pink"
+              onSeeAll={() => setSheet({ items: bf(ZIPCO_PEKO), title: 'Zipco & Peka' })}
+            />
+          )
+        ) : (
+          <>
+            {catShelf(3)}
+            {catShelf(4)}
+            {catShelf(5)}
+          </>
         )}
 
         <EndlessFeed onChange={changeCart} pool={pool} />
