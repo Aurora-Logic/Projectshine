@@ -104,12 +104,12 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 | # | Feature | Status | Build |
 |---|---------|--------|-------|
 | B1 | Project suggestions (wardrobe/kitchen/…) | 🟡 | **Project Kit Builder**: pick room → curated checklist w/ suggested qtys (scales by cabinets/doors count) → save to Project List or add-all. Entry: home card + lists empty-state. |
-| B2 | Hinge filters (door/carcass thickness) | 🟡 | Add `doorThk/carcassThk` to hinge SKUs; category-aware FilterSheet groups (mm chips). Search inherits automatically. |
-| B3 | Door-closer selector (W×D×H + material) | 🟡 | Calculator #3: inputs → est. door weight → recommend rated closer SKU + ADD. Needs 3 closer SKUs seeded. |
-| B4 | Branding/demo/carpenter/promo requests | 🟡 | **Brand Support** page on the visit-request template: type chips, qty/notes, CalPicker where relevant, tracked stages (Received → Approved → Dispatched/Scheduled). |
+| B2 | Hinge filters (door/carcass thickness) | ✅ | `doorThk/carcassThk` on hinge SKUs; FilterSheet shows mm-chip groups only in Hinges category. |
+| B3 | Door-closer selector (W×D×H + material) | ✅ | Calculator "Door closer" tab: W×H×T + material → est. kg → recommends rated closer (3 SKUs seeded: DC-60/85/120) with ADD. |
+| B4 | Branding/demo/carpenter/promo requests | ✅ | **Brand Support** (#brand): 4 type chips, qty-or-CalPicker form, tracked stages (Received → Approved → Dispatched/Scheduled), persisted `qc-mkt`. |
 | B5 | Repeat order, 1-click | ✅ | Live ×3: Reorder page (usual-qty, Add-all-due), Repeat on past orders, Reorder on delivered card. |
-| B6 | Claims (pending CN / return / wrong delivery) | 🔴 | **Claims Centre**: pick order → claim type → affected items (qty steppers) → photos (in-session preview) + notes → tracked status (Raised → Under review → CN issued / Pickup scheduled). Settlement = backend. |
-| B7 | Delivery image upload (POD) | ⚙️ | Upload lives in the **rider app**. Dealer side now: "Proof of Delivery" section on delivered orders (photos, receiver, time) with mock data; "Download POD". |
+| B6 | Claims (pending CN / return / wrong delivery) | ✅ | **Claims Centre** (#claims): order picker → type → affected items w/ steppers → photo attach + notes → tracked (Raised → Under review → CN issued / Pickup scheduled / Replacement dispatched), persisted `qc-claims`. Settlement = backend. |
+| B7 | Delivery image upload (POD) | ✅⚙️ | Dealer-side shipped: "Proof of Delivery" card on delivered order details (photos, OTP-verified chip, receiver, geo-tag line). Rider-app upload = backend. |
 | B8 | Find a carpenter | 🔴 | **Find a Pro** directory — becomes the Utilities tab (resolves A0.4). Cards: skills, area, jobs, rating, Call/WhatsApp. |
 | B9 | Find architect/designer | 🔴 | Second tab of B8. + "Refer a pro" mini-form (feeds B12-E referrals). |
 | B10 | Inspiration gallery | 🔴 | **Inspiration** grid (room filters) → detail view with "products used" → ADD / save-to-list. |
