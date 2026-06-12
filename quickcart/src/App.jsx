@@ -2544,28 +2544,42 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef }) {
   }
   return (
     <div className="acctpage">
-      <div className="pdp-head">
-        <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
-        <Text size="2" weight="bold" style={{ flex: 1 }}>Account</Text>
+      <div className="acct-hero">
+        <Flex align="center" gap="3">
+          <button className="sheet-back hero-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
+          <Text size="2" weight="bold" style={{ color: '#fff' }}>Account</Text>
+        </Flex>
+        <Flex align="center" gap="3" mt="4">
+          <div className="prof-av">VB</div>
+          <Box flexGrow="1" style={{ minWidth: 0 }}>
+            <Heading size="5" style={{ color: '#fff', letterSpacing: '-0.3px' }}>Virag Bora</Heading>
+            <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.75)' }}>Bora Hardware & Plywood · HSR Layout</Text>
+            <Flex align="center" gap="2" mt="1">
+              <span className="tier-mini" style={{ background: '#C9CED6' }} />
+              <Text size="1" weight="bold" style={{ color: '#fff' }}>Silver dealer</Text>
+              <Text size="1" style={{ color: 'rgba(255,255,255,.65)' }}>· since Mar 2023</Text>
+            </Flex>
+          </Box>
+        </Flex>
+        <div className="acct-stats">
+          <div>
+            <Text size="3" weight="bold" as="div" style={{ color: '#fff' }}>15</Text>
+            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,.75)' }}>orders / mo</Text>
+          </div>
+          <div>
+            <Text size="3" weight="bold" as="div" style={{ color: '#fff' }}>₹14.3k</Text>
+            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,.75)' }}>saved this FY</Text>
+          </div>
+          <div>
+            <Text size="3" weight="bold" as="div" style={{ color: '#fff' }}>62%</Text>
+            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,.75)' }}>monthly target</Text>
+          </div>
+        </div>
       </div>
       <div className="cp-body">
-        <div className="cp-card prof">
-          <Flex align="center" gap="3">
-            <div className="prof-av">VB</div>
-            <Box flexGrow="1" style={{ minWidth: 0 }}>
-              <Text size="3" weight="bold" as="div">Virag Bora</Text>
-              <Text size="1" color="gray" as="div">Bora Hardware & Plywood · HSR Layout</Text>
-              <Flex align="center" gap="2" mt="1">
-                <span className="tier-mini" style={{ background: '#98A2B3' }} />
-                <Text size="1" weight="bold">Silver dealer</Text>
-                <Text size="1" color="gray">· member since Mar 2023</Text>
-              </Flex>
-            </Box>
-          </Flex>
-        </div>
         {ACCT_GROUPS.map(([g, items]) => (
           <div className="cp-card" key={g} style={{ padding: '10px 6px' }}>
-            <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-9)', letterSpacing: '.5px', fontSize: 10, padding: '2px 10px 4px' }}>{g}</Text>
+            <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-9)', letterSpacing: '.5px', fontSize: 10, padding: '4px 12px 6px' }}>{g}</Text>
             {items.map(([key, Icon, t, s]) => (
               <button key={key} className="mrow" onClick={() => setSub(key)}>
                 <span className="mrow-ic"><Icon width={16} height={16} /></span>
