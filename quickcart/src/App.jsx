@@ -2102,7 +2102,15 @@ function ProductPage({ p, onClose, onChange }) {
   }
   const recos = useMemo(() => recosFor(p), [p])
   const club = recos[0]
-  const more = recos.slice(1, 5)
+  // 3×3 recommendations: same-range first, padded from the pool
+  const more = useMemo(() => {
+    const list = recos.slice(1)
+    for (const x of FEED_POOL) {
+      if (list.length >= 9) break
+      if (x.id !== p.id && (!club || x.id !== club.id) && !list.some(y => y.id === x.id)) list.push(x)
+    }
+    return list.slice(0, 9)
+  }, [recos, p, club])
   const tier = bulkTier(p)
   const off = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0
   const oos = p.stock === 0
