@@ -2212,7 +2212,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
             </div>
 
             {deals.length > 0 && (
-              <div className="cp-card">
+              <div className="cp-card cp-flash">
                 <Flex align="center" justify="between">
                   <Text size="2" weight="bold">Flash deals before you checkout</Text>
                   <DealTimer />
