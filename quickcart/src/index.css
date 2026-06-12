@@ -434,6 +434,14 @@ body {
   border-radius: 10px;
   background: #fff;
 }
+/* active stepper: wider so − / count / + each get honest room */
+.padd.on { width: 84px; }
+/* 44px effective hit areas on ± (invisible bleed; no overlap: minus ends at
+   x=34, plus starts at x=50 of the 84px pill). Idle ADD gets a modest bleed —
+   button-only so the dead corner of the stepper Flex never swallows card taps. */
+.padd .rt-IconButton { position: relative; }
+.padd .rt-IconButton::after { content: ''; position: absolute; inset: -10px; }
+button.padd::after { content: ''; position: absolute; inset: -6px; }
 
 /* ---------- Free delivery strip ---------- */
 .fd-strip {

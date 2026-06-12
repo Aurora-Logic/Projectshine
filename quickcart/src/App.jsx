@@ -498,6 +498,12 @@ function SectionHead({ title, extra, light, sub, onSeeAll }) {
 }
 
 function AddControl({ qty, onAdd, onRemove, onBulk }) {
+  // bulk sheet opens on long-press of the count — a plain tap between − and +
+  // must never pop a sheet (fat-finger hazard on the highest-frequency control)
+  const lpTimer = useRef(null)
+  useEffect(() => () => clearTimeout(lpTimer.current), [])
+  const lpStart = onBulk ? () => { lpTimer.current = setTimeout(onBulk, 450) } : undefined
+  const lpEnd = onBulk ? () => clearTimeout(lpTimer.current) : undefined
   if (qty === 0) {
     return (
       <Button
@@ -509,18 +515,19 @@ function AddControl({ qty, onAdd, onRemove, onBulk }) {
     )
   }
   return (
-    <Flex className="padd stepin" align="center" justify="between" style={{ background: 'var(--green-9)' }}>
-      <IconButton size="1" onClick={onRemove} style={{ background: 'transparent', color: '#fff' }}>
+    <Flex className="padd stepin on" align="center" justify="between" style={{ background: 'var(--green-9)' }}>
+      <IconButton size="1" aria-label="Decrease quantity" onClick={onRemove} style={{ background: 'transparent', color: '#fff' }}>
         <MinusIcon />
       </IconButton>
       <Text
         key={qty} className="numpop"
-        size="2" weight="bold" style={{ color: '#fff' }}
-        onClick={onBulk ? (e) => { e.stopPropagation(); onBulk() } : undefined}
+        size="2" weight="bold" style={{ color: '#fff', userSelect: 'none' }}
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={lpStart} onPointerUp={lpEnd} onPointerLeave={lpEnd} onPointerCancel={lpEnd}
       >
         {qty}
       </Text>
-      <IconButton size="1" onClick={onAdd} style={{ background: 'transparent', color: '#fff' }}>
+      <IconButton size="1" aria-label="Increase quantity" onClick={onAdd} style={{ background: 'transparent', color: '#fff' }}>
         <PlusIcon />
       </IconButton>
     </Flex>
