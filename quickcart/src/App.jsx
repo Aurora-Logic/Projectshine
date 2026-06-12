@@ -3311,55 +3311,15 @@ function VisitForm({ kind }) {
         <div className="cp-card">
           <Flex align="center" justify="between">
             <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
-              YOUR REQUESTS
+              YOUR REQUESTS · {reqs.length}
             </Text>
-            <Text style={{ fontSize: 9.5, color: 'var(--gray-9)' }}>also in Account · My visit requests</Text>
+            {reqs.filter(r => visitStage(r, now) < 2).length > 0 && (
+              <span className="st-chip">{reqs.filter(r => visitStage(r, now) < 2).length} in progress</span>
+            )}
           </Flex>
           {reqs.map(r => <VisitRow key={r.id} r={r} now={now} kind={kind} />)}
         </div>
       )}
-    </>
-  )
-}
-
-/* All visit requests in one place — the dealer's tracking hub */
-function AcctRequests() {
-  const [now, setNow] = useState(Date.now())
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 5000)
-    return () => clearInterval(t)
-  }, [])
-  const load = (k) => {
-    try { return JSON.parse(localStorage.getItem(k) || '[]') } catch { return [] }
-  }
-  const all = [
-    ...load('qc-visits-site').map(r => ({ ...r, kind: 'site' })),
-    ...load('qc-visits-display').map(r => ({ ...r, kind: 'display' })),
-  ].sort((a, b) => b.ts - a.ts)
-  const [tab, setTab] = useState('all')
-  const shown = all.filter(r => tab === 'all' || r.kind === tab)
-  const live = all.filter(r => visitStage(r, now) < 2).length
-  return (
-    <>
-      <div className="sub-hero green-line">
-        <CalendarIcon width={15} height={15} color="var(--green-11)" style={{ flex: 'none' }} />
-        <Text size="2" weight="bold">{all.length} request{all.length === 1 ? '' : 's'}</Text>
-        <Text size="1" color="gray" style={{ marginLeft: 'auto' }}>{live} in progress</Text>
-      </div>
-      <div className="seg" style={{ marginTop: 0 }}>
-        {[['all', 'All'], ['site', 'Site visits'], ['display', 'Showroom']].map(([k, l]) => (
-          <button key={k} className={`seg-b ${tab === k ? 'on' : ''}`} onClick={() => setTab(k)}>{l}</button>
-        ))}
-      </div>
-      <div className="cp-card">
-        {shown.length === 0 ? (
-          <Text size="1" color="gray" as="div">
-            No requests yet — book a site visit or a showroom slot and track it here.
-          </Text>
-        ) : (
-          shown.map(r => <VisitRow key={`${r.kind}-${r.id}`} r={r} now={now} kind={r.kind} />)
-        )}
-      </div>
     </>
   )
 }
@@ -3484,7 +3444,6 @@ const ACCT_FLAT = [
   ['calc', RulerSquareIcon, 'Calculators'],
   ['site', SewingPinIcon, 'Submit site visit'],
   ['display', EyeOpenIcon, 'Display centre visit'],
-  ['requests', CalendarIcon, 'My visit requests'],
   ['support', ChatBubbleIcon, 'Support'],
   ['notif', BellIcon, 'Notification preferences'],
   ['privacy', LockClosedIcon, 'Account privacy'],
@@ -3494,7 +3453,7 @@ const ACCT_TITLES = {
   dash: 'Performance dashboard', orders: 'Order history', credit: 'Credit ledger',
   lists: 'Project lists', schemes: 'Schemes & discounts',
   gst: 'GST details', calc: 'Calculators', site: 'Submit site visit',
-  display: 'Display centre visit', requests: 'My visit requests', support: 'Support', addr: 'Address book',
+  display: 'Display centre visit', support: 'Support', addr: 'Address book',
   notif: 'Notification preferences', privacy: 'Account privacy',
 }
 
@@ -3506,7 +3465,6 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, o
     if (h === '#lists') return 'lists'
     if (h === '#orders') return 'orders'
     if (h === '#site') return 'site'
-    if (h === '#requests') return 'requests'
     return initialSub || null
   })
   const [lo, setLo] = useState(null) // null | 'confirm' | 'out'
@@ -3533,7 +3491,6 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, o
       case 'calc': return <AcctCalc />
       case 'site': return <VisitForm kind="site" />
       case 'display': return <VisitForm kind="display" />
-      case 'requests': return <AcctRequests />
       case 'support': return <AcctSupport />
       case 'addr': return <AcctAddr />
       case 'notif': return <AcctNotif />
@@ -4847,7 +4804,7 @@ export default function App() {
   const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
   const [cartOpen, setCartOpen] = useState(window.location.hash === '#cart')
   const [reorderOpen, setReorderOpen] = useState(['#reorder', '#pastorder'].includes(window.location.hash))
-  const [acctOpen, setAcctOpen] = useState(['#account', '#dash', '#credit', '#lists', '#orders', '#site', '#requests'].includes(window.location.hash))
+  const [acctOpen, setAcctOpen] = useState(['#account', '#dash', '#credit', '#lists', '#orders', '#site'].includes(window.location.hash))
   const acctSubRef = useRef(false)
   const acctInitSub = useRef(null)
   const [authed, setAuthed] = useState(() => {
