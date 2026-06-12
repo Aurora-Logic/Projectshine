@@ -796,7 +796,7 @@ body {
   align-items: center;
   gap: 7px;
   background: #fff;
-  color: #C2410C;
+  color: #1C46A8;
   white-space: nowrap;
   flex: none;
   font-size: 15px;
@@ -1879,8 +1879,8 @@ body {
 
 /* ---------- Flash sale ---------- */
 .band-flash {
-  background-color: #BF4106;
-  background-image: linear-gradient(160deg, #F97316 0%, #D9580D 55%, #9A3412 100%);
+  background-color: #1C46A8;
+  background-image: linear-gradient(160deg, #2D6FE8 0%, #2049B8 55%, #142F85 100%);
   padding: 20px 0 24px;
   margin-top: 24px;
 }
