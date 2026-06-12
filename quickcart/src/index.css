@@ -3234,7 +3234,7 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 .ods-stats span { font-size: 9.5px; color: var(--gray-10); font-weight: 700; }
 
 /* account menu groups read softer than data cards */
-.acctpage > .cp-body > .cp-card { border-radius: 20px; }
+.acctpage > .cp-body > .cp-card { border-radius: 24px; }
 
 /* ---------- Dashboard engagement layer ---------- */
 .mrow-ic { border-radius: 50%; width: 34px; height: 34px; }
