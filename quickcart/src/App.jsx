@@ -15,7 +15,7 @@ import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
   FEED_POOL, CATEGORIES, BANNERS, COMBOS, CLEARANCE_TILES, QUIZ,
   LEADERS, SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
-  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES, REORDER, PAST_ORDERS, DASH, CREDIT,
+  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES, REORDER, PAST_ORDERS, DASH, CREDIT, CAT_SCHEMES,
 } from './data.js'
 import './App.css'
 
@@ -2220,11 +2220,41 @@ function AcctLists({ onChange }) {
 
 /* ---------------- Credit ledger (30-day dealer credit) ---------------- */
 
+function downloadLedger() {
+  let paid = []
+  try { paid = JSON.parse(localStorage.getItem('qc-paid') || '[]') } catch { /* none */ }
+  let bal = 0
+  const rows = CREDIT.bills.map(b => {
+    const isPaid = paid.includes(b.id)
+    if (!isPaid) bal += b.amt
+    return `<tr><td>PO ${b.id}</td><td>Credit invoice</td><td class="r">₹${b.amt.toLocaleString('en-IN')}</td><td class="r">${isPaid ? 'Paid' : b.days < 0 ? `Overdue ${-b.days}d` : `Due in ${b.days}d`}</td><td class="r">₹${bal.toLocaleString('en-IN')}</td></tr>`
+  }).join('')
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Ledger FY 2026-27</title><style>
+    body{font-family:-apple-system,Segoe UI,sans-serif;margin:32px;color:#1a1a1a}
+    h1{font-size:20px;margin:0;color:#0E4A2F} .mut{color:#777;font-size:12px}
+    table{width:100%;border-collapse:collapse;margin-top:18px;font-size:13px}
+    th,td{padding:8px 10px;border-bottom:1px solid #e5e5e5;text-align:left} .r{text-align:right}
+    th{background:#F1F8F4;font-size:11px;letter-spacing:.4px;text-transform:uppercase}
+  </style></head><body>
+    <h1>QuickCart — Dealer Ledger</h1>
+    <div class="mut">Bora Hardware &amp; Plywood · FY 2026–27 · credit limit ₹5,00,000</div>
+    <table><tr><th>Ref</th><th>Type</th><th class="r">Amount</th><th class="r">Status</th><th class="r">Balance</th></tr>${rows}</table>
+    <p class="mut">Computer-generated statement — share with your CA directly.</p>
+  </body></html>`
+  const blob = new Blob([html], { type: 'text/html' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = 'Ledger-FY-2026-27.html'
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
 function AcctCredit() {
   const [paid, setPaid] = usePersisted('qc-paid', [])
   const [pay, setPay] = useState(null)
   const [method, setMethod] = useState('UPI')
   const [done, setDone] = useState(null)
+  const [ledgerMsg, setLedgerMsg] = useState(false)
   const bills = CREDIT.bills.filter(b => !paid.includes(b.id))
   const settled = CREDIT.bills.filter(b => paid.includes(b.id))
   const outstanding = bills.reduce((s, b) => s + b.amt, 0)
@@ -2240,12 +2270,12 @@ function AcctCredit() {
   return (
     <>
       <div className="cr-hero">
-        <Text size="1" weight="bold" as="div" style={{ color: 'rgba(255,255,255,.7)', fontSize: 10, letterSpacing: '.6px' }}>
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--blue-11)', fontSize: 10, letterSpacing: '.6px' }}>
           CREDIT AVAILABLE
         </Text>
         <Flex align="baseline" gap="2" mt="1">
-          <Text weight="bold" style={{ fontSize: 30, color: '#fff', letterSpacing: '-0.8px' }}>{fmtL(avail)}</Text>
-          <Text size="1" style={{ color: 'rgba(255,255,255,.7)' }}>of {fmtL(CREDIT.limit)} limit</Text>
+          <Text weight="bold" style={{ fontSize: 30, letterSpacing: '-0.8px' }}>{fmtL(avail)}</Text>
+          <Text size="1" color="gray">of {fmtL(CREDIT.limit)} limit</Text>
         </Flex>
         <div className="cr-bar"><div style={{ width: `${Math.round((avail / CREDIT.limit) * 100)}%` }} /></div>
         <Flex gap="2" mt="3" wrap="wrap">
@@ -2306,6 +2336,27 @@ function AcctCredit() {
         </div>
       )}
 
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          LEDGER STATEMENT · FY 2026–27
+        </Text>
+        <Text size="1" color="gray" as="div" mt="1">Every bill, payment and running balance — CA-ready.</Text>
+        <Flex gap="2" mt="3">
+          <Button size="2" variant="soft" color="green" radius="full" style={{ fontWeight: 800, flex: 1 }} onClick={downloadLedger}>
+            Download
+          </Button>
+          <Button size="2" variant="soft" color="gray" radius="full" style={{ fontWeight: 800, flex: 1 }} onClick={() => setLedgerMsg(true)}>
+            Email me
+          </Button>
+        </Flex>
+        {ledgerMsg && (
+          <Flex align="center" gap="2" mt="2">
+            <CheckIcon width={13} height={13} color="var(--green-11)" />
+            <Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>Ledger on its way to virag@borahardware.in</Text>
+          </Flex>
+        )}
+      </div>
+
       {pay && (
         <div className="qsheet-overlay" onClick={() => setPay(null)}>
           <div className="qsheet" onClick={(e) => e.stopPropagation()}>
@@ -2347,25 +2398,19 @@ function AcctCredit() {
 
 /* ---------------- Dealer login (demo gate, Instacart-style) ---------------- */
 
-const GoogleG = () => (
-  <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-    <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
-    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
-    <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.3 0-9.7-3.4-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
-    <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.5l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/>
+const WaMark = () => (
+  <svg width="19" height="19" viewBox="0 0 32 32" aria-hidden="true">
+    <circle cx="16" cy="16" r="16" fill="#25D366"/>
+    <path fill="#fff" d="M16 6.5c-5.2 0-9.4 4.2-9.4 9.4 0 1.8.5 3.5 1.4 5L6.5 25.5l4.7-1.5c1.4.8 3.1 1.3 4.8 1.3 5.2 0 9.4-4.2 9.4-9.4S21.2 6.5 16 6.5zm5.5 13.3c-.2.7-1.4 1.3-1.9 1.4-.5.1-1.1.1-1.8-.1-.4-.1-.9-.3-1.6-.6-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 .9-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4.2.5.7 1.9.8 2 .1.1.1.3 0 .5-.1.2-.1.3-.3.5l-.4.5c-.1.1-.3.3-.1.6.2.3.7 1.2 1.6 1.9 1.1.9 2 1.2 2.3 1.4.3.1.5.1.6-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.6-.1.3.1 1.7.8 2 1 .3.1.5.2.5.3.1.2.1.7-.1 1.2z"/>
   </svg>
 )
-const AppleMark = () => (
-  <svg width="17" height="19" viewBox="0 0 384 512" fill="currentColor" aria-hidden="true">
-    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
-  </svg>
-)
-const FbMark = () => (
-  <svg width="19" height="19" viewBox="0 0 36 36" aria-hidden="true">
-    <circle cx="18" cy="18" r="18" fill="#1877F2"/>
-    <path fill="#fff" d="M24.8 23.2l.8-5.2h-5v-3.4c0-1.4.7-2.8 2.9-2.8h2.3V7.4s-2-.4-4-.4c-4.1 0-6.7 2.5-6.7 6.9v3.9h-4.6v5.2h4.6V36c.9.1 1.9.2 2.9.2s2-.1 2.9-.2V23.2h3.9z"/>
-  </svg>
-)
+
+const LOGIN_JOY = [
+  '12,400+ dealers order on QuickCart daily',
+  'Dealers saved ₹2.1 Cr via schemes last month',
+  'Express delivery — at your shop in 1 hour',
+  '30-day interest-free credit for dealers',
+]
 
 function LoginGate({ onDone }) {
   const [tab, setTab] = useState('phone')
@@ -2373,12 +2418,21 @@ function LoginGate({ onDone }) {
   const [ph, setPh] = useState('')
   const [em, setEm] = useState('')
   const [otp, setOtp] = useState('')
+  const [reqSent, setReqSent] = useState(false)
+  const [joy, setJoy] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setJoy(j => (j + 1) % LOGIN_JOY.length), 2600)
+    return () => clearInterval(t)
+  }, [])
   const ready = tab === 'phone' ? ph.length === 10 : /\S+@\S+\.\S+/.test(em)
   return (
     <div className="login2">
       <Heading style={{ fontSize: 32, letterSpacing: '-1px', marginTop: 30 }}>
         {stage === 'otp' ? 'Enter OTP' : 'Dealer login'}
       </Heading>
+      <div className="lg-joy" key={joy}>
+        <StarFilledIcon width={12} height={12} /> {LOGIN_JOY[joy]}
+      </div>
       {stage === 'cred' ? (
         <>
           <div className="lg-tabs">
@@ -2404,12 +2458,28 @@ function LoginGate({ onDone }) {
           </Text>
           <button className="lg-cta" disabled={!ready} onClick={() => setStage('otp')}>Continue</button>
           <div className="lg-or"><span>or</span></div>
-          <button className="lg-soc" onClick={onDone}><AppleMark /> Continue with Apple</button>
-          <button className="lg-soc" onClick={onDone}><GoogleG /> Continue with Google</button>
-          <button className="lg-soc" onClick={onDone}><FbMark /> Continue with Facebook</button>
+          <button className="lg-soc wa" onClick={onDone}><WaMark /> Continue with WhatsApp</button>
           <Text size="2" as="div" mt="4" style={{ textAlign: 'center' }}>
             or <span className="lg-link" onClick={onDone}>continue as guest</span>
           </Text>
+          <div className="lg-new">
+            <Text size="2" weight="bold" as="div">New to QuickCart?</Text>
+            <Text size="1" color="gray" as="div" mt="1" style={{ lineHeight: 1.55 }}>
+              Extra margins, 30-day credit and 1-hour delivery for registered dealers.
+            </Text>
+            {reqSent ? (
+              <Flex align="center" gap="2" mt="2">
+                <CheckIcon width={13} height={13} color="var(--green-11)" />
+                <Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>
+                  Request received — we'll call within 4 working hours
+                </Text>
+              </Flex>
+            ) : (
+              <Button mt="2" size="2" variant="soft" color="green" radius="full" style={{ fontWeight: 800 }} onClick={() => setReqSent(true)}>
+                Request a dealer account
+              </Button>
+            )}
+          </div>
         </>
       ) : (
         <>
@@ -2777,15 +2847,15 @@ function AcctOrders({ lastOrder, onChange }) {
   )
 }
 
-function AcctSchemes() {
+function AcctSchemes({ onCategory }) {
   return (
     <>
       <div className="sub-hero violet">
-        <Text size="1" weight="bold" as="div" style={{ color: 'rgba(255,255,255,.78)', fontSize: 10, letterSpacing: '.6px' }}>
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--violet-11)', fontSize: 10, letterSpacing: '.6px' }}>
           SAVED THIS FY
         </Text>
-        <Text weight="bold" as="div" style={{ fontSize: 27, color: '#fff', letterSpacing: '-0.6px' }}>₹14,320</Text>
-        <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.8)' }}>through volume schemes and bulk prices</Text>
+        <Text weight="bold" as="div" style={{ fontSize: 27, letterSpacing: '-0.6px' }}>₹14,320</Text>
+        <Text size="1" color="gray" as="div">through volume schemes and bulk prices</Text>
       </div>
       <div className="cp-card cp-scheme">
         <Text size="1" weight="bold" as="div" style={{ color: 'var(--violet-11)', letterSpacing: '.5px', fontSize: 10.5 }}>PER-ORDER VOLUME SCHEME</Text>
@@ -2807,6 +2877,27 @@ function AcctSchemes() {
             <Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>{t.perk}</Text>
           </Flex>
         ))}
+      </div>
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          LIVE CATEGORY SCHEMES
+        </Text>
+        {CAT_SCHEMES.map(s => {
+          const c = CATEGORIES.find(x => x[1] === s.cat)
+          return (
+            <button key={s.cat} className="cs-cat" onClick={() => onCategory && onCategory(s.cat)}>
+              {c && <Img src={img(c[0], 100)} alt="" />}
+              <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                <Text size="2" weight="bold" as="div">{s.cat}</Text>
+                <Text as="div" style={{ fontSize: 10.5, color: 'var(--violet-11)', fontWeight: 700 }}>{s.deal}</Text>
+                <Text as="div" style={{ fontSize: 9.5, color: 'var(--gray-9)' }}>{s.till}</Text>
+              </span>
+              <span className="st-chip">{s.tag}</span>
+              <ChevronRightIcon width={14} height={14} color="var(--gray-8)" style={{ flex: 'none' }} />
+            </button>
+          )
+        })}
+        <Text size="1" color="gray" as="div" mt="2">Tap a category to see the products in scheme.</Text>
       </div>
     </>
   )
@@ -2961,8 +3052,8 @@ function VisitForm({ kind }) {
     </div>
   ) : (
     <div className="sub-hero orange">
-      <SewingPinIcon width={15} height={15} color="#fff" style={{ flex: 'none' }} />
-      <Text size="1" weight="bold" style={{ color: '#fff' }}>Our team comes with samples, catalogues and a measuring kit</Text>
+      <SewingPinIcon width={15} height={15} color="var(--orange-11)" style={{ flex: 'none' }} />
+      <Text size="1" weight="bold" style={{ color: 'var(--orange-11)' }}>Our team comes with samples, catalogues and a measuring kit</Text>
     </div>
   )
   if (done) {
@@ -3041,9 +3132,9 @@ function AcctSupport() {
   return (
     <>
       <div className="sub-hero green-line">
-        <span className="oc-pulse" style={{ background: '#FFD43B' }} />
-        <Text size="2" weight="bold" style={{ color: '#fff' }}>We're online</Text>
-        <Text size="1" style={{ color: 'rgba(255,255,255,.8)', marginLeft: 'auto' }}>avg reply ~10 min</Text>
+        <span className="oc-pulse" />
+        <Text size="2" weight="bold">We're online</Text>
+        <Text size="1" color="gray" style={{ marginLeft: 'auto' }}>avg reply ~10 min</Text>
       </div>
       <div className="cp-card">
         {rows.map(([Icon, t, s, href]) => (
@@ -3083,8 +3174,8 @@ function AcctNotif() {
   return (
     <>
       <div className="sub-hero green-line">
-        <BellIcon width={15} height={15} color="#fff" style={{ flex: 'none' }} />
-        <Text size="2" weight="bold" style={{ color: '#fff' }}>{on} of {defs.length} channels on</Text>
+        <BellIcon width={15} height={15} color="var(--green-11)" style={{ flex: 'none' }} />
+        <Text size="2" weight="bold">{on} of {defs.length} channels on</Text>
       </div>
       <div className="cp-card">
       {defs.map(([k, t, s]) => (
@@ -3160,7 +3251,7 @@ const ACCT_TITLES = {
   notif: 'Notification preferences', privacy: 'Account privacy',
 }
 
-function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub }) {
+function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, onCategory }) {
   const [sub, setSub] = useState(() => {
     const h = window.location.hash
     if (h === '#dash') return 'dash'
@@ -3187,7 +3278,7 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub })
       case 'orders': return <AcctOrders lastOrder={lastOrder} onChange={onChange} />
       case 'credit': return <AcctCredit />
       case 'lists': return <AcctLists onChange={onChange} />
-      case 'schemes': return <AcctSchemes />
+      case 'schemes': return <AcctSchemes onCategory={onCategory} />
       case 'gst': return <AcctGst />
       case 'calc': return <AcctCalc />
       case 'site': return <VisitForm kind="site" />
@@ -3211,6 +3302,9 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub })
         <Heading mt="4" style={{ fontSize: 27, letterSpacing: '-0.8px' }}>Virag Bora</Heading>
         <Text size="2" color="gray" as="div" mt="1">+91 98860 12345 · Bora Hardware & Plywood</Text>
         <Text size="2" color="gray" as="div">virag@borahardware.in</Text>
+        <div className="joy-chip">
+          <StarFilledIcon width={11} height={11} /> Top 25% dealer in HSR Layout — great going
+        </div>
       </div>
       <div className="cp-body">
         <div className="mem-card">
@@ -3244,6 +3338,31 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub })
             </button>
           ))}
         </div>
+
+        {(() => {
+          let paidIds = []
+          try { paidIds = JSON.parse(localStorage.getItem('qc-paid') || '[]') } catch { /* none */ }
+          const openBills = CREDIT.bills.filter(b => !paidIds.includes(b.id))
+          const out = openBills.reduce((s, b) => s + b.amt, 0)
+          const avail = CREDIT.limit - out
+          const od = openBills.filter(b => b.days < 0).length
+          return (
+            <button className="credit-snap" onClick={() => setSub('credit')}>
+              <Flex align="center" justify="between">
+                <Text size="1" weight="bold" style={{ color: 'var(--blue-11)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                  CREDIT AVAILABLE
+                </Text>
+                {od > 0 ? <span className="st-chip bad">{od} overdue</span> : <span className="st-chip ok">On track</span>}
+              </Flex>
+              <Flex align="baseline" gap="2" mt="1">
+                <Text size="5" weight="bold" style={{ letterSpacing: '-0.5px' }}>{fmtL(avail)}</Text>
+                <Text size="1" color="gray">of {fmtL(CREDIT.limit)}{out > 0 ? ` · ${fmtL(out)} due` : ''}</Text>
+                <ChevronRightIcon width={15} height={15} color="var(--gray-8)" style={{ marginLeft: 'auto' }} />
+              </Flex>
+              <div className="mem-bar"><div style={{ width: `${Math.round((avail / CREDIT.limit) * 100)}%` }} /></div>
+            </button>
+          )
+        })()}
 
         <div className="cp-card" style={{ padding: '2px 16px' }}>
           {ACCT_FLAT.map(([key, Icon, t]) => (
@@ -4907,7 +5026,11 @@ export default function App() {
         )}
 
         {acctOpen && (
-          <AccountPage onClose={closeAcct} onChange={changeCart} cart={cart} lastOrder={order} subRef={acctSubRef} initialSub={acctInitSub.current} />
+          <AccountPage
+            onClose={closeAcct} onChange={changeCart} cart={cart} lastOrder={order}
+            subRef={acctSubRef} initialSub={acctInitSub.current}
+            onCategory={(cat) => { setAcctOpen(false); setPlp(cat) }}
+          />
         )}
 
         {pdp && <ProductPage key={pdp.id} p={pdp} onClose={closePdp} onChange={changeCart} cart={cart} />}

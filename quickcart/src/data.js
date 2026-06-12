@@ -391,3 +391,11 @@ export const CREDIT = {
     { id: 'QC-471203', amt: 24930, days: 16 },
   ],
 }
+
+/* Live category-level schemes shown on the Schemes page */
+export const CAT_SCHEMES = [
+  { cat: 'Drawer Slides', deal: 'Extra 5% off on 50+ pcs', till: 'Till 30 Jun', tag: 'VOLUME' },
+  { cat: 'Hinges', deal: 'Buy 20 sets, get 2 free', till: 'Till 25 Jun', tag: 'FREEBIE' },
+  { cat: 'Kitchen', deal: 'Flat ₹500 off Quadro systems', till: 'Launch offer', tag: 'FLAT OFF' },
+  { cat: 'Lighting', deal: '12% off LED strips & profiles', till: 'Last units', tag: 'CLEARANCE' },
+]
