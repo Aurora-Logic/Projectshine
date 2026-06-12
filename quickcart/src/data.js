@@ -75,6 +75,37 @@ export const DOOR_CLOSERS = [
   { id: 'dc3', mat: 'Steel', load: 120, size: 1250, stock: 35, brand: 'ebco', ph: '1558002038-1055907df827', name: 'Ebco Heavy Door Closer DC-120', qty: 'Doors ≤120 kg · ≤1250 mm', price: 2450, mrp: 2790 },
 ]
 
+/* B1 · Project Kit Builder — per-unit recipes; qty = ceil(count × per) or fixed */
+export const KITS = [
+  {
+    key: 'kitchen', label: 'Modular kitchen', ph: '1556911220-bff31c812dba',
+    blurb: 'Quadro drawers, soft-close shutters, corner unit, sensor lights',
+    counts: [['drawers', 'Drawers', 6], ['shutters', 'Shutters', 8]],
+    items: [
+      ['ne1', 'drawers', 1], ['ba2', 'shutters', 1], ['ba4', 'shutters', 0.5],
+      ['ne5', 'fixed', 1], ['ls2', 'fixed', 2], ['zp4', 'fixed', 1], ['ba5', 'fixed', 2],
+    ],
+  },
+  {
+    key: 'wardrobe', label: 'Sliding wardrobe', ph: '1558997519-83ea9252edf8',
+    blurb: 'Top-hung sliding system, drawer slides, locks, LED strip',
+    counts: [['doors', 'Sliding doors', 2], ['drawers', 'Drawers', 3]],
+    items: [
+      ['ne3', 'fixed', 1], ['ba1', 'drawers', 1], ['ba3', 'drawers', 1],
+      ['dl3', 'fixed', 1], ['ls1', 'fixed', 1], ['ba5', 'fixed', 1],
+    ],
+  },
+  {
+    key: 'office', label: 'Office workstations', ph: '1497366216548-37526070297c',
+    blurb: 'Keyboard trays, CPU trolleys, monitor arms, cable management',
+    counts: [['desks', 'Workstations', 4]],
+    items: [
+      ['dl4', 'desks', 1], ['ws2', 'desks', 1], ['ws3', 'desks', 1],
+      ['ws4', 'desks', 1], ['ws5', 'desks', 1], ['ba3', 'desks', 1],
+    ],
+  },
+]
+
 export const FEED_POOL = [
   ...NEW_EBCO, ...DEALS, ...WORKSMART, ...LIVESMART, ...ZIPCO_PEKO, ...BUY_AGAIN, ...DOOR_CLOSERS,
   { id: 'x1', mat: 'Plastic', load: 50, stock: 210, brand: 'ebco', ph: '1551298370-9d3d53740c72', name: 'Castor Wheels 50mm (4 pc)', qty: 'Twin · brake', price: 320, mrp: 372, tag: '14% OFF' },

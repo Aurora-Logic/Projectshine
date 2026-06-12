@@ -14,7 +14,7 @@ import {
 } from '@radix-ui/react-icons'
 import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
-  FEED_POOL, CATEGORIES, BANNERS, COMBOS, QUIZ,
+  FEED_POOL, CATEGORIES, BANNERS, COMBOS, QUIZ, KITS,
   SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
   BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES, REORDER, PAST_ORDERS, DASH, CREDIT, CAT_SCHEMES,
 } from './data.js'
@@ -1378,6 +1378,162 @@ function ComboDeals({ onChange }) {
   )
 }
 
+/* ---------------- B1 · Project Kit Builder ---------------- */
+
+function KitBanner({ onOpen }) {
+  return (
+    <div className="kit-banner" {...btnish(onOpen)}>
+      <Img src={img(KITS[0].ph, 200)} alt="" />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Text size="2" weight="bold" as="div">Fitting out a full site?</Text>
+        <Text size="1" color="gray" as="div" mt="1" style={{ lineHeight: 1.4 }}>
+          Kitchen, wardrobe or office — get the complete fittings list in one tap
+        </Text>
+        <span className="kit-cta">Build a project kit <ChevronRightIcon width={13} height={13} /></span>
+      </div>
+    </div>
+  )
+}
+
+function KitPage({ onClose, onChange, onGoCart }) {
+  useSheetA11y(onClose)
+  const [kitKey, setKitKey] = useState('kitchen')
+  const kit = KITS.find(k => k.key === kitKey)
+  const [counts, setCounts] = useState(() =>
+    Object.fromEntries(KITS.flatMap(k => k.counts.map(([key, , def]) => [key, def]))))
+  const [off, setOff] = useState({}) // excluded line ids
+  const [done, setDone] = useState(false)
+  const [savedList, setSavedList] = useState(false)
+  const rows = kit.items
+    .map(([id, per, q]) => {
+      const p = FEED_POOL.find(x => x.id === id)
+      if (!p) return null
+      const n = per === 'fixed' ? q : Math.max(1, Math.ceil((counts[per] || 0) * q))
+      return { p, n, on: !off[id] }
+    })
+    .filter(Boolean)
+  const live = rows.filter(r => r.on)
+  const total = live.reduce((s, r) => s + lineTotal(r.p, r.n), 0)
+  const listSave = live.reduce((s, r) => s + (r.p.price * r.n - lineTotal(r.p, r.n)), 0)
+  const pieces = live.reduce((s, r) => s + r.n, 0)
+  const step = (key, d) => {
+    setDone(false)
+    setCounts(c => ({ ...c, [key]: Math.min(20, Math.max(1, (c[key] || 1) + d)) }))
+  }
+  const addAll = (e) => {
+    live.forEach(r => onChange(r.n, r.p, { noReco: true }))
+    sparkle(e)
+    setDone(true)
+  }
+  const saveAsList = () => {
+    const lists = loadLists()
+    saveLists([...lists, {
+      id: `l${Date.now()}`,
+      name: `${kit.label} kit`,
+      items: live.map(r => ({ id: r.p.id, n: r.n })),
+    }])
+    setSavedList(true)
+  }
+  return (
+    <div className="kitpage" role="dialog" aria-modal="true" aria-label="Project Kit Builder" tabIndex={-1}>
+      <div className="pdp-head">
+        <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Project Kit Builder</Heading>
+          <Text size="1" color="gray" as="div">Complete fittings list, sized to your site</Text>
+        </Box>
+      </div>
+      <div className="cp-body">
+        <div className="kit-tiles">
+          {KITS.map(k => {
+            const on = k.key === kitKey
+            return (
+              <button
+                key={k.key} className={`kit-tile ${on ? 'on' : ''}`}
+                onClick={() => { setKitKey(k.key); setOff({}); setDone(false); setSavedList(false) }}
+              >
+                <Img src={img(k.ph, 300)} alt="" />
+                <span className="kit-cap">{k.label}</span>
+                {on && <span className="kit-check"><CheckIcon width={12} height={12} /></span>}
+              </button>
+            )
+          })}
+        </div>
+        <Text size="1" color="gray" as="div" mt="2" mb="3" style={{ padding: '0 4px' }}>{kit.blurb}</Text>
+
+        <div className="cp-card">
+          <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+            PROJECT SIZE
+          </Text>
+          {kit.counts.map(([key, label]) => (
+            <Flex key={key} align="center" justify="between" mt="3">
+              <Text size="2" weight="bold">{label}</Text>
+              <div className="qs-step" style={{ margin: 0, padding: 0, border: 'none' }}>
+                <button className="qs-sbtn" onClick={() => step(key, -1)} aria-label={`Fewer ${label}`}><MinusIcon /></button>
+                <Text size="3" weight="bold" style={{ width: 38, textAlign: 'center' }}>{counts[key]}</Text>
+                <button className="qs-sbtn" onClick={() => step(key, 1)} aria-label={`More ${label}`}><PlusIcon /></button>
+              </div>
+            </Flex>
+          ))}
+        </div>
+
+        <div className="cp-card">
+          <Flex align="center" justify="between">
+            <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              YOUR KIT · {live.length} ITEMS · {pieces} PCS
+            </Text>
+            {listSave > 0 && <span className="st-chip ok">SAVES ₹{listSave.toLocaleString('en-IN')}</span>}
+          </Flex>
+          {rows.map(r => {
+            const u = unitPriceFor(r.p, r.n)
+            return (
+              <div key={r.p.id} className={`claim-item ${r.on ? 'on' : ''}`}>
+                <button
+                  className="claim-check"
+                  onClick={() => { setOff(o => ({ ...o, [r.p.id]: !o[r.p.id] })); setDone(false) }}
+                  aria-label={r.on ? `Remove ${r.p.name}` : `Include ${r.p.name}`}
+                >
+                  {r.on && <CheckIcon width={12} height={12} />}
+                </button>
+                <Img src={img(r.p.ph, 120)} alt="" style={{ width: 42, height: 42, borderRadius: 10, objectFit: 'cover', flex: 'none', opacity: r.on ? 1 : .45 }} />
+                <Box flexGrow="1" style={{ minWidth: 0, opacity: r.on ? 1 : .45 }}>
+                  <Text size="1" weight="bold" as="div" className="clamp1">{r.p.name}</Text>
+                  <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>
+                    {r.n} × ₹{u.toLocaleString('en-IN')}{u < r.p.price ? ' · bulk price' : ''}
+                  </Text>
+                </Box>
+                <Text size="1" weight="bold" style={{ flex: 'none', whiteSpace: 'nowrap', opacity: r.on ? 1 : .45 }}>
+                  ₹{lineTotal(r.p, r.n).toLocaleString('en-IN')}
+                </Text>
+              </div>
+            )
+          })}
+          <button className={`kit-save ${savedList ? 'done' : ''}`} onClick={savedList ? undefined : saveAsList}>
+            {savedList ? <><CheckIcon width={13} height={13} /> Saved — Account → Project lists</> : <><BookmarkIcon width={13} height={13} /> Save as a project list</>}
+          </button>
+        </div>
+      </div>
+      <div className="kit-bar">
+        <Box style={{ minWidth: 0 }}>
+          <Text size="1" color="gray" as="div">{pieces} pieces</Text>
+          <Text size="3" weight="bold" as="div" style={{ letterSpacing: '-0.3px' }}>₹{total.toLocaleString('en-IN')}</Text>
+        </Box>
+        {done ? (
+          <button className="qs-cta" style={{ margin: 0, flex: 1 }} onClick={onGoCart}>
+            <span><CheckIcon width={14} height={14} style={{ marginRight: 6, verticalAlign: -2 }} />Kit added</span>
+            <span>Go to cart</span>
+          </button>
+        ) : (
+          <button className="qs-cta" style={{ margin: 0, flex: 1 }} onClick={addAll} disabled={live.length === 0}>
+            <span>Add kit to cart</span>
+            <span>{live.length} items</span>
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function ComboCard({ c, onChange }) {
   const p = { id: c.id, ph: c.ph, price: c.price, name: c.title, qty: c.items }
   const qty = useContext(CartItemsCtx)[p.id]?.n || 0
@@ -2322,7 +2478,7 @@ function ListSheet({ p, onClose }) {
   )
 }
 
-function AcctLists({ onChange }) {
+function AcctLists({ onChange, onGoKit }) {
   const [lists, setLists] = useState(loadLists)
   const [openId, setOpenId] = useState(null)
   const [adding, setAdding] = useState(false)
@@ -2404,7 +2560,14 @@ function AcctLists({ onChange }) {
           )
         })}
         {lists.length === 0 && (
-          <Text size="1" color="gray" as="div">No lists yet — create one per site or job.</Text>
+          <>
+            <Text size="1" color="gray" as="div">No lists yet — create one per site or job.</Text>
+            {onGoKit && (
+              <Button mt="2" size="2" variant="soft" color="green" radius="full" style={{ fontWeight: 800 }} onClick={onGoKit}>
+                Start with a project kit
+              </Button>
+            )}
+          </>
         )}
       </div>
       {adding ? (
@@ -4335,6 +4498,58 @@ const ACCT_TITLES = {
 /* Estimate PDF branding: company name, logo upload, text colours */
 const EST_SWATCHES = ['#1A1C1F', '#696E74', '#1A2342', '#14633F', '#30A46C', '#1A43AE', '#C9A44A', '#9A3412']
 const EST_PAPERS = ['#F8F5ED', '#FFFFFF', '#F2F2F0', '#F1F5EF', '#F8F1ED', '#EFF3F6']
+/* live mini-mockups of the three BOM layouts, tinted by the chosen colours */
+function TplCard({ k, label, active, paper, accent, onClick }) {
+  const ink = 'rgba(0,0,0,.55)'
+  return (
+    <button type="button" className={`tpl-card ${active ? 'on' : ''}`} onClick={onClick} aria-label={`${label} template`}>
+      <div className="tpl-page" style={{ background: paper }}>
+        {k === 'classic' && (
+          <>
+            <Flex justify="between" align="center">
+              <div className="tp-line" style={{ width: '38%', height: 4, background: ink }} />
+              <div className="tp-dot" />
+            </Flex>
+            <Flex gap="1">{[14, 14, 14, 14].map((w, i) => <div key={i} className="tp-row" style={{ width: w }} />)}</Flex>
+            <div className="tp-line" style={{ marginTop: 4 }} />
+            <div className="tp-row" style={{ width: '52%' }} />
+            <div className="tp-line" />
+            {[1, 2, 3].map(i => <div key={i} className="tp-row" />)}
+            <div className="tp-row" style={{ width: '46%', alignSelf: 'flex-end', background: 'rgba(0,0,0,.16)' }} />
+          </>
+        )}
+        {k === 'bold' && (
+          <>
+            <div className="tp-band" style={{ background: accent, height: 26, margin: '-7px -7px 0', borderRadius: 0, padding: '5px 7px' }}>
+              <div className="tp-line" style={{ width: '34%', height: 6, background: 'rgba(0,0,0,.65)' }} />
+            </div>
+            {[1, 2, 3].map(i => <div key={i} className="tp-row" style={{ marginTop: i === 1 ? 5 : 0 }} />)}
+            <div className="tp-row" style={{ width: '46%', alignSelf: 'flex-end', background: 'rgba(0,0,0,.16)' }} />
+            <div style={{ flex: 1 }} />
+            <div className="tp-band" style={{ background: 'rgba(0,0,0,.55)', height: 9, margin: '0 -7px' }} />
+            <div className="tp-band" style={{ background: accent, height: 8, margin: '0 -7px' }} />
+          </>
+        )}
+        {k === 'studio' && (
+          <>
+            <Flex justify="between">
+              <div className="tp-dot" style={{ borderRadius: 99 }} />
+              <Flex direction="column" gap="1" style={{ width: '46%' }}>
+                {[1, 2, 3].map(i => <div key={i} className="tp-line" style={{ width: '100%' }} />)}
+              </Flex>
+            </Flex>
+            <div className="tp-line" style={{ width: '44%', height: 3, background: ink, marginTop: 3 }} />
+            {[1, 2].map(i => <div key={i} className="tp-row" style={{ marginTop: i === 1 ? 4 : 0 }} />)}
+            <div className="tp-row" style={{ width: '46%', alignSelf: 'flex-end' }} />
+            <div className="tp-row" style={{ width: '60%', alignSelf: 'flex-end', background: 'rgba(0,0,0,.14)', height: 3 }} />
+          </>
+        )}
+      </div>
+      <span className="tpl-lab">{label}</span>
+    </button>
+  )
+}
+
 function ColorRow({ label, value, onChange, swatches = EST_SWATCHES }) {
   return (
     <div>
@@ -4413,21 +4628,18 @@ function AcctEstPdf() {
         <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
           TEMPLATE
         </Text>
-        <Flex gap="2" mt="2">
+        <div className="tpl-grid">
           {[['classic', 'Classic'], ['bold', 'Bold'], ['studio', 'Studio']].map(([k, l]) => (
-            <Button
-              key={k} size="1" radius="full"
-              variant={(brand.template || 'classic') === k ? 'solid' : 'soft'}
-              color={(brand.template || 'classic') === k ? 'green' : 'gray'}
-              style={{ fontWeight: 800 }}
+            <TplCard
+              key={k} k={k} label={l}
+              active={(brand.template || 'classic') === k}
+              paper={brand.paper || '#F8F5ED'} accent={brand.accent || '#CDE76D'}
               onClick={() => set('template', k)}
-            >
-              {l}
-            </Button>
+            />
           ))}
-        </Flex>
+        </div>
         <Text size="1" color="gray" as="div" mt="2">
-          Classic — hairlines, logos on top. Bold — colour-block bands, logos below. Studio — editorial caps with amount in words.
+          Classic — hairlines, logos on top. Bold — colour bands, logos below. Studio — editorial caps, amount in words.
         </Text>
       </div>
 
@@ -4484,7 +4696,7 @@ function AcctEstPdf() {
   )
 }
 
-function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCategory, onGoReorder }) {
+function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCategory, onGoReorder, onGoKit }) {
   const [sub, setSub] = useState(() => {
     const h = window.location.hash
     if (h === '#dash') return 'dash'
@@ -4514,7 +4726,7 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
       case 'dash': return <AcctDash onReorder={onGoReorder} />
       case 'orders': return <AcctOrders lastOrder={lastOrder} onChange={onChange} />
       case 'credit': return <AcctCredit />
-      case 'lists': return <AcctLists onChange={onChange} />
+      case 'lists': return <AcctLists onChange={onChange} onGoKit={onGoKit} />
       case 'schemes': return <AcctSchemes onCategory={onCategory} />
       case 'gst': return <AcctGst />
       case 'calc': return <AcctCalc />
@@ -5496,18 +5708,16 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
       doc.text(t, x, yy)
       doc.setCharSpace(0)
     }
-    cap('(DATE)', M, 30); cap('(VALID FOR)', M, 40); cap('(BILLED TO)', 74, 30); cap('(FROM)', 74, 40)
+    cap('(DATE)', M, 30); cap('(VALID FOR)', M, 41); cap('(BILLED TO)', 74, 30); cap('(FROM)', 74, 41)
     doc.setFont('PJS', 'normal').setFontSize(8).setTextColor(...onAccent)
-    doc.text(today, M, 34.5).text(`${validDays} days`, M, 44.5)
+    doc.text(today, M, 34.5).text(`${validDays} days`, M, 45.5)
     doc.text(`${cust.name}${cust.phone ? ' · ' + cust.phone : ''}`, 74, 34.5)
-    if (cust.refBy) doc.setFontSize(7).text(`Ref. by — ${cust.refBy}`, 74, 38).setFontSize(8)
-    doc.text(`${dealerLines[0]} · Bengaluru`, 74, 44.5)
+    if (cust.refBy) doc.setFontSize(7).text(`Ref. by — ${cust.refBy}`, 74, 37.8).setFontSize(8)
+    doc.text(`${dealerLines[0]} · Bengaluru`, 74, 45.5)
 
     const fin = itemsTable({ startY: 60, bottom: 48, headFill: PAPER.map(c => Math.max(0, c - 14)), big: false })
     let y = totalsBlock(fin + 8, H - 52)
-    y = drawRich(doc, note, M, y + 2, 92, { size: 8 })
-    doc.setFont('PJS', 'normal').setFontSize(7.5).setTextColor(...GRAY)
-      .text(`Items: ${items.length} · ${totalPcs} pcs`, M, y + 5)
+    drawRich(doc, note, M, y + 2, 92, { size: 8 })
 
     const pages = doc.getNumberOfPages()
     for (let i = 1; i <= pages; i++) {
@@ -6427,6 +6637,7 @@ export default function App() {
     order?.items?.forEach(({ p, n }) => changeCart(n, p, { noReco: true }))
     setCartOpen(true)
   }
+  const [kitOpen, setKitOpen] = useState(window.location.hash === '#kit')
   const [plp, setPlp] = useState(() => {
     if (window.location.hash.startsWith('#fsheet')) return 'Hinges'
     if (window.location.hash === '#strip') return 'All'
@@ -6442,7 +6653,7 @@ export default function App() {
   const openCategory = (label) => setPlp(label)
 
   // Any overlay up -> the page behind must not scroll
-  const overlayUp = !!(sheet || pdp || qsheet || cartOpen || reorderOpen || acctOpen || plp)
+  const overlayUp = !!(sheet || pdp || qsheet || cartOpen || reorderOpen || acctOpen || plp || kitOpen)
   useEffect(() => {
     document.body.classList.toggle('no-scroll', overlayUp)
     return () => document.body.classList.remove('no-scroll')
@@ -6537,6 +6748,19 @@ export default function App() {
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [reorderOpen])
+  const closeKit = () => {
+    if (window.history.state?.qcKit) window.history.back()
+    else setKitOpen(false)
+  }
+  useEffect(() => {
+    if (!kitOpen) return
+    if (!window.history.state?.qcKit) window.history.pushState({ qcKit: true }, '')
+    const onPop = () => {
+      if (!pdpRef.current && !qtyRef.current && !cartRef.current) setKitOpen(false)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [kitOpen])
   const closeCart = () => {
     if (window.history.state?.qcCart) window.history.back()
     else setCartOpen(false)
@@ -6751,6 +6975,7 @@ export default function App() {
         <QuizCard onFinish={markPlayed} skin={quizSkin} />
 
         {brand === 'ALL' && <ComboDeals onChange={changeCart} />}
+        {brand === 'ALL' && <KitBanner onOpen={() => setKitOpen(true)} />}
 
         {brand === 'ALL' && (
           <BrandDay onShop={() => setSheet({ items: FEED_POOL, query: BRAND_DAY.query, title: 'Product of the day' })} />
@@ -6851,8 +7076,13 @@ export default function App() {
             subRef={acctSubRef} initialSub={acctInitSub.current}
             onCategory={(cat) => { setAcctOpen(false); setPlp(cat) }}
             onGoReorder={() => { setAcctOpen(false); setReorderOpen(true) }}
+            onGoKit={() => { setAcctOpen(false); setKitOpen(true) }}
           />
           )}
+        </PageExit>
+
+        <PageExit open={kitOpen}>
+          {kitOpen && <KitPage onClose={closeKit} onChange={changeCart} onGoCart={() => setCartOpen(true)} />}
         </PageExit>
 
         <PageExit open={pdp !== null}>
