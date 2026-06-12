@@ -4407,12 +4407,171 @@ function AddressSheet({ addrs, sel, onPick, onAdd, onClose }) {
   )
 }
 
+/* ---------------- Customer estimate (PDF export) ---------------- */
+/* jspdf + the DejaVu font (₹ glyph) are lazy-loaded on first export only,
+   so the main bundle doesn't grow. Bill numbers are passed in from CartPage
+   so the PDF can never drift from the on-screen bill. */
+const fetchB64 = async (url) => {
+  const r = await fetch(url)
+  if (!r.ok) throw new Error(`fetch ${url}: ${r.status}`)
+  const b = new Uint8Array(await r.arrayBuffer())
+  let s = ''
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000))
+  return btoa(s)
+}
+const imgData = (url) => new Promise((resolve, reject) => {
+  const im = new Image()
+  im.onload = () => {
+    const c = document.createElement('canvas')
+    c.width = im.naturalWidth
+    c.height = im.naturalHeight
+    c.getContext('2d').drawImage(im, 0, 0)
+    resolve({ data: c.toDataURL('image/png'), w: im.naturalWidth, h: im.naturalHeight })
+  }
+  im.onerror = () => reject(new Error(`image ${url}`))
+  im.src = url
+})
+
+async function generateEstimate({ cust, items, bill }) {
+  const [{ jsPDF }, { default: autoTable }, fontN, fontB, mark, ...brands] = await Promise.all([
+    import('jspdf'), import('jspdf-autotable'),
+    fetchB64('/fonts/DejaVuSans.ttf'), fetchB64('/fonts/DejaVuSans-Bold.ttf'),
+    imgData('/icon-192.png'),
+    ...Object.values(BRAND_LOGOS).map(imgData),
+  ])
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  doc.addFileToVFS('DejaVuSans.ttf', fontN)
+  doc.addFont('DejaVuSans.ttf', 'DejaVu', 'normal')
+  doc.addFileToVFS('DejaVuSans-Bold.ttf', fontB)
+  doc.addFont('DejaVuSans-Bold.ttf', 'DejaVu', 'bold')
+
+  const W = 210, M = 14, GREEN = [20, 99, 63], INK = [24, 28, 33], GRAY = [110, 117, 125]
+  const inr = (n) => '₹' + n.toLocaleString('en-IN')
+  const no = `QE-${String(Date.now()).slice(-6)}`
+  const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+
+  // header: logo + company left, ESTIMATE meta right
+  doc.addImage(mark.data, 'PNG', M, 12, 13, 13)
+  doc.setFont('DejaVu', 'bold').setFontSize(17).setTextColor(...INK).text('QuickCart', M + 17, 19)
+  doc.setFont('DejaVu', 'normal').setFontSize(8.5).setTextColor(...GRAY)
+    .text('Furniture hardware · trade prices · 90-min delivery', M + 17, 24.5)
+  doc.setFont('DejaVu', 'bold').setFontSize(15).setTextColor(...GREEN).text('ESTIMATE', W - M, 17, { align: 'right' })
+  doc.setFont('DejaVu', 'normal').setFontSize(8.5).setTextColor(...GRAY)
+    .text(`${no}  ·  ${today}  ·  valid 7 days`, W - M, 23, { align: 'right' })
+  doc.setDrawColor(...GREEN).setLineWidth(0.8).line(M, 30, W - M, 30)
+
+  // prepared for / from
+  doc.setFontSize(7.5).setTextColor(...GRAY).text('PREPARED FOR', M, 38).text('FROM', 120, 38)
+  doc.setFont('DejaVu', 'bold').setFontSize(10.5).setTextColor(...INK).text(cust.name, M, 44)
+  doc.setFont('DejaVu', 'normal').setFontSize(9)
+  const custLines = [cust.phone, ...(cust.site ? doc.splitTextToSize(cust.site, 86) : [])].filter(Boolean)
+  doc.text(custLines, M, 49.5)
+  doc.setFont('DejaVu', 'bold').setFontSize(10.5).text('Virag Bora · QuickCart dealer', 120, 44)
+  doc.setFont('DejaVu', 'normal').setFontSize(9)
+    .text(['304 Maple Heights, HSR Layout', 'Bengaluru 560102'], 120, 49.5)
+
+  // items table
+  autoTable(doc, {
+    startY: 60 + Math.max(0, custLines.length - 2) * 4.5,
+    margin: { left: M, right: M },
+    head: [['#', 'Item', 'Pack / spec', 'Qty', 'Rate', 'Amount']],
+    body: items.map(({ p, n }, i) => [i + 1, p.name, p.qty || '—', n, inr(p.price), inr(p.price * n)]),
+    styles: { font: 'DejaVu', fontSize: 8.5, textColor: INK, cellPadding: 2.4 },
+    headStyles: { fillColor: GREEN, textColor: 255, fontStyle: 'bold', fontSize: 8 },
+    alternateRowStyles: { fillColor: [246, 248, 247] },
+    columnStyles: {
+      0: { cellWidth: 8, halign: 'right' },
+      3: { cellWidth: 12, halign: 'right' },
+      4: { cellWidth: 24, halign: 'right' },
+      5: { cellWidth: 28, halign: 'right' },
+    },
+  })
+
+  // totals — same numbers as the on-screen bill
+  let y = doc.lastAutoTable.finalY + 8
+  if (y > 240) { doc.addPage(); y = 20 }
+  const row = (label, val, opts = {}) => {
+    doc.setFont('DejaVu', opts.bold ? 'bold' : 'normal').setFontSize(opts.bold ? 10.5 : 9)
+    doc.setTextColor(...(opts.green ? GREEN : opts.bold ? INK : GRAY))
+    doc.text(label, 140, y, { align: 'right' })
+    doc.text(val, W - M, y, { align: 'right' })
+    y += opts.bold ? 7 : 5.5
+  }
+  row('Item total', inr(bill.itemTotal))
+  if (bill.bulkSave > 0) row('Bulk price savings', '−' + inr(bill.bulkSave), { green: true })
+  if (bill.schemeOff > 0) row(`Volume scheme (${bill.slabPct}%)`, '−' + inr(bill.schemeOff), { green: true })
+  row('Delivery' + (bill.express ? ' (express · 1 hr)' : ''), bill.fee === 0 ? 'FREE' : inr(bill.fee))
+  doc.setDrawColor(...GREEN).setLineWidth(0.4).line(118, y - 3, W - M, y - 3)
+  y += 1.5
+  row('Estimate total', inr(bill.toPay), { bold: true })
+  doc.setFont('DejaVu', 'normal').setFontSize(7.5).setTextColor(...GRAY)
+    .text('Trade estimate only — GST as applicable. Prices valid 7 days from the date above.', M, y + 2)
+
+  // footer: authorized brand strip
+  let fy = Math.max(y + 16, 262)
+  if (fy > 275) { doc.addPage(); fy = 262 }
+  doc.setFontSize(7.5).setTextColor(...GRAY).text('AUTHORIZED DEALER FOR', W / 2, fy, { align: 'center' })
+  const lh = 8
+  const sizes = brands.map(b => ({ ...b, dw: (b.w / b.h) * lh }))
+  const totalW = sizes.reduce((s, b) => s + b.dw, 0) + (sizes.length - 1) * 9
+  let bx = (W - totalW) / 2
+  for (const b of sizes) {
+    doc.setFillColor(246, 247, 248).roundedRect(bx - 2, fy + 3 - 1.5, b.dw + 4, lh + 3, 1.5, 1.5, 'F')
+    doc.addImage(b.data, 'PNG', bx, fy + 3, b.dw, lh)
+    bx += b.dw + 9
+  }
+  doc.setFontSize(7).setTextColor(...GRAY)
+    .text(`Generated with QuickCart · ${today}`, W / 2, fy + 15, { align: 'center' })
+
+  doc.save(`${no} ${cust.name.trim()} estimate.pdf`)
+}
+
+function EstimateSheet({ items, bill, onClose }) {
+  const [cust, setCust] = usePersisted('qc-est-cust', { name: '', phone: '', site: '' })
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(null)
+  const go = async () => {
+    setBusy(true)
+    setErr(null)
+    try {
+      await generateEstimate({ cust, items, bill })
+      onClose()
+    } catch {
+      setErr('Could not prepare the PDF. Check your connection and try again.')
+      setBusy(false)
+    }
+  }
+  const f = (k) => (e) => setCust({ ...cust, [k]: e.target.value })
+  return (
+    <div className="qsheet-overlay" onClick={onClose}>
+      <div className="qsheet" onClick={(e) => e.stopPropagation()}>
+        <div className="qsheet-grab" />
+        <Heading size="4" style={{ letterSpacing: '-0.3px' }}>Customer estimate</Heading>
+        <Text size="1" color="gray" as="div" mt="1">
+          {items.length} item{items.length === 1 ? '' : 's'} · ₹{bill.toPay.toLocaleString('en-IN')} — exported as a branded PDF for your customer.
+        </Text>
+        {/* 16px font so iOS Safari doesn't zoom the sheet on focus */}
+        <Flex direction="column" gap="2" mt="3">
+          <input className="cp-input" style={{ fontSize: 16 }} placeholder="Customer / site name" autoComplete="name" value={cust.name} onChange={f('name')} />
+          <input className="cp-input" style={{ fontSize: 16 }} type="tel" inputMode="tel" autoComplete="tel" placeholder="Phone (optional)" value={cust.phone} onChange={f('phone')} />
+          <textarea className="cp-note" style={{ fontSize: 16 }} rows={2} placeholder="Site address (optional)" value={cust.site} onChange={f('site')} />
+        </Flex>
+        {err && <Text size="1" as="div" mt="2" style={{ color: 'var(--red-10)', fontWeight: 700 }}>{err}</Text>}
+        <button className="qs-cta" style={{ justifyContent: 'center', gap: 7 }} disabled={!cust.name.trim() || busy} onClick={go}>
+          <FileTextIcon width={15} height={15} /> {busy ? 'Preparing PDF…' : 'Download estimate PDF'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function CartPage({ cart, onClose, onChange, onPlaced }) {
   const openQty = useContext(QtyCtx)
   const items = Object.values(cart.items)
   const [addrs, setAddrs] = useState(loadAddrs)
   const [sel, setSel] = useState(() => localStorage.getItem('qc-addr-sel') || loadAddrs()[0].id)
   const [addrSheet, setAddrSheet] = useState(false)
+  const [estSheet, setEstSheet] = useState(false)
   const [note, setNote] = useState(() => localStorage.getItem('qc-note') || '')
   const [placed, setPlaced] = useState(null)
   const [express, setExpress] = useState(false)
@@ -4651,6 +4810,13 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
                 <Text size="1" as="div" mt="1" color="gray">Plus ₹{mrpSave.toLocaleString('en-IN')} below MRP on these items</Text>
               )}
             </div>
+
+            <button
+              className="qs-cta ghost" style={{ marginTop: 0, justifyContent: 'center', gap: 7 }}
+              onClick={() => setEstSheet(true)}
+            >
+              <FileTextIcon width={14} height={14} /> Download estimate for customer
+            </button>
           </>
         )}
       </div>
@@ -4682,6 +4848,13 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
       )}
       {addrSheet && (
         <AddressSheet addrs={addrs} sel={sel} onPick={pickAddr} onAdd={addAddr} onClose={() => setAddrSheet(false)} />
+      )}
+      {estSheet && (
+        <EstimateSheet
+          items={items}
+          bill={{ itemTotal: cart.total, bulkSave, schemeOff, slabPct: slab ? slab.off : 0, fee, express, toPay }}
+          onClose={() => setEstSheet(false)}
+        />
       )}
       {placed && (
         <div className="order-done">
