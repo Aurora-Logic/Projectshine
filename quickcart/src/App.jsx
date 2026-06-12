@@ -565,8 +565,8 @@ const SUBCATS = {
   Kitchen: [['Carousels', 'carousel'], ['Deep drawers', 'deep'], ['Quadro', 'quadro']],
   Office: [['Keyboard trays', 'keyboard'], ['Monitor arms', 'monitor'], ['CPU', 'cpu'], ['Cable', 'cable']],
   Lighting: [['LED strips', 'strip'], ['Sensor lights', 'sensor'], ['Profiles', 'profile'], ['Night lights', 'night']],
-  Handles: [['D-Handles', 'd-handle'], ['Support pins', 'pin']],
-  Storage: [['Castors', 'castor'], ['Shelf', 'shelf'], ['Catches', 'catch']],
+  Handles: [['D-Handles', 'd-handle']],
+  Storage: [['Castors', 'castor'], ['Shelf & pins', 'pin'], ['Catches', 'catch'], ['Connectors', 'connector']],
 }
 
 const subcatThumb = (kw) =>
