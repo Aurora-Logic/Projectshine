@@ -2694,8 +2694,11 @@ function MiniLine({ data, color = '#3E63DD', fill }) {
 function AcctDash({ onReorder }) {
   const [per, setPer] = useState(12)
   const [tab, setTab] = useState('trend')
+  const [tper, setTper] = useState('monthly')
   const ready = useNextFrame()
   const k = DASH.kpis
+  const tt = TARGETS[tper]
+  const tpct = Math.min(100, Math.round((tt.done / tt.target) * 100))
   const big = useCountUp(k.month, true, 1100)
   const best = DASH.months.reduce((a, b) => (b[1] > a[1] ? b : a))
   const bestIdx = DASH.months.findIndex(d => d[1] === best[1])
@@ -2737,16 +2740,30 @@ function AcctDash({ onReorder }) {
       <div className="cp-card dk">
         <Flex align="center" justify="between">
           <Text size="1" weight="bold" style={{ color: '#98A0AB', letterSpacing: '.5px', fontSize: 10.5 }}>
-            MONTHLY REBATE
+            TARGETS
           </Text>
-          <Text size="1" weight="bold" style={{ color: '#F5C242' }}>+2% at {fmtL(TARGETS.monthly.target)}</Text>
+          <div className="seg" style={{ margin: 0 }}>
+            {Object.keys(TARGETS).map(kk => (
+              <button key={kk} className={`seg-b ${tper === kk ? 'on' : ''}`} onClick={() => setTper(kk)}>
+                {TARGETS[kk].label}
+              </button>
+            ))}
+          </div>
         </Flex>
-        <Text size="3" weight="bold" as="div" mt="1" style={{ color: '#F2F4F7' }}>
-          {fmtL(TARGETS.monthly.target - k.month)} to go
-        </Text>
+        <Flex align="baseline" gap="2" mt="2">
+          <Text weight="bold" style={{ fontSize: 27, color: '#F2F4F7', letterSpacing: '-0.6px' }}>{tpct}%</Text>
+          <Text style={{ fontSize: 10.5, color: '#98A0AB' }}>achieved</Text>
+          <Text size="1" weight="bold" style={{ marginLeft: 'auto', color: '#F2F4F7' }}>
+            {fmtL(tt.done)} <span style={{ color: '#98A0AB', fontWeight: 600 }}>of {fmtL(tt.target)}</span>
+          </Text>
+        </Flex>
         <div className="dk-bar">
-          <div style={{ width: ready ? `${tgtPct}%` : '0%' }} />
+          <div style={{ width: ready ? `${tpct}%` : '0%' }} />
         </div>
+        <Flex align="center" justify="between" mt="2">
+          <Text style={{ fontSize: 10.5, color: '#98A0AB' }}>{fmtL(tt.target - tt.done)} to go · ends {tt.ends}</Text>
+          <Text style={{ fontSize: 10.5, color: '#F5C242', fontWeight: 800 }}>{tt.note}</Text>
+        </Flex>
       </div>
 
       <div className="kpi-grid">

@@ -4621,3 +4621,6 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 .sub-dark .hbar { background: #23252C; }
 .sub-dark .d3-card { box-shadow: 0 5px 0 #000, 0 16px 28px rgba(0, 0, 0, .55); }
 
+
+/* add controls always pop above following card sections */
+.padd { z-index: 6; }
