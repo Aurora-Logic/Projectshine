@@ -1169,11 +1169,20 @@ function SearchSheet({ sheet, onClose, onChange, recoStrip, onRecoClose }) {
                   ].filter(Boolean).join(' · ')}
             </Text>
           </Box>
-          <Grid columns="2" gapX="3" gapY="4" pt="3" pb="9">
-            {pageReady
-              ? shown.map(p => <ProductCard key={`s-${p.id}`} p={p} grid onChange={onChange} />)
-              : [0, 1, 2, 3].map(i => <div className="skel" key={`sk${i}`} />)}
-          </Grid>
+          {pageReady && shown.length === 0 ? (
+            <Flex direction="column" align="center" py="8" gap="2">
+              <Text size="2" weight="bold" color="gray">Nothing matches these filters</Text>
+              <Button size="1" radius="full" variant="soft" onClick={() => { setB('ALL'); setF(DEFAULT_F); setCat('All') }}>
+                Clear filters
+              </Button>
+            </Flex>
+          ) : (
+            <Grid columns="2" gapX="3" gapY="4" pt="3" pb="9">
+              {pageReady
+                ? shown.map(p => <ProductCard key={`s-${p.id}`} p={p} grid onChange={onChange} />)
+                : [0, 1, 2, 3].map(i => <div className="skel" key={`sk${i}`} />)}
+            </Grid>
+          )}
         </div>
       </div>
       <div className="sheet-reco">
@@ -2336,57 +2345,90 @@ function AcctCredit() {
   )
 }
 
-/* ---------------- Dealer login (demo gate) ---------------- */
+/* ---------------- Dealer login (demo gate, Instacart-style) ---------------- */
+
+const GoogleG = () => (
+  <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+    <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
+    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+    <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.3 0-9.7-3.4-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
+    <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.5l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/>
+  </svg>
+)
+const AppleMark = () => (
+  <svg width="17" height="19" viewBox="0 0 384 512" fill="currentColor" aria-hidden="true">
+    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
+  </svg>
+)
+const FbMark = () => (
+  <svg width="19" height="19" viewBox="0 0 36 36" aria-hidden="true">
+    <circle cx="18" cy="18" r="18" fill="#1877F2"/>
+    <path fill="#fff" d="M24.8 23.2l.8-5.2h-5v-3.4c0-1.4.7-2.8 2.9-2.8h2.3V7.4s-2-.4-4-.4c-4.1 0-6.7 2.5-6.7 6.9v3.9h-4.6v5.2h4.6V36c.9.1 1.9.2 2.9.2s2-.1 2.9-.2V23.2h3.9z"/>
+  </svg>
+)
 
 function LoginGate({ onDone }) {
-  const [stage, setStage] = useState('phone')
+  const [tab, setTab] = useState('phone')
+  const [stage, setStage] = useState('cred')
   const [ph, setPh] = useState('')
+  const [em, setEm] = useState('')
   const [otp, setOtp] = useState('')
+  const ready = tab === 'phone' ? ph.length === 10 : /\S+@\S+\.\S+/.test(em)
   return (
-    <div className="login">
-      <div className="login-top">
-        <Text as="div" weight="bold" style={{ fontSize: 34, color: '#fff', letterSpacing: '-1.2px' }}>QuickCart</Text>
-        <Text size="2" as="div" mt="1" style={{ color: 'rgba(255,255,255,.8)' }}>Furniture hardware · delivered in hours</Text>
-        <div className="login-brands">
-          {Object.values(BRAND_LOGOS).map((src, i) => (
-            <span key={i}><img src={src} alt="" /></span>
-          ))}
-        </div>
-      </div>
-      <div className="login-card">
-        {stage === 'phone' ? (
-          <>
-            <Heading size="5" style={{ letterSpacing: '-0.3px' }}>Dealer login</Heading>
-            <Text size="1" color="gray" as="div" mt="1">Registered mobile number</Text>
-            <Flex gap="2" mt="3" align="center">
-              <span className="login-prefix">+91</span>
+    <div className="login2">
+      <Heading style={{ fontSize: 32, letterSpacing: '-1px', marginTop: 30 }}>
+        {stage === 'otp' ? 'Enter OTP' : 'Dealer login'}
+      </Heading>
+      {stage === 'cred' ? (
+        <>
+          <div className="lg-tabs">
+            <button className={tab === 'phone' ? 'on' : ''} onClick={() => setTab('phone')}>Phone number</button>
+            <button className={tab === 'email' ? 'on' : ''} onClick={() => setTab('email')}>Email</button>
+          </div>
+          {tab === 'phone' ? (
+            <div className="lg-group">
+              <span>+91</span>
               <input
-                className="cp-input" style={{ margin: 0, fontSize: 16, letterSpacing: '.5px' }}
-                inputMode="numeric" maxLength={10} placeholder="98860 12345"
+                inputMode="numeric" maxLength={10} placeholder="Phone number"
                 value={ph} onChange={(e) => setPh(e.target.value.replace(/\D/g, ''))}
               />
-            </Flex>
-            <Button mt="3" size="3" color="green" style={{ width: '100%', fontWeight: 800 }} disabled={ph.length !== 10} onClick={() => setStage('otp')}>
-              Get OTP
-            </Button>
-          </>
-        ) : (
-          <>
-            <Heading size="5" style={{ letterSpacing: '-0.3px' }}>Enter OTP</Heading>
-            <Text size="1" color="gray" as="div" mt="1">Sent to +91 {ph} · any 4 digits work in this demo</Text>
-            <input
-              className="cp-input login-otp" inputMode="numeric" maxLength={4} placeholder="••••"
-              value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-            />
-            <Button mt="3" size="3" color="green" style={{ width: '100%', fontWeight: 800 }} disabled={otp.length !== 4} onClick={onDone}>
-              Verify & continue
-            </Button>
-          </>
-        )}
+            </div>
+          ) : (
+            <div className="lg-group">
+              <input type="email" placeholder="Work email" value={em} onChange={(e) => setEm(e.target.value)} />
+            </div>
+          )}
+          <Text size="1" color="gray" as="div" mt="3" style={{ lineHeight: 1.55 }}>
+            We'll send a verification code. By continuing you agree to our{' '}
+            <span className="lg-link">Dealer Terms</span> & <span className="lg-link">Privacy Policy</span>.
+          </Text>
+          <button className="lg-cta" disabled={!ready} onClick={() => setStage('otp')}>Continue</button>
+          <div className="lg-or"><span>or</span></div>
+          <button className="lg-soc" onClick={onDone}><AppleMark /> Continue with Apple</button>
+          <button className="lg-soc" onClick={onDone}><GoogleG /> Continue with Google</button>
+          <button className="lg-soc" onClick={onDone}><FbMark /> Continue with Facebook</button>
+          <Text size="2" as="div" mt="4" style={{ textAlign: 'center' }}>
+            or <span className="lg-link" onClick={onDone}>continue as guest</span>
+          </Text>
+        </>
+      ) : (
+        <>
+          <Text size="2" color="gray" as="div" mt="2">
+            Sent to {tab === 'phone' ? `+91 ${ph}` : em} · any 4 digits work in this demo
+          </Text>
+          <input
+            className="lg-otp" inputMode="numeric" maxLength={4} placeholder="••••"
+            value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+          />
+          <button className="lg-cta" disabled={otp.length !== 4} onClick={onDone}>Verify & continue</button>
+          <Text size="2" as="div" mt="4" style={{ textAlign: 'center' }}>
+            <span className="lg-link" onClick={() => setStage('cred')}>Change number</span>
+          </Text>
+        </>
+      )}
+      <div className="lg-brands">
+        {Object.values(BRAND_LOGOS).map((src, i) => <img key={i} src={src} alt="" />)}
       </div>
-      <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.55)', textAlign: 'center', padding: '0 32px 22px' }}>
-        GST-billed dealer account · by continuing you accept dealer terms
-      </Text>
     </div>
   )
 }
@@ -3092,26 +3134,22 @@ function AcctPrivacy() {
   )
 }
 
-const ACCT_GROUPS = [
-  ['BUSINESS', [
-    ['dash', BarChartIcon, 'Performance dashboard', 'Purchases, growth, category mix', 'violet'],
-    ['orders', CounterClockwiseClockIcon, 'Order history', 'Receipts, repeat, invoices', 'blue'],
-    ['credit', IdCardIcon, 'Credit ledger', '30-day limit, dues, pay bills', 'crimson'],
-    ['lists', BookmarkIcon, 'Project lists', 'Order per site in one shot', 'plum'],
-    ['schemes', StarFilledIcon, 'Schemes & discounts', 'Volume slabs, tier perks', 'amber'],
-    ['gst', FileTextIcon, 'GST details', 'GSTIN, billing name', 'green'],
-  ]],
-  ['TOOLS & SERVICES', [
-    ['calc', RulerSquareIcon, 'Calculators', 'Slide load, hinges per door', 'cyan'],
-    ['site', SewingPinIcon, 'Submit site visit', 'Get our team to your site', 'orange'],
-    ['display', EyeOpenIcon, 'Display centre visit', 'Book a showroom slot', 'pink'],
-    ['support', ChatBubbleIcon, 'Support', 'Call, WhatsApp, FAQs', 'indigo'],
-  ]],
-  ['SETTINGS', [
-    ['addr', HomeIcon, 'Address book', 'Delivery locations', 'teal'],
-    ['notif', BellIcon, 'Notification preferences', 'Orders, offers, price drops', 'tomato'],
-    ['privacy', LockClosedIcon, 'Account privacy', 'Data and permissions', 'brown'],
-  ]],
+const ACCT_TILES = [
+  ['addr', HomeIcon, 'Address', 'Book'],
+  ['credit', IdCardIcon, 'Credit', 'Ledger'],
+  ['orders', FileTextIcon, 'My', 'Invoices'],
+  ['lists', BookmarkIcon, 'Project', 'Lists'],
+]
+
+const ACCT_FLAT = [
+  ['dash', BarChartIcon, 'Performance dashboard'],
+  ['gst', FileTextIcon, 'GST details'],
+  ['calc', RulerSquareIcon, 'Calculators'],
+  ['site', SewingPinIcon, 'Submit site visit'],
+  ['display', EyeOpenIcon, 'Display centre visit'],
+  ['support', ChatBubbleIcon, 'Support'],
+  ['notif', BellIcon, 'Notification preferences'],
+  ['privacy', LockClosedIcon, 'Account privacy'],
 ]
 
 const ACCT_TITLES = {
@@ -3163,59 +3201,63 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub })
   }
   return (
     <div className="acctpage">
-      <div className="acct-hero">
-        <Flex align="center" gap="3">
-          <button className="sheet-back hero-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
-          <Text size="3" weight="bold" style={{ color: '#fff', letterSpacing: '-0.2px' }}>Account</Text>
+      <div className="acct-head2">
+        <Flex align="center" justify="between">
+          <button className="sheet-back" onClick={onClose} aria-label="Back" style={{ background: 'rgba(255,255,255,.7)' }}>
+            <ArrowLeftIcon />
+          </button>
+          <button className="help-pill" onClick={() => setSub('support')}>Help</button>
         </Flex>
-        <Flex align="center" gap="3" mt="4">
-          <div className="prof-av">VB</div>
-          <Box flexGrow="1" style={{ minWidth: 0 }}>
-            <Heading size="5" style={{ color: '#fff', letterSpacing: '-0.3px' }}>Virag Bora</Heading>
-            <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.75)' }}>Bora Hardware & Plywood · HSR Layout</Text>
-            <Flex align="center" gap="2" mt="1">
-              <span className="tier-mini" style={{ background: '#C9CED6' }} />
-              <Text size="1" weight="bold" style={{ color: '#fff' }}>Silver dealer</Text>
-              <Text size="1" style={{ color: 'rgba(255,255,255,.65)' }}>· since Mar 2023</Text>
-            </Flex>
-          </Box>
-        </Flex>
-        <div className="acct-stats">
-          <div>
-            <Text size="3" weight="bold" as="div" style={{ color: '#fff' }}>15</Text>
-            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,.75)' }}>orders / mo</Text>
-          </div>
-          <div>
-            <Text size="3" weight="bold" as="div" style={{ color: '#fff' }}>₹14.3k</Text>
-            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,.75)' }}>saved this FY</Text>
-          </div>
-          <div>
-            <Text size="3" weight="bold" as="div" style={{ color: '#fff' }}>62%</Text>
-            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,.75)' }}>monthly target</Text>
-          </div>
-        </div>
+        <Heading mt="4" style={{ fontSize: 27, letterSpacing: '-0.8px' }}>Virag Bora</Heading>
+        <Text size="2" color="gray" as="div" mt="1">+91 98860 12345 · Bora Hardware & Plywood</Text>
+        <Text size="2" color="gray" as="div">virag@borahardware.in</Text>
       </div>
       <div className="cp-body">
-        {ACCT_GROUPS.map(([g, items]) => (
-          <div className="cp-card" key={g} style={{ padding: '10px 6px' }}>
-            <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-9)', letterSpacing: '.5px', fontSize: 10, padding: '4px 12px 6px' }}>{g}</Text>
-            {items.map(([key, Icon, t, s, c]) => (
-              <button key={key} className="mrow" onClick={() => setSub(key)}>
-                <span className="mrow-ic" style={{ background: `var(--${c}-3)`, color: `var(--${c}-11)` }}>
-                  <Icon width={16} height={16} />
-                </span>
-                <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                  <Text size="2" weight="bold" as="div">{t}</Text>
-                  <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>{s}</Text>
-                </span>
-                <ChevronRightIcon width={15} height={15} color="var(--gray-8)" />
-              </button>
-            ))}
-          </div>
-        ))}
-        <div className="cp-card" style={{ padding: '6px' }}>
-          <button className="mrow" onClick={() => setLo('confirm')}>
-            <span className="mrow-ic" style={{ background: 'var(--red-3)', color: 'var(--red-11)' }}><ExitIcon width={15} height={15} /></span>
+        <div className="mem-card">
+          <Flex align="center" gap="2">
+            <span className="tier-mini" style={{ background: '#98A2B3', width: 15, height: 15 }} />
+            <Text size="4" weight="bold" style={{ letterSpacing: '-0.4px' }}>Silver Dealer</Text>
+            <span className="mem-join">Gold at ₹2L/mo</span>
+          </Flex>
+          <Text size="2" weight="bold" as="div" mt="2" style={{ lineHeight: 1.4 }}>
+            +2% margin & priority dispatch at Gold — ₹75,500 to go this month
+          </Text>
+          <div className="mem-bar"><div style={{ width: '62%' }} /></div>
+          <div className="mem-divider" />
+          <button className="mem-row" onClick={() => setSub('dash')}>
+            <BarChartIcon width={16} height={16} />
+            <span>View dealer journey</span>
+            <ChevronRightIcon width={15} height={15} color="var(--gray-8)" />
+          </button>
+          <button className="mem-row" onClick={() => setSub('schemes')}>
+            <StarFilledIcon width={15} height={15} />
+            <span>Schemes & discounts</span>
+            <ChevronRightIcon width={15} height={15} color="var(--gray-8)" />
+          </button>
+        </div>
+
+        <div className="qt-row">
+          {ACCT_TILES.map(([k, Icon, l1, l2]) => (
+            <button key={k} className="qt" onClick={() => setSub(k)}>
+              <Icon width={19} height={19} />
+              <Text weight="bold" as="div" mt="1" style={{ lineHeight: 1.3, fontSize: 11 }}>{l1}<br />{l2}</Text>
+            </button>
+          ))}
+        </div>
+
+        <div className="cp-card" style={{ padding: '2px 16px' }}>
+          {ACCT_FLAT.map(([key, Icon, t]) => (
+            <button key={key} className="flat-row" onClick={() => setSub(key)}>
+              <Icon width={17} height={17} />
+              <Text size="2" weight="medium" style={{ flex: 1, textAlign: 'left' }}>{t}</Text>
+              <ChevronRightIcon width={15} height={15} color="var(--gray-8)" />
+            </button>
+          ))}
+        </div>
+
+        <div className="cp-card" style={{ padding: '2px 16px' }}>
+          <button className="flat-row" onClick={() => setLo('confirm')}>
+            <ExitIcon width={16} height={16} color="var(--red-11)" />
             <Text size="2" weight="bold" style={{ flex: 1, textAlign: 'left', color: 'var(--red-11)' }}>Log out</Text>
           </button>
         </div>
@@ -4274,7 +4316,7 @@ function ProductPage({ p, onClose, onChange, cart }) {
           {sizes.length > 1 && (
             <Box mt="3">
               <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', fontSize: 10.5, letterSpacing: '.5px' }}>
-                SIZE
+                AVAILABLE LENGTHS · THIS RANGE
               </Text>
               <Flex gap="2" mt="1">
                 {sizes.map(([sz, prod]) => (
