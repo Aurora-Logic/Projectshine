@@ -3376,3 +3376,139 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 .insight.cool { background: var(--blue-1); border-color: var(--blue-4); }
 .kpi, .bdg { transition: transform .16s cubic-bezier(.22, 1, .36, 1); }
 .kpi:active, .bdg:active { transform: scale(.96); }
+
+/* ---------- Credit ledger ---------- */
+.cr-hero {
+  background: linear-gradient(160deg, #3E63DD 0%, #2A47B8 60%, #1C3193 100%);
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.cr-bar {
+  height: 7px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, .2);
+  margin-top: 12px;
+  overflow: hidden;
+}
+.cr-bar > div {
+  height: 100%;
+  border-radius: 99px;
+  background: #FFD43B;
+  transition: width .7s cubic-bezier(.22, 1, .36, 1);
+}
+.cr-chip {
+  background: rgba(255, 255, 255, .15);
+  border: 1px solid rgba(255, 255, 255, .22);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  border-radius: 99px;
+  padding: 4px 10px;
+}
+.cr-chip.bad { background: rgba(229, 72, 77, .85); border-color: transparent; }
+.bill-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--gray-3);
+}
+.bill-row:last-of-type { border-bottom: none; }
+.st-chip.bad { background: var(--red-3); color: var(--red-11); }
+
+/* ---------- Project lists ---------- */
+.pl-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--gray-11);
+  cursor: pointer;
+  padding: 2px 2px 10px;
+}
+.pl-del {
+  display: block;
+  width: 100%;
+  border: none;
+  background: var(--red-3);
+  color: var(--red-11);
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 12.5px;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+/* ---------- PDP size variants ---------- */
+.size-chip {
+  border: 1.5px solid var(--gray-5);
+  background: #fff;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 12.5px;
+  border-radius: 10px;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, transform .15s;
+}
+.size-chip.on { border-color: var(--green-9); background: var(--green-2); color: var(--green-11); }
+.size-chip:active { transform: scale(.95); }
+
+/* ---------- Dealer login gate ---------- */
+.login {
+  position: fixed;
+  inset: 0;
+  margin: 0 auto;
+  max-width: 480px;
+  z-index: 200;
+  background:
+    radial-gradient(130% 100% at 100% 0%, rgba(255, 255, 255, .1) 0%, transparent 45%),
+    linear-gradient(168deg, var(--green-9) 0%, #14633F 55%, #0E4A2F 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.login-top { padding: 64px 26px 0; }
+.login-brands {
+  display: flex;
+  gap: 8px;
+  margin-top: 22px;
+  flex-wrap: wrap;
+}
+.login-brands span {
+  background: #fff;
+  border-radius: 10px;
+  padding: 5px 9px;
+  display: flex;
+  align-items: center;
+}
+.login-brands img { height: 16px; display: block; }
+.login-card {
+  background: #fff;
+  border-radius: 22px;
+  margin: 24px;
+  padding: 22px 20px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .25);
+}
+.login-prefix {
+  background: var(--gray-3);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 800;
+  font-size: 14px;
+  flex: none;
+}
+.login-otp {
+  font-size: 24px;
+  letter-spacing: 14px;
+  text-align: center;
+  font-weight: 800;
+  margin-top: 12px;
+}

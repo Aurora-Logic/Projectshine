@@ -381,3 +381,13 @@ export const DASH = {
   brands: [['Ebco', 58], ['Worksmart', 16], ['Livsmart', 11], ['Zipco', 9], ['Peka', 6]],
   kpis: { month: 124500, growth: 18, aov: 8300, saved: 14320, orders: 15 },
 }
+
+/* 30-day dealer credit line */
+export const CREDIT = {
+  limit: 500000,
+  bills: [
+    { id: 'QC-446102', amt: 41250, days: -3 },
+    { id: 'QC-458819', amt: 32312, days: 6 },
+    { id: 'QC-471203', amt: 24930, days: 16 },
+  ],
+}
