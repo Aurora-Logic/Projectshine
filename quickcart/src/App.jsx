@@ -2094,6 +2094,7 @@ function AcctDash() {
   const big = useCountUp(k.month, true, 1100)
   const last6 = DASH.months.slice(-6)
   const mx = Math.max(...last6.map(d => d[1]))
+  const mn = Math.min(...last6.map(d => d[1]))
   const best = DASH.months.reduce((a, b) => (b[1] > a[1] ? b : a))
   const pctile = Math.round(((MY_RANK.of - MY_RANK.rank) / MY_RANK.of) * 100)
   const badges = [
@@ -2120,7 +2121,7 @@ function AcctDash() {
         <div className="dash-spark">
           {last6.map(([m, v]) => (
             <div key={m} className="ds-col">
-              <span style={{ height: ready ? `${(v / mx) * 100}%` : '0%' }} />
+              <span style={{ height: ready ? `${28 + 72 * ((v - mn) / (mx - mn || 1))}%` : '0%' }} />
               <em>{m}</em>
             </div>
           ))}
@@ -2162,7 +2163,7 @@ function AcctDash() {
         </div>
       </div>
 
-      <div className="insight">
+      <div className="insight warm">
         <span className="bdg-ic" style={{ background: 'var(--amber-3)', color: 'var(--amber-11)', flex: 'none' }}>
           <RocketIcon width={14} height={14} />
         </span>
@@ -2171,7 +2172,7 @@ function AcctDash() {
           One Quadro order does it.
         </Text>
       </div>
-      <div className="insight">
+      <div className="insight cool">
         <span className="bdg-ic" style={{ background: 'var(--blue-3)', color: 'var(--blue-11)', flex: 'none' }}>
           <BarChartIcon width={14} height={14} />
         </span>
@@ -2358,6 +2359,13 @@ function AcctOrders({ lastOrder, onChange }) {
 function AcctSchemes() {
   return (
     <>
+      <div className="sub-hero violet">
+        <Text size="1" weight="bold" as="div" style={{ color: 'rgba(255,255,255,.78)', fontSize: 10, letterSpacing: '.6px' }}>
+          SAVED THIS FY
+        </Text>
+        <Text weight="bold" as="div" style={{ fontSize: 27, color: '#fff', letterSpacing: '-0.6px' }}>₹14,320</Text>
+        <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.8)' }}>through volume schemes and bulk prices</Text>
+      </div>
       <div className="cp-card cp-scheme">
         <Text size="1" weight="bold" as="div" style={{ color: 'var(--violet-11)', letterSpacing: '.5px', fontSize: 10.5 }}>PER-ORDER VOLUME SCHEME</Text>
         {SCHEMES.map(s => (
@@ -2522,8 +2530,24 @@ function VisitForm({ kind }) {
   const [city, setCity] = useState('')
   const [notes, setNotes] = useState('')
   const opts = kind === 'site' ? ['New site', 'Renovation', 'Project bid'] : ['Today', 'Tomorrow', 'Saturday']
+  const hero = kind === 'display' ? (
+    <div className="sub-photo">
+      <Img src={img(BRAND_DAY.ph, 700)} alt="" />
+      <div className="sub-photo-cap">
+        <Text size="2" weight="bold" as="div" style={{ color: '#fff' }}>Ebco Display Centre</Text>
+        <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.85)' }}>Indiranagar · the full range, live</Text>
+      </div>
+    </div>
+  ) : (
+    <div className="sub-hero orange">
+      <SewingPinIcon width={15} height={15} color="#fff" style={{ flex: 'none' }} />
+      <Text size="1" weight="bold" style={{ color: '#fff' }}>Our team comes with samples, catalogues and a measuring kit</Text>
+    </div>
+  )
   if (done) {
     return (
+      <>
+      {hero}
       <div className="cp-card">
         <Flex align="center" gap="2">
           <span className="st-chip ok"><CheckIcon width={10} height={10} /> Requested</span>
@@ -2536,9 +2560,12 @@ function VisitForm({ kind }) {
           {kind === 'site' ? 'Submit another' : 'Change slot'}
         </Button>
       </div>
+      </>
     )
   }
   return (
+    <>
+    {hero}
     <div className="cp-card">
       {kind === 'display' && (
         <>
@@ -2575,6 +2602,7 @@ function VisitForm({ kind }) {
         {kind === 'site' ? 'Request site visit' : 'Book display centre slot'}
       </Button>
     </div>
+    </>
   )
 }
 
@@ -2591,6 +2619,11 @@ function AcctSupport() {
   ]
   return (
     <>
+      <div className="sub-hero green-line">
+        <span className="oc-pulse" style={{ background: '#FFD43B' }} />
+        <Text size="2" weight="bold" style={{ color: '#fff' }}>We're online</Text>
+        <Text size="1" style={{ color: 'rgba(255,255,255,.8)', marginLeft: 'auto' }}>avg reply ~10 min</Text>
+      </div>
       <div className="cp-card">
         {rows.map(([Icon, t, s, href]) => (
           <a key={t} className="sup-row" href={href} target="_blank" rel="noreferrer">
@@ -2625,8 +2658,14 @@ function AcctNotif() {
     ['price', 'Price drops', 'On items you buy often'],
     ['wa', 'WhatsApp updates', 'Mirror everything on WhatsApp'],
   ]
+  const on = Object.values(prefs).filter(Boolean).length
   return (
-    <div className="cp-card">
+    <>
+      <div className="sub-hero green-line">
+        <BellIcon width={15} height={15} color="#fff" style={{ flex: 'none' }} />
+        <Text size="2" weight="bold" style={{ color: '#fff' }}>{on} of {defs.length} channels on</Text>
+      </div>
+      <div className="cp-card">
       {defs.map(([k, t, s]) => (
         <Flex key={k} align="center" gap="3" className="pref-row">
           <Box flexGrow="1" style={{ minWidth: 0 }}>
@@ -2636,7 +2675,8 @@ function AcctNotif() {
           <Toggle on={!!prefs[k]} onToggle={() => setPrefs({ ...prefs, [k]: !prefs[k] })} />
         </Flex>
       ))}
-    </div>
+      </div>
+    </>
   )
 }
 
@@ -2736,7 +2776,7 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef }) {
       <div className="acct-hero">
         <Flex align="center" gap="3">
           <button className="sheet-back hero-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
-          <Text size="2" weight="bold" style={{ color: '#fff' }}>Account</Text>
+          <Text size="3" weight="bold" style={{ color: '#fff', letterSpacing: '-0.2px' }}>Account</Text>
         </Flex>
         <Flex align="center" gap="3" mt="4">
           <div className="prof-av">VB</div>
@@ -2796,7 +2836,7 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef }) {
         <div className="acct-sub">
           <div className="pdp-head">
             <button className="sheet-back" onClick={backSub} aria-label="Back"><ArrowLeftIcon /></button>
-            <Text size="2" weight="bold" style={{ flex: 1 }}>{ACCT_TITLES[sub]}</Text>
+            <Heading size="4" style={{ flex: 1, letterSpacing: '-0.3px' }}>{ACCT_TITLES[sub]}</Heading>
           </div>
           <div className="cp-body">{renderSub()}</div>
         </div>
@@ -2954,22 +2994,11 @@ function RoRow({ m, added, onAdd, onStep, onCustom }) {
         <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{p.name}</Text>
         <Flex align="center" gap="2" mt="1">
           <Text size="1" weight="bold">₹{p.price.toLocaleString('en-IN')}</Text>
-          {p.mrp && (
-            <Text style={{ fontSize: 10, textDecoration: 'line-through', color: 'var(--gray-9)' }}>
-              ₹{p.mrp.toLocaleString('en-IN')}
-            </Text>
-          )}
           {off > 0 && <span className="off-pill" style={{ fontSize: 9, padding: '1px 5px' }}>{off}% OFF</span>}
         </Flex>
-        {p.bulk && (
-          <Text as="div" weight="bold" style={{ fontSize: 9.5, color: 'var(--blue-11)' }}>Bulk: {p.bulk}</Text>
-        )}
-        {p.stock != null && (
-          <Text as="div" weight="bold" style={{
-            fontSize: 9.5,
-            color: oos ? 'var(--red-10)' : p.stock <= 10 ? 'var(--amber-11)' : 'var(--green-10)',
-          }}>
-            {oos ? `Out of stock · ships in ${p.lead} days` : p.stock <= 10 ? `Only ${p.stock} left` : `In stock · ${p.stock}+ pcs`}
+        {(oos || (p.stock != null && p.stock <= 10)) && (
+          <Text as="div" weight="bold" style={{ fontSize: 9.5, color: oos ? 'var(--red-10)' : 'var(--amber-11)' }}>
+            {oos ? `Out of stock · ships in ${p.lead} days` : `Only ${p.stock} left`}
           </Text>
         )}
         <Flex gap="1" mt="1" wrap="wrap">
@@ -3131,7 +3160,7 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
       <div className="pdp-head">
         <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
         <Box style={{ flex: 1, minWidth: 0 }}>
-          <Text size="2" weight="bold" as="div">Reorder</Text>
+          <Heading size="4" style={{ letterSpacing: '-0.3px' }}>Reorder</Heading>
           <Text size="1" color="gray" as="div">One tap adds your usual quantity</Text>
         </Box>
         <CounterClockwiseClockIcon width={18} height={18} color="var(--gray-9)" />
@@ -3410,7 +3439,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
     <div className="cartpage">
       <div className="pdp-head">
         <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
-        <Text size="2" weight="bold" style={{ flex: 1 }}>Your cart</Text>
+        <Heading size="4" style={{ flex: 1, letterSpacing: '-0.3px' }}>Your cart</Heading>
         <Text size="1" weight="bold" color="gray">{cart.count} item{cart.count === 1 ? '' : 's'}</Text>
       </div>
       <div className="cp-body">
@@ -3794,7 +3823,7 @@ function ProductPage({ p, onClose, onChange, cart }) {
     <div ref={rootRef} className={`pdp ${enter === 1 ? 'pdp-in-r' : enter === -1 ? 'pdp-in-l' : ''}`}>
       <div className="pdp-head">
         <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
-        <Text size="2" weight="bold" style={{ flex: 1, minWidth: 0 }} truncate>Product details</Text>
+        <Text size="3" weight="bold" style={{ flex: 1, minWidth: 0, letterSpacing: '-0.2px' }} truncate>Product details</Text>
         {BRAND_LOGOS[p.brand] && <img src={BRAND_LOGOS[p.brand]} alt={p.brand} style={{ height: 16, flex: 'none' }} />}
       </div>
       <div ref={bodyRef} className="pdp-body" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={onTouchCancel}>
@@ -3835,7 +3864,9 @@ function ProductPage({ p, onClose, onChange, cart }) {
             <Text weight="bold" style={{ fontSize: 24, letterSpacing: '-0.4px' }}>₹{p.price.toLocaleString('en-IN')}</Text>
             {p.mrp && <Text size="2" color="gray" style={{ textDecoration: 'line-through' }}>₹{p.mrp.toLocaleString('en-IN')}</Text>}
             {off > 0 && <span className="off-pill">{off}% OFF</span>}
+            {off === 0 && !tier && <span className="st-chip ok">DEALER PRICE</span>}
           </Flex>
+          <Text size="1" color="gray" as="div" mt="1">GST included · input credit itemised on your invoice</Text>
           {tier && (
             <div className="bulk-box">
               <div className="bulk-row">
