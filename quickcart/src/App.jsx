@@ -5014,12 +5014,11 @@ export default function App() {
   const [simSkin, setSimSkin] = useState(null)
   const simEnabled = window.location.hash === '#sim'
   const heroVariant = window.location.hash === '#hero-classic' ? 'classic' : 'fest'
-  // fest grid layout rotates per open — compact variants only:
-  // a classic · b mirrored · e 4-stack left + tall promo right
+  // fest grid layout rotates per open: a classic · b mirrored
   const [festL] = useState(() => {
     const m = window.location.hash.match(/^#fest-([a-e])$/)
     if (m) return m[1]
-    const L = ['a', 'b', 'e']
+    const L = ['a', 'b']
     const i = (Number(localStorage.getItem('qc-fest-idx') || -1) + 1) % L.length
     localStorage.setItem('qc-fest-idx', String(i))
     return L[i]
