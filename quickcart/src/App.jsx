@@ -4441,18 +4441,18 @@ async function generateEstimate({ cust, items, bill }) {
     .then(b => 'data:image/jpeg;base64,' + b).catch(() => null)
   const [{ jsPDF }, { default: autoTable }, fontN, fontB, mark, thumbs, ...brands] = await Promise.all([
     import('jspdf'), import('jspdf-autotable'),
-    fetchB64('/fonts/DejaVuSans.ttf'), fetchB64('/fonts/DejaVuSans-Bold.ttf'),
+    fetchB64('/fonts/PJS-Regular.ttf'), fetchB64('/fonts/PJS-Bold.ttf'),
     imgData('/icon-192.png'),
     Promise.all(items.map(({ p }) => thumb(p.ph))),
     ...Object.values(BRAND_LOGOS).map(imgData),
   ])
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true })
-  doc.addFileToVFS('DejaVuSans.ttf', fontN)
-  doc.addFont('DejaVuSans.ttf', 'DejaVu', 'normal')
-  doc.addFileToVFS('DejaVuSans-Bold.ttf', fontB)
-  doc.addFont('DejaVuSans-Bold.ttf', 'DejaVu', 'bold')
+  doc.addFileToVFS('PJS-Regular.ttf', fontN)
+  doc.addFont('PJS-Regular.ttf', 'PJS', 'normal')
+  doc.addFileToVFS('PJS-Bold.ttf', fontB)
+  doc.addFont('PJS-Bold.ttf', 'PJS', 'bold')
 
-  const W = 210, H = 297, M = 18
+  const W = 210, H = 297, M = 16
   const GREEN = [20, 99, 63], INK = [26, 28, 31], GRAY = [105, 110, 116]
   const PAPER = [242, 242, 240], HAIR = [203, 203, 198]
   const inr = (n) => '₹' + n.toLocaleString('en-IN')
@@ -4462,44 +4462,44 @@ async function generateEstimate({ cust, items, bill }) {
   const paper = () => doc.setFillColor(...PAPER).rect(0, 0, W, H, 'F')
   paper()
 
-  // ---- masthead: wordmark left, monogram right (Swiss editorial)
-  doc.setFont('DejaVu', 'bold').setFontSize(27).setTextColor(...GREEN).text('QuickCart', M, 33)
-  doc.addImage(mark.data, 'PNG', W - M - 11, 22, 11, 11)
+  // ---- masthead: wordmark left, monogram right (tight)
+  doc.setFont('PJS', 'bold').setFontSize(25).setTextColor(...GREEN).text('QuickCart', M, 23)
+  doc.addImage(mark.data, 'PNG', W - M - 13, 12, 13, 13)
 
   // ---- information columns
-  doc.setFont('DejaVu', 'normal').setFontSize(9.5).setTextColor(...INK)
-  doc.text('Customer Information', M, 72).text('Dealer Information', 112, 72)
-  doc.setFontSize(9).setTextColor(...GRAY)
+  doc.setFont('PJS', 'bold').setFontSize(9).setTextColor(...INK)
+  doc.text('Customer Information', M, 36).text('Dealer Information', 112, 36)
+  doc.setFont('PJS', 'normal').setFontSize(8.5).setTextColor(...GRAY)
   const custLines = [cust.name, cust.phone, ...(cust.site ? doc.splitTextToSize(cust.site, 80) : [])].filter(Boolean)
-  doc.text(custLines, M, 79)
-  doc.text(['Virag Bora — QuickCart dealer', '304 Maple Heights, HSR Layout', 'Bengaluru 560102', '+91 98450 00000'], 112, 79)
+  doc.text(custLines, M, 42)
+  doc.text(['Virag Bora — QuickCart dealer', '304 Maple Heights, HSR Layout', 'Bengaluru 560102 · +91 98450 00000'], 112, 42)
 
-  // ---- title row between hairlines: Estimate · number · date
-  const tTop = 79 + Math.max(custLines.length, 4) * 4.6 + 9
+  // ---- title row between hairlines: Estimate big, number/date body-size
+  const tTop = 42 + Math.max(custLines.length, 3) * 4.3 + 5
   doc.setDrawColor(...HAIR).setLineWidth(0.3).line(M, tTop, W - M, tTop)
-  doc.setFont('DejaVu', 'normal').setFontSize(21).setTextColor(...INK)
-  doc.text('Estimate', M, tTop + 13)
-  doc.text(no, W / 2, tTop + 13, { align: 'center' })
-  doc.text(today, W - M, tTop + 13, { align: 'right' })
-  doc.line(M, tTop + 20, W - M, tTop + 20)
+  doc.setFont('PJS', 'bold').setFontSize(17).setTextColor(...INK).text('Estimate', M, tTop + 9.5)
+  doc.setFont('PJS', 'normal').setFontSize(10).setTextColor(...GRAY)
+  doc.text(no, W / 2, tTop + 9.5, { align: 'center' })
+  doc.text(today, W - M, tTop + 9.5, { align: 'right' })
+  doc.line(M, tTop + 14, W - M, tTop + 14)
 
   // ---- items table: hairline rows, product thumbnails
   autoTable(doc, {
-    startY: tTop + 30,
-    margin: { left: M, right: M, bottom: 42 },
+    startY: tTop + 19,
+    margin: { left: M, right: M, bottom: 34 },
     head: [['Qty', '', 'Item no', 'Description', 'Unit price', 'Amount']],
     body: items.map(({ p, n }) => [n, '', p.id.toUpperCase(), `${p.name}\n${p.qty || ''}`, inr(p.price), inr(p.price * n)]),
     theme: 'plain',
-    styles: { font: 'DejaVu', fontSize: 9, textColor: INK, cellPadding: { top: 3.2, bottom: 3.2, left: 0, right: 2 }, valign: 'middle' },
-    headStyles: { fontSize: 9, textColor: INK, lineWidth: { bottom: 0.35 }, lineColor: INK },
+    styles: { font: 'PJS', fontSize: 8.5, textColor: INK, cellPadding: { top: 2.2, bottom: 2.2, left: 0, right: 2 }, valign: 'middle' },
+    headStyles: { font: 'PJS', fontStyle: 'bold', fontSize: 8.5, textColor: INK, lineWidth: { bottom: 0.35 }, lineColor: INK },
     bodyStyles: { lineWidth: { bottom: 0.18 }, lineColor: HAIR },
     columnStyles: {
-      0: { cellWidth: 13 },
-      1: { cellWidth: 15, minCellHeight: 15 },
-      2: { cellWidth: 22, textColor: GRAY },
+      0: { cellWidth: 11 },
+      1: { cellWidth: 13, minCellHeight: 12.5 },
+      2: { cellWidth: 20, textColor: GRAY },
       3: { cellWidth: 'auto' },
-      4: { cellWidth: 26, halign: 'right', textColor: GRAY },
-      5: { cellWidth: 28, halign: 'right' },
+      4: { cellWidth: 25, halign: 'right', textColor: GRAY },
+      5: { cellWidth: 27, halign: 'right' },
     },
     willDrawPage: (data) => { if (data.pageNumber > 1) paper() },
     didParseCell: (data) => {
@@ -4508,62 +4508,62 @@ async function generateEstimate({ cust, items, bill }) {
     didDrawCell: (data) => {
       if (data.section !== 'body' || data.column.index !== 1) return
       const t = thumbs[data.row.index]
-      const s = 10, ix = data.cell.x, iy = data.cell.y + (data.cell.height - s) / 2
+      const s = 9, ix = data.cell.x, iy = data.cell.y + (data.cell.height - s) / 2
       if (t) doc.addImage(t, 'JPEG', ix, iy, s, s)
       else doc.setFillColor(225, 225, 221).rect(ix, iy, s, s, 'F')
     },
   })
 
   // ---- totals: hairline-separated right block (same numbers as the cart bill)
-  let y = doc.lastAutoTable.finalY + 14
+  let y = doc.lastAutoTable.finalY + 8
   const rows = [
     ['Item total', inr(bill.itemTotal)],
     bill.bulkSave > 0 && ['Bulk price savings', '−' + inr(bill.bulkSave)],
     bill.schemeOff > 0 && [`Volume scheme (${bill.slabPct}%)`, '−' + inr(bill.schemeOff)],
     ['Delivery' + (bill.express ? ' (express · 1 hr)' : ''), bill.fee === 0 ? 'FREE' : inr(bill.fee)],
   ].filter(Boolean)
-  const blockH = (rows.length + 1) * 9 + 16
-  if (y + blockH > H - 46) { doc.addPage(); paper(); y = 40 }
+  const blockH = (rows.length + 1) * 7.5 + 14
+  if (y + blockH > H - 42) { doc.addPage(); paper(); y = 30 }
   const tx = 118
   for (const [label, val] of rows) {
-    doc.setFont('DejaVu', 'normal').setFontSize(9).setTextColor(...GRAY)
+    doc.setFont('PJS', 'normal').setFontSize(8.5).setTextColor(...GRAY)
     doc.text(label, tx, y)
     doc.setTextColor(...INK).text(val, W - M, y, { align: 'right' })
-    doc.setDrawColor(...HAIR).setLineWidth(0.18).line(tx, y + 3, W - M, y + 3)
-    y += 9
+    doc.setDrawColor(...HAIR).setLineWidth(0.18).line(tx, y + 2.6, W - M, y + 2.6)
+    y += 7.5
   }
-  doc.setFont('DejaVu', 'bold').setFontSize(10).setTextColor(...INK)
+  doc.setFont('PJS', 'bold').setFontSize(10).setTextColor(...INK)
   doc.text('Total', tx, y)
   doc.text(inr(bill.toPay), W - M, y, { align: 'right' })
-  doc.setDrawColor(...INK).setLineWidth(0.35).line(tx, y + 3.5, W - M, y + 3.5)
-  doc.setFont('DejaVu', 'normal').setFontSize(8.5).setTextColor(...INK)
-    .text(doc.splitTextToSize('Please confirm this estimate within 7 days — GST as applicable.', W - M - tx), tx, y + 12)
+  doc.setDrawColor(...INK).setLineWidth(0.35).line(tx, y + 3, W - M, y + 3)
+  doc.setFont('PJS', 'normal').setFontSize(8).setTextColor(...INK)
+    .text(doc.splitTextToSize('Please confirm this estimate within 7 days — GST as applicable.', W - M - tx), tx, y + 9.5)
 
   // ---- last page: brand logos row above the footer
-  const ly = 256
-  doc.setFont('DejaVu', 'normal').setFontSize(6.5).setTextColor(...GRAY).setCharSpace(0.5)
+  const ly = 252
+  doc.setFont('PJS', 'bold').setFontSize(6.5).setTextColor(...GRAY).setCharSpace(0.5)
   doc.text('AUTHORIZED DEALER FOR', M, ly)
   doc.setCharSpace(0)
-  const lh = 5.5
+  const lh = 7
   let bx = M
   for (const b of brands) {
     const dw = (b.w / b.h) * lh
-    doc.addImage(b.data, 'PNG', bx, ly + 3, dw, lh)
-    bx += dw + 8
+    doc.addImage(b.data, 'PNG', bx, ly + 2.5, dw, lh)
+    bx += dw + 9
   }
 
   // ---- footer on every page: hairline + green contact columns + side text
   const pages = doc.getNumberOfPages()
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i)
-    doc.setDrawColor(...GREEN).setLineWidth(0.4).line(M, H - 23, W - M, H - 23)
-    doc.setFont('DejaVu', 'normal').setFontSize(7.5).setTextColor(...GREEN)
-    doc.text(['estimates@quickcart.in', 'quickcart-nine-iota.vercel.app'], M, H - 17.5)
-    doc.text(['304 Maple Heights, HSR Layout', 'Bengaluru 560102'], 72, H - 17.5)
-    doc.text(['Trade prices · GST billing', '90-min site delivery'], 128, H - 17.5)
-    doc.text(['GSTIN', '29AAACQ1234L1ZQ'], 174, H - 17.5)
+    doc.setDrawColor(...GREEN).setLineWidth(0.4).line(M, H - 21, W - M, H - 21)
+    doc.setFont('PJS', 'normal').setFontSize(7.5).setTextColor(...GREEN)
+    doc.text(['estimates@quickcart.in', 'quickcart-nine-iota.vercel.app'], M, H - 15.5)
+    doc.text(['304 Maple Heights, HSR Layout', 'Bengaluru 560102'], 72, H - 15.5)
+    doc.text(['Trade prices · GST billing', '90-min site delivery'], 128, H - 15.5)
+    doc.text(['GSTIN', '29AAACQ1234L1ZQ'], 176, H - 15.5)
     doc.setFontSize(6.5)
-      .text('QuickCart · Furniture Hardware · Registered dealer — Bengaluru', 9, H - 12, { angle: 90 })
+      .text('QuickCart · Furniture Hardware · Registered dealer — Bengaluru', 8, H - 10, { angle: 90 })
   }
 
   doc.save(`${no} ${cust.name.trim()} estimate.pdf`)
@@ -4650,13 +4650,9 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
         <Heading size="4" style={{ flex: 1, letterSpacing: '-0.3px' }}>Your cart</Heading>
         <Text size="1" weight="bold" color="gray">{cart.count} item{cart.count === 1 ? '' : 's'}</Text>
         {items.length > 0 && (
-          <Button
-            size="1" variant="soft" color="green" radius="full"
-            style={{ fontWeight: 800, flex: 'none', gap: 5 }}
-            onClick={() => setEstSheet(true)} aria-label="Download estimate PDF"
-          >
+          <button className="est-btn" onClick={() => setEstSheet(true)} aria-label="Download estimate PDF">
             <FileTextIcon width={13} height={13} /> Estimate
-          </Button>
+          </button>
         )}
       </div>
       <div className="cp-body">

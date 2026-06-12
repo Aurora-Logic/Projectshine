@@ -4670,3 +4670,27 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 
 /* qty chips beyond available stock are visibly unavailable */
 .qs-chip:disabled { opacity: .4; cursor: default; }
+
+/* ---------- Estimate button (cart header) — 3D push-button ---------- */
+.est-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  background: linear-gradient(180deg, var(--green-9), var(--green-11));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  box-shadow: 0 3px 0 #0E4A2F, 0 6px 14px rgba(20, 99, 63, .35);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.est-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #0E4A2F, 0 3px 8px rgba(20, 99, 63, .3);
+}
