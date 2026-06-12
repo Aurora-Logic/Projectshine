@@ -14,7 +14,7 @@ import {
 } from '@radix-ui/react-icons'
 import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
-  FEED_POOL, CATEGORIES, BANNERS, COMBOS, QUIZ, KITS, PROS,
+  FEED_POOL, CATEGORIES, BANNERS, COMBOS, QUIZ, KITS, PROS, INSPO, INSPO_ROOMS,
   SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
   BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES, REORDER, PAST_ORDERS, DASH, CREDIT, CAT_SCHEMES,
 } from './data.js'
@@ -1375,6 +1375,149 @@ function ComboDeals({ onChange }) {
         {COMBOS.map(c => <ComboCard key={c.id} c={c} onChange={onChange} />)}
       </div>
     </Box>
+  )
+}
+
+/* ---------------- B10/B11 · Inspiration — shop the look ---------------- */
+
+function InspoStrip({ onOpen }) {
+  return (
+    <Box pt="5">
+      <SectionHead
+        title="Shop the look" extra={<span className="save-pill">UPDATED WEEKLY</span>}
+        onSeeAll={() => onOpen(null)}
+      />
+      <div className="hscroll">
+        {INSPO.slice(0, 4).map(lk => (
+          <div key={lk.id} className="insp-mini" {...btnish(() => onOpen(lk.id))}>
+            <Img src={img(lk.ph, 360)} alt="" />
+            {lk.fresh && <span className="insp-new">NEW</span>}
+            <span className="insp-mini-cap">
+              <b>{lk.title}</b>
+              <i>{lk.room} · {lk.products.length} products</i>
+            </span>
+          </div>
+        ))}
+        <div className="insp-mini more" {...btnish(() => onOpen(null))}>
+          <span>See all<br />looks</span>
+          <ChevronRightIcon width={16} height={16} />
+        </div>
+      </div>
+    </Box>
+  )
+}
+
+function InspoPage({ onClose, onChange, startLook, lookRef }) {
+  useSheetA11y(onClose)
+  const openQty = useContext(QtyCtx)
+  const items = useContext(CartItemsCtx)
+  const [room, setRoom] = useState('All')
+  const [look, setLook] = useState(() => INSPO.find(l => l.id === startLook) || null)
+  useEffect(() => { if (lookRef) lookRef.current = !!look }, [look, lookRef])
+  // detail gets its own history entry so back returns to the grid
+  useEffect(() => {
+    if (!look) return undefined
+    if (!window.history.state?.qcInspoLook) window.history.pushState({ qcInspoLook: true }, '')
+    const onPop = () => setLook(null)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [look])
+  const closeLook = () => {
+    if (window.history.state?.qcInspoLook) window.history.back()
+    else setLook(null)
+  }
+  const shown = room === 'All' ? INSPO : INSPO.filter(l => l.room === room)
+  const resolve = (ids) => ids.map(id => FEED_POOL.find(p => p.id === id)).filter(Boolean)
+  const [added, setAdded] = useState(false)
+  const addAll = (e) => {
+    resolve(look.products).forEach(p => onChange(1, p, { noReco: true }))
+    sparkle(e)
+    setAdded(true)
+  }
+  return (
+    <div className="inspopage" role="dialog" aria-modal="true" aria-label="Inspiration" tabIndex={-1}>
+      <div className="pdp-head">
+        <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Inspiration</Heading>
+          <Text size="1" color="gray" as="div">Real installs · every look is shoppable</Text>
+        </Box>
+      </div>
+      <div className="insp-chips">
+        {INSPO_ROOMS.map(r => (
+          <button key={r} className={`seg-b ${room === r ? 'on' : ''}`} onClick={() => setRoom(r)}>{r}</button>
+        ))}
+      </div>
+      <div className="cp-body" style={{ paddingTop: 4 }}>
+        <div className="insp-grid">
+          {shown.map((lk, i) => (
+            <div
+              key={lk.id} className="insp-card cardin" style={{ animationDelay: `${i * 40}ms` }}
+              {...btnish(() => setLook(lk))}
+            >
+              <div className="insp-ph" style={{ aspectRatio: ['3 / 4', '1 / 1', '4 / 5'][i % 3] }}>
+                <Img src={img(lk.ph, 480)} alt={lk.title} />
+                {lk.fresh && <span className="insp-new">NEW</span>}
+                <span className="insp-cap">
+                  <b>{lk.title}</b>
+                  <i>{lk.room} · {lk.products.length} products</i>
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {look && (
+        <div className="insp-detail">
+          <div className="insp-hero">
+            <Img src={img(look.ph, 800)} alt="" />
+            <button className="sheet-back insp-back" onClick={closeLook} aria-label="Back to looks">
+              <ArrowLeftIcon width={18} height={18} />
+            </button>
+            <span className="insp-room">{look.room}</span>
+          </div>
+          <div className="insp-body">
+            <Heading as="h2" size="4" style={{ letterSpacing: '-0.4px' }}>{look.title}</Heading>
+            <Text size="1" color="gray" as="div" mt="1">
+              Every fitting in this install, ready to order
+            </Text>
+            <div className="cp-card" style={{ marginTop: 14 }}>
+              <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                SHOP THIS LOOK · {look.products.length} ITEMS
+              </Text>
+              {resolve(look.products).map(p => {
+                const n = items[p.id]?.n || 0
+                return (
+                  <div className="cs-row" key={`il-${p.id}`}>
+                    <Img src={img(p.ph, 120)} alt="" />
+                    <Box flexGrow="1" style={{ minWidth: 0 }}>
+                      <Text size="1" weight="bold" as="div" className="clamp1">{p.name}</Text>
+                      <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>
+                        ₹{p.price.toLocaleString('en-IN')}{p.bulk ? ` · ${p.bulk}` : ''}
+                      </Text>
+                    </Box>
+                    <button className={`insp-add ${n > 0 ? 'in' : ''}`} onClick={() => (openQty ? openQty(p) : onChange(1, p))}>
+                      {n > 0 ? `${n} ✓` : 'ADD'}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          <div className="kit-bar">
+            <Box style={{ minWidth: 0 }}>
+              <Text size="1" color="gray" as="div">{look.products.length} fittings</Text>
+              <Text size="2" weight="bold" as="div">Start with 1 pc each</Text>
+            </Box>
+            <button className="qs-cta" style={{ margin: 0, flex: 1 }} onClick={added ? closeLook : addAll}>
+              <span>{added ? 'Added — keep browsing' : 'Add full look'}</span>
+              {!added && <PlusIcon width={15} height={15} />}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -6818,6 +6961,9 @@ export default function App() {
   }
   const [kitOpen, setKitOpen] = useState(window.location.hash === '#kit')
   const [prosOpen, setProsOpen] = useState(window.location.hash === '#pros')
+  const [inspoOpen, setInspoOpen] = useState(window.location.hash.startsWith('#inspo'))
+  const inspoStart = useRef((window.location.hash.match(/^#inspo-(\w+)/) || [])[1] || null)
+  const inspoLookRef = useRef(false)
   const [plp, setPlp] = useState(() => {
     if (window.location.hash.startsWith('#fsheet')) return 'Hinges'
     if (window.location.hash === '#strip') return 'All'
@@ -6833,7 +6979,7 @@ export default function App() {
   const openCategory = (label) => setPlp(label)
 
   // Any overlay up -> the page behind must not scroll
-  const overlayUp = !!(sheet || pdp || qsheet || cartOpen || reorderOpen || acctOpen || plp || kitOpen || prosOpen)
+  const overlayUp = !!(sheet || pdp || qsheet || cartOpen || reorderOpen || acctOpen || plp || kitOpen || prosOpen || inspoOpen)
   useEffect(() => {
     document.body.classList.toggle('no-scroll', overlayUp)
     return () => document.body.classList.remove('no-scroll')
@@ -6928,6 +7074,19 @@ export default function App() {
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [reorderOpen])
+  const closeInspo = () => {
+    if (window.history.state?.qcInspo) window.history.back()
+    else setInspoOpen(false)
+  }
+  useEffect(() => {
+    if (!inspoOpen) return
+    if (!window.history.state?.qcInspo) window.history.pushState({ qcInspo: true }, '')
+    const onPop = () => {
+      if (!pdpRef.current && !qtyRef.current && !cartRef.current && !inspoLookRef.current) setInspoOpen(false)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [inspoOpen])
   const closePros = () => {
     if (window.history.state?.qcPros) window.history.back()
     else setProsOpen(false)
@@ -7173,6 +7332,9 @@ export default function App() {
         {brand === 'ALL' && (
           <BrandDay onShop={() => setSheet({ items: FEED_POOL, query: BRAND_DAY.query, title: 'Product of the day' })} />
         )}
+        {brand === 'ALL' && (
+          <InspoStrip onOpen={(id) => { inspoStart.current = id; setInspoOpen(true) }} />
+        )}
 
         {homeMode === 'brand' && bf(NEW_EBCO).length > 0 && (
           <Shelf
@@ -7276,6 +7438,15 @@ export default function App() {
 
         <PageExit open={kitOpen}>
           {kitOpen && <KitPage onClose={closeKit} onChange={changeCart} onGoCart={() => setCartOpen(true)} />}
+        </PageExit>
+
+        <PageExit open={inspoOpen}>
+          {inspoOpen && (
+            <InspoPage
+              onClose={closeInspo} onChange={changeCart}
+              startLook={inspoStart.current} lookRef={inspoLookRef}
+            />
+          )}
         </PageExit>
 
         <PageExit open={prosOpen}>

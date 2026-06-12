@@ -21,7 +21,7 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 - [x] **A0.1 S** Restore `downloadInvoice` (deleted in `0275feb`, two live call sites throw `ReferenceError`; recover from `12b6f4f`, share scaffold with `downloadLedger`, render from the bill snapshot once A1.4 lands).
 - [x] **A0.2 S** Guard the cart popstate handler: `if (!qtyRef.current) setCartOpen(false)` — today, confirming a qty from the in-cart flash strip ejects the dealer from checkout.
 - [x] **A0.3 S** Kill the dead-tap band: `.footer { pointer-events: none }` + `auto` on `.cartbar.show`/`.navrow` (mirror `.plp-cartwrap`). An invisible ~66px strip eats taps whenever the cart is empty.
-- [ ] **A0.4 S–M** Utilities tab: currently a silent no-op. Resolution decided with the client brief → becomes **Find a Pro** (B8/B9). Interim if features ship later: aggregate Calculators + visit tools, or hide the tab.
+- [x] **A0.4 S–M** Utilities tab: currently a silent no-op. Resolution decided with the client brief → becomes **Find a Pro** (B8/B9). Interim if features ship later: aggregate Calculators + visit tools, or hide the tab.
 - [x] **A0.5 S** Error boundary in `main.jsx` (branded reload card; optional `qc-*` clear). White-page → recoverable.
 - [x] **A0.6 S** Remove/dev-gate the `window.onerror` title hook in `index.html` (visitors can currently see `ERR:…` as the tab title).
 - [x] **A0.7 M** Lint to green: delete dead code (`ClearanceStore`, `OrderDetailSheet`, `LeaderCol`+`LEADERS`, `TimerIcon`, dead props), fix genuine hooks errors, downgrade compiler-prep rules to `warn`. Keep it green after.
@@ -103,17 +103,17 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 
 | # | Feature | Status | Build |
 |---|---------|--------|-------|
-| B1 | Project suggestions (wardrobe/kitchen/…) | 🟡 | **Project Kit Builder**: pick room → curated checklist w/ suggested qtys (scales by cabinets/doors count) → save to Project List or add-all. Entry: home card + lists empty-state. |
+| B1 | Project suggestions (wardrobe/kitchen/…) | ✅ | **Project Kit Builder**: pick room → curated checklist w/ suggested qtys (scales by cabinets/doors count) → save to Project List or add-all. Entry: home card + lists empty-state. |
 | B2 | Hinge filters (door/carcass thickness) | ✅ | `doorThk/carcassThk` on hinge SKUs; FilterSheet shows mm-chip groups only in Hinges category. |
 | B3 | Door-closer selector (W×D×H + material) | ✅ | Calculator "Door closer" tab: W×H×T + material → est. kg → recommends rated closer (3 SKUs seeded: DC-60/85/120) with ADD. |
 | B4 | Branding/demo/carpenter/promo requests | ✅ | **Brand Support** (#brand): 4 type chips, qty-or-CalPicker form, tracked stages (Received → Approved → Dispatched/Scheduled), persisted `qc-mkt`. |
 | B5 | Repeat order, 1-click | ✅ | Live ×3: Reorder page (usual-qty, Add-all-due), Repeat on past orders, Reorder on delivered card. |
 | B6 | Claims (pending CN / return / wrong delivery) | ✅ | **Claims Centre** (#claims): order picker → type → affected items w/ steppers → photo attach + notes → tracked (Raised → Under review → CN issued / Pickup scheduled / Replacement dispatched), persisted `qc-claims`. Settlement = backend. |
 | B7 | Delivery image upload (POD) | ✅⚙️ | Dealer-side shipped: "Proof of Delivery" card on delivered order details (photos, OTP-verified chip, receiver, geo-tag line). Rider-app upload = backend. |
-| B8 | Find a carpenter | 🔴 | **Find a Pro** directory — becomes the Utilities tab (resolves A0.4). Cards: skills, area, jobs, rating, Call/WhatsApp. |
-| B9 | Find architect/designer | 🔴 | Second tab of B8. + "Refer a pro" mini-form (feeds B12-E referrals). |
-| B10 | Inspiration gallery | 🔴 | **Inspiration** grid (room filters) → detail view with "products used" → ADD / save-to-list. |
-| B11 | Design library (regularly updated) | 🔴⚙️ | Same surface as B10 with collections; content pipeline = admin CMS (backend). Viewer ships now. |
+| B8 | Find a carpenter | ✅ | **Find a Pro** directory — becomes the Utilities tab (resolves A0.4). Cards: skills, area, jobs, rating, Call/WhatsApp. |
+| B9 | Find architect/designer | ✅ | Second tab of B8. + "Refer a pro" mini-form (feeds B12-E referrals). |
+| B10 | Inspiration gallery | ✅ | **Inspiration** grid (room filters) → detail view with "products used" → ADD / save-to-list. |
+| B11 | Design library (regularly updated) | ✅⚙️ | Same surface as B10 with collections; content pipeline = admin CMS (backend). Viewer ships now. |
 | B12 | Secret weighted dealer scorecard | 🟡⚙️ | See below. App already shows tier/percentile; engine is backend-only. |
 
 ### B12 scorecard — secrecy handled correctly

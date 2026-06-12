@@ -75,6 +75,20 @@ export const DOOR_CLOSERS = [
   { id: 'dc3', mat: 'Steel', load: 120, size: 1250, stock: 35, brand: 'ebco', ph: '1558002038-1055907df827', name: 'Ebco Heavy Door Closer DC-120', qty: 'Doors ≤120 kg · ≤1250 mm', price: 2450, mrp: 2790 },
 ]
 
+/* B10/B11 · Inspiration gallery — real installs, shoppable.
+   Content pipeline (admin CMS) is backend; `fresh` marks this week's drops. */
+export const INSPO = [
+  { id: 'in1', ph: '1484154218962-a197022b5858', room: 'Kitchen', title: 'Sunlit modular kitchen in oak', products: ['ne1', 'ba2', 'ne5', 'ls2'], fresh: true },
+  { id: 'in3', ph: '1558997519-83ea9252edf8', room: 'Wardrobe', title: 'Floor-to-ceiling sliding wardrobe', products: ['ne3', 'ba1', 'dl3', 'ls1'], fresh: true },
+  { id: 'in5', ph: '1524758631624-e2822e304c36', room: 'Office', title: 'Executive cabin, clean cable runs', products: ['dl4', 'ws3', 'ws5'] },
+  { id: 'in2', ph: '1556911220-bff31c812dba', room: 'Kitchen', title: 'Compact galley, soft-close everything', products: ['ba2', 'ba1', 'zp4'] },
+  { id: 'in7', ph: '1565814329452-e1efa11c5b89', room: 'Living', title: 'Warm profile lighting, floating units', products: ['ls1', 'ls5', 'ls4'] },
+  { id: 'in6', ph: '1497366216548-37526070297c', room: 'Office', title: 'Open team floor, twelve stations', products: ['ws2', 'ws4', 'ba3'] },
+  { id: 'in4', ph: '1489171078254-c3365d6e359f', room: 'Living', title: 'Display wall with hidden storage', products: ['ba5', 'zp4', 'ba4'] },
+  { id: 'in8', ph: '1595428774223-ef52624120d2', room: 'Kitchen', title: 'Tandem drawers, zero handles', products: ['ne4', 'zp1', 'zp4'] },
+]
+export const INSPO_ROOMS = ['All', 'Kitchen', 'Wardrobe', 'Living', 'Office']
+
 /* B8/B9 · Find a Pro — dealer-verified installer & designer network */
 export const PROS = {
   carpenter: [

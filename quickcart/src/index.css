@@ -5197,3 +5197,203 @@ button.lg-link {
   color: #fff;
 }
 .pro-wa svg { width: 15px; height: 15px; }
+
+/* ---------- B10/B11 · Inspiration ---------- */
+.insp-mini {
+  position: relative;
+  flex: none;
+  width: 158px;
+  aspect-ratio: 3 / 4;
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.insp-mini img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.insp-mini::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 42%, rgba(8, 22, 16, .78));
+}
+.insp-mini.more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--green-2);
+  border: 1.5px dashed var(--green-7);
+  color: var(--green-11);
+  font-size: 12.5px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.35;
+}
+.insp-mini.more::after { content: none; }
+.insp-mini-cap, .insp-cap {
+  position: absolute;
+  left: 11px;
+  right: 11px;
+  bottom: 10px;
+  z-index: 1;
+  color: #fff;
+  display: block;
+}
+.insp-mini-cap b, .insp-cap b {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.insp-mini-cap i, .insp-cap i {
+  display: block;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  opacity: .85;
+  margin-top: 2px;
+}
+.insp-new {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  background: #FFD43B;
+  color: #4A3A00;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .6px;
+  border-radius: 999px;
+  padding: 3px 7px;
+}
+.inspopage {
+  position: fixed;
+  inset: 0;
+  margin: 0 auto;
+  max-width: 480px;
+  background: var(--gray-2);
+  z-index: 73;
+  display: flex;
+  flex-direction: column;
+  animation: pagein .26s cubic-bezier(.32, .72, .25, 1);
+}
+.inspopage .pdp-head { flex: none; }
+.insp-chips {
+  flex: none;
+  display: flex;
+  gap: 7px;
+  padding: 2px 12px 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: #fff;
+  border-bottom: 1px solid var(--gray-4);
+}
+.insp-chips::-webkit-scrollbar { display: none; }
+.insp-chips .seg-b { flex: none; }
+.insp-grid {
+  columns: 2;
+  column-gap: 10px;
+}
+.insp-card {
+  break-inside: avoid;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.insp-ph {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+}
+.insp-ph img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.insp-ph::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 42%, rgba(8, 22, 16, .78));
+}
+.insp-detail {
+  position: fixed;
+  inset: 0;
+  margin: 0 auto;
+  max-width: 480px;
+  background: var(--gray-2);
+  z-index: 75;
+  display: flex;
+  flex-direction: column;
+  animation: pagein .26s cubic-bezier(.32, .72, .25, 1);
+}
+.insp-hero {
+  position: relative;
+  flex: none;
+  height: 38vh;
+  min-height: 230px;
+}
+.insp-hero img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.insp-back {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  left: 12px;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+}
+.insp-room {
+  position: absolute;
+  left: 14px;
+  bottom: 30px;
+  background: rgba(255, 255, 255, .92);
+  color: var(--gray-12);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  text-transform: uppercase;
+}
+.insp-body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--gray-2);
+  border-radius: 22px 22px 0 0;
+  margin-top: -20px;
+  position: relative;
+  padding: 18px 12px 12px;
+}
+.insp-add {
+  flex: none;
+  border: 1.5px solid var(--green-9);
+  background: #fff;
+  color: var(--green-11);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.insp-add.in {
+  background: var(--green-9);
+  color: #fff;
+}
