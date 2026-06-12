@@ -663,7 +663,7 @@ const CAT_RULES = {
   All: () => true,
   'Drawer Slides': p => /slide|drawer/i.test(p.name),
   Hinges: p => /hinge/i.test(p.name),
-  Locks: p => /lock|aldrop|bolt/i.test(p.name),
+  Locks: p => /lock|aldrop|bolt|closer/i.test(p.name),
   Wardrobe: p => /wardrobe/i.test(p.name),
   Kitchen: p => /kitchen|carousel|tandem|quadro/i.test(p.name),
   Office: p => p.brand === 'worksmart',
@@ -801,7 +801,7 @@ function RecoStrip({ items, onClose, onChange }) {
 
 /* ---------- Shared filter system: subcat · brand · material · load · size · deals · sort ---------- */
 
-const DEFAULT_F = { deals: false, spec: null, sort: 0, mat: null, load: 0, size: null }
+const DEFAULT_F = { deals: false, spec: null, sort: 0, mat: null, load: 0, size: null, doorThk: null, carcassThk: null }
 const MATERIALS = [...new Set(FEED_POOL.map(p => p.mat).filter(Boolean))]
 const SIZES = [450, 500, 600]
 const matThumb = (m) => FEED_POOL.find(p => p.mat === m)?.ph
@@ -813,7 +813,9 @@ function applyF(list, f, b) {
   if (f.mat) out = out.filter(p => p.mat === f.mat)
   if (f.load > 0) out = out.filter(p => (p.load || 0) >= f.load)
   if (f.size) out = out.filter(p => p.size === f.size)
-  if (f.deals) out = out.filter(p => p.tag)
+  if (f.doorThk) out = out.filter(p => p.doorThk === f.doorThk)
+  if (f.carcassThk) out = out.filter(p => p.carcassThk === f.carcassThk)
+  if (f.deals) out = out.filter(p => p.tag || (p.mrp && p.mrp > p.price))
   out = [...out]
   if (f.sort === 1) out.sort((x, y) => x.price - y.price)
   if (f.sort === 2) out.sort((x, y) => y.price - x.price)
@@ -827,6 +829,8 @@ const fBadges = (f, b) => ({
   material: f.mat ? 1 : 0,
   load: f.load > 0 ? 1 : 0,
   size: f.size ? 1 : 0,
+  doorThk: f.doorThk ? 1 : 0,
+  carcassThk: f.carcassThk ? 1 : 0,
   deal: f.deals ? 1 : 0,
   sort: f.sort > 0 ? 1 : 0,
 })
@@ -837,6 +841,8 @@ const fSummary = (f, b) => [
   f.mat,
   f.load > 0 && `≥ ${f.load} kg`,
   f.size && `${f.size}mm`,
+  f.doorThk && `${f.doorThk}mm door`,
+  f.carcassThk && `${f.carcassThk}mm carcass`,
   f.deals && 'Deals only',
   f.sort > 0 && SORT_OPTIONS[f.sort],
 ].filter(Boolean)
@@ -847,6 +853,8 @@ function FilterSheet({ group, onGroup, cat = 'All', b, setB, f, setF, count }) {
   const badges = fBadges(f, b)
   const groups = [
     ['sub', 'Subcategory'], ['brand', 'Brand'], ['material', 'Material'],
+    // spec filters appear only where the category carries the spec
+    ...(cat === 'Hinges' ? [['doorThk', 'Door thk'], ['carcassThk', 'Carcass']] : []),
     ['load', 'Load'], ['size', 'Size'], ['deal', 'Deals'], ['sort', 'Sort'],
   ]
   return (
@@ -950,6 +958,32 @@ function FilterSheet({ group, onGroup, cat = 'All', b, setB, f, setF, count }) {
                     <button key={sz} className={`fs-tile ${on ? 'on' : ''}`} onClick={() => set({ size: on ? null : sz })}>
                       <div className="media"><Text weight="bold" style={{ fontSize: 24 }}>{sz}<span style={{ fontSize: 13 }}>mm</span></Text></div>
                       <div className="fs-cap"><Text size="2" weight="bold">{sz} mm</Text></div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {group === 'doorThk' && (
+              <div className="fs-tiles">
+                {[16, 18, 19, 25].map(v => {
+                  const on = f.doorThk === v
+                  return (
+                    <button key={v} className={`fs-tile ${on ? 'on' : ''}`} onClick={() => set({ doorThk: on ? null : v })}>
+                      <div className="media"><Text weight="bold" style={{ fontSize: 24 }}>{v}<span style={{ fontSize: 13 }}>mm</span></Text></div>
+                      <div className="fs-cap"><Text size="2" weight="bold">{v} mm door</Text></div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {group === 'carcassThk' && (
+              <div className="fs-tiles">
+                {[16, 18].map(v => {
+                  const on = f.carcassThk === v
+                  return (
+                    <button key={v} className={`fs-tile ${on ? 'on' : ''}`} onClick={() => set({ carcassThk: on ? null : v })}>
+                      <div className="media"><Text weight="bold" style={{ fontSize: 24 }}>{v}<span style={{ fontSize: 13 }}>mm</span></Text></div>
+                      <div className="fs-cap"><Text size="2" weight="bold">{v} mm board</Text></div>
                     </button>
                   )
                 })}
@@ -3347,7 +3381,7 @@ function CalcSugg({ p, qty, note }) {
     return (
       <div className="calc-out">
         <Text size="1" weight="bold" style={{ color: 'var(--amber-11)' }}>
-          Above 60 kg — talk to support for heavy-duty options
+          Beyond the standard range — talk to support for engineered options
         </Text>
       </div>
     )
@@ -3377,6 +3411,16 @@ function AcctCalc() {
   const [wt, setWt] = useState(30)
   const [sz, setSz] = useState(450)
   const [ht, setHt] = useState(1800)
+  // door-closer selector
+  const [cw, setCw] = useState(900)
+  const [chh, setChh] = useState(2100)
+  const [cth, setCth] = useState(25)
+  const [cmat, setCmat] = useState('Engineered wood')
+  const DENSITY = { 'Engineered wood': 650, 'Solid wood': 750, 'Glass': 2500, 'Aluminium': 1600 }
+  const doorKg = Math.round((cw / 1000) * (chh / 1000) * (cth / 1000) * DENSITY[cmat])
+  const closer = FEED_POOL
+    .filter(p => /closer/i.test(p.name) && p.load >= doorKg && p.size >= cw)
+    .sort((a, b) => a.load - b.load)[0]
   const slide = FEED_POOL
     .filter(p => p.load && p.load >= wt && (!p.size || p.size === sz) && /slide|channel|tandem|quadro/i.test(p.name))
     .sort((a, b) => a.load - b.load)[0]
@@ -3386,7 +3430,8 @@ function AcctCalc() {
     <>
       <div className="seg" style={{ marginTop: 0 }}>
         <button className={`seg-b ${tab === 'slide' ? 'on' : ''}`} onClick={() => setTab('slide')}>Slide load</button>
-        <button className={`seg-b ${tab === 'hinge' ? 'on' : ''}`} onClick={() => setTab('hinge')}>Hinge count</button>
+        <button className={`seg-b ${tab === 'hinge' ? 'on' : ''}`} onClick={() => setTab('hinge')}>Hinges</button>
+        <button className={`seg-b ${tab === 'closer' ? 'on' : ''}`} onClick={() => setTab('closer')}>Door closer</button>
       </div>
       {tab === 'slide' ? (
         <div className="cp-card">
@@ -3409,6 +3454,41 @@ function AcctCalc() {
           <input className="cp-input" style={{ marginTop: 4 }} type="number" min="300" max="3000" value={ht}
             onChange={(e) => setHt(Math.max(300, +e.target.value || 0))} />
           <CalcSugg p={hinge} qty={hingeCount} note={`${ht} mm door → ${hingeCount} hinges per door`} />
+        </div>
+      )}
+      {tab === 'closer' && (
+        <div className="cp-card">
+          <Text size="2" weight="bold" as="div">Door closer selector</Text>
+          <Text size="1" color="gray" as="div" mt="1">Door size & material → estimated weight → the right closer</Text>
+          <Flex gap="2" mt="2">
+            <Box style={{ flex: 1 }}>
+              <Text size="1" color="gray" as="div">Width (mm)</Text>
+              <input
+                className="cp-input" style={{ marginTop: 4 }} type="number" min="400" max="1400"
+                value={cw} onChange={(e) => setCw(Math.max(300, +e.target.value || 0))}
+              />
+            </Box>
+            <Box style={{ flex: 1 }}>
+              <Text size="1" color="gray" as="div">Height (mm)</Text>
+              <input
+                className="cp-input" style={{ marginTop: 4 }} type="number" min="1200" max="3000"
+                value={chh} onChange={(e) => setChh(Math.max(900, +e.target.value || 0))}
+              />
+            </Box>
+          </Flex>
+          <Text size="1" color="gray" as="div">Thickness</Text>
+          <Flex gap="2" mt="1" mb="2">
+            {[18, 25, 32, 40].map(t => (
+              <button key={t} className={`seg-b ${cth === t ? 'on' : ''}`} style={{ flex: 1 }} onClick={() => setCth(t)}>{t} mm</button>
+            ))}
+          </Flex>
+          <Text size="1" color="gray" as="div">Material</Text>
+          <Flex gap="2" mt="1" mb="2" wrap="wrap">
+            {Object.keys(DENSITY).map(m => (
+              <button key={m} className={`seg-b ${cmat === m ? 'on' : ''}`} style={{ flex: '1 1 40%' }} onClick={() => setCmat(m)}>{m}</button>
+            ))}
+          </Flex>
+          <CalcSugg p={closer} note={`~${doorKg} kg · ${cw} mm door → ${closer ? closer.qty : 'no standard match'}`} />
         </div>
       )}
     </>

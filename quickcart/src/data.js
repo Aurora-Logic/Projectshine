@@ -22,7 +22,7 @@ export const FEED_CAP = 40
 
 export const BUY_AGAIN = [
   { id: 'ba1', mat: 'Zinc', load: 35, size: 450, stock: 240, brand: 'ebco', ph: '1595428774223-ef52624120d2', name: 'Ebco Telescopic Drawer Slide 450mm (pair)', qty: 'Zinc · 35 kg load', price: 385, usual: true, bulk: '10+ @ ₹350/pc' },
-  { id: 'ba2', mat: 'Steel', stock: 64, brand: 'ebco', ph: '1594026112284-02bb6f3352fe', name: 'Ebco Soft-Close Hinge (2 pc)', qty: '0°–110° · clip-on', price: 290, mrp: 310, usual: true, bulk: '20+ @ ₹265/set' },
+  { id: 'ba2', mat: 'Steel', stock: 64, brand: 'ebco', ph: '1594026112284-02bb6f3352fe', name: 'Ebco Soft-Close Hinge (2 pc)', qty: '0°–110° · clip-on', doorThk: 18, carcassThk: 18, price: 290, mrp: 310, usual: true, bulk: '20+ @ ₹265/set' },
   { id: 'ba3', mat: 'Steel', stock: 520, brand: 'ebco', ph: '1582139329536-e7284fece509', name: 'Ebco Cam Lock 19mm', qty: 'Nickel · 2 keys', price: 95, bulk: '50+ @ ₹78/pc' },
   { id: 'ba4', mat: 'SS', size: 160, stock: 64, brand: 'ebco', ph: '1558997519-83ea9252edf8', name: 'SS D-Handle 160mm (2 pc)', qty: 'Brushed steel', price: 240 },
   { id: 'ba5', mat: 'Steel', stock: 800, brand: 'ebco', ph: '1556911220-bff31c812dba', name: 'Shelf Support Pins (20 pc)', qty: '5mm · nickel', price: 60 },
@@ -39,7 +39,7 @@ export const NEW_EBCO = [
 
 export const DEALS = [
   { id: 'dl1', mat: 'Zinc', load: 45, size: 500, stock: 48, brand: 'ebco', ph: '1484154218962-a197022b5858', name: 'Ball-Bearing Slide 500mm (pair)', qty: '45 kg load · zinc', price: 520, mrp: 745, buys: '2k+ fitted this month', bulk: '10+ @ ₹479/pc' },
-  { id: 'dl2', mat: 'Steel', stock: 75, brand: 'ebco', ph: '1594026112284-02bb6f3352fe', name: 'Soft-Close Hinge Pack (10 pc)', qty: 'Clip-on · 110°', price: 1260, mrp: 1750, bulk: '5+ @ ₹1,150/pack' },
+  { id: 'dl2', mat: 'Steel', stock: 75, brand: 'ebco', ph: '1594026112284-02bb6f3352fe', name: 'Soft-Close Hinge Pack (10 pc)', qty: 'Clip-on · 110°', doorThk: 19, carcassThk: 18, price: 1260, mrp: 1750, bulk: '5+ @ ₹1,150/pack' },
   { id: 'dl3', mat: 'ABS', stock: 22, brand: 'livsmart', ph: '1558002038-1055907df827', name: 'Livsmart Digital Furniture Lock', qty: 'RFID + PIN', price: 2399, mrp: 2999, rating: 4.2 },
   { id: 'dl4', mat: 'ABS', load: 12, stock: 40, brand: 'worksmart', ph: '1416339306562-f3d12fefd36f', name: 'Worksmart Keyboard Tray', qty: 'Soft-pad · sliding', price: 1899, mrp: 2374, tag: '20% OFF' },
   { id: 'dl5', mat: 'Aluminium', size: 2000, stock: 55, brand: 'livsmart', ph: '1565814329452-e1efa11c5b89', name: 'Aluminium Profile Light 2m', qty: 'Warm white · 12V', price: 949, mrp: 1116, tag: '15% OFF' },
@@ -63,13 +63,20 @@ export const LIVESMART = [
 
 export const ZIPCO_PEKO = [
   { id: 'zp1', mat: 'Steel', load: 60, size: 600, stock: 44, brand: 'zipco', ph: '1594026112284-02bb6f3352fe', name: 'Zipco Heavy-Duty Slide 600mm', qty: '60 kg load', price: 680, mrp: 820, bulk: '10+ @ ₹610/pc' },
-  { id: 'zp2', mat: 'Steel', stock: 380, brand: 'peka', ph: '1586023492125-27b2c045efd7', name: 'Peka Concealed Hinge (pair)', qty: '90° · screw-on', price: 180, buys: '700+ fitted this month' },
+  { id: 'zp2', mat: 'Steel', stock: 380, brand: 'peka', ph: '1586023492125-27b2c045efd7', name: 'Peka Concealed Hinge (pair)', qty: '90° · screw-on', doorThk: 16, carcassThk: 16, price: 180, buys: '700+ fitted this month' },
   { id: 'zp3', mat: 'Steel', stock: 0, lead: 5, brand: 'zipco', ph: '1558997519-83ea9252edf8', name: 'Zipco Wardrobe Lock', qty: 'Left/right · 2 keys', price: 260, mrp: 295, tag: '12% OFF' },
   { id: 'zp4', mat: 'Plastic', stock: 160, brand: 'peka', ph: '1551298370-9d3d53740c72', name: 'Peka Magnetic Catch (10 pc)', qty: 'White · 4 kg pull', price: 240, rating: 4.4 },
 ]
 
+/* door closers — selected via the calculator (load = max door kg, size = max width mm) */
+export const DOOR_CLOSERS = [
+  { id: 'dc1', mat: 'Steel', load: 60, size: 950, stock: 120, brand: 'ebco', ph: '1558997519-83ea9252edf8', name: 'Ebco Door Closer DC-60', qty: 'Doors ≤60 kg · ≤950 mm', price: 1250, mrp: 1450, bulk: '5+ @ ₹1,150/pc' },
+  { id: 'dc2', mat: 'Steel', load: 85, size: 1100, stock: 80, brand: 'ebco', ph: '1582139329536-e7284fece509', name: 'Ebco Door Closer DC-85', qty: 'Doors ≤85 kg · ≤1100 mm', price: 1650, mrp: 1890, bulk: '5+ @ ₹1,520/pc' },
+  { id: 'dc3', mat: 'Steel', load: 120, size: 1250, stock: 35, brand: 'ebco', ph: '1558002038-1055907df827', name: 'Ebco Heavy Door Closer DC-120', qty: 'Doors ≤120 kg · ≤1250 mm', price: 2450, mrp: 2790 },
+]
+
 export const FEED_POOL = [
-  ...NEW_EBCO, ...DEALS, ...WORKSMART, ...LIVESMART, ...ZIPCO_PEKO, ...BUY_AGAIN,
+  ...NEW_EBCO, ...DEALS, ...WORKSMART, ...LIVESMART, ...ZIPCO_PEKO, ...BUY_AGAIN, ...DOOR_CLOSERS,
   { id: 'x1', mat: 'Plastic', load: 50, stock: 210, brand: 'ebco', ph: '1551298370-9d3d53740c72', name: 'Castor Wheels 50mm (4 pc)', qty: 'Twin · brake', price: 320, mrp: 372, tag: '14% OFF' },
   { id: 'x2', mat: 'Zinc', stock: 500, brand: 'ebco', ph: '1503387762-592deb58ef4e', name: 'Furniture Connector Kit', qty: 'Minifix · 50 sets', price: 145, buys: '400+ fitted this month' },
 ]
