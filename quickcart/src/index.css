@@ -4624,3 +4624,9 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 
 /* add controls always pop above following card sections */
 .padd { z-index: 6; }
+
+/* the white ADD pill must read on white card bodies too (combo cards
+   were fine only because of their tinted background) */
+.padd {
+  box-shadow: inset 0 0 0 1.5px var(--green-7), 0 4px 12px rgba(0, 0, 0, .2);
+}

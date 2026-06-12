@@ -5526,7 +5526,15 @@ export default function App() {
               setOrder(rec)
               localStorage.setItem('qc-order', JSON.stringify(rec))
               setCart({ count: 0, total: 0, photos: [], items: {} })
-              closeCart()
+              // land on home with the tracking card in view, whatever the stack was
+              setCartOpen(false)
+              setQsheet(null)
+              setPdp(null)
+              setSheet(null)
+              setPlp(null)
+              setReorderOpen(false)
+              setAcctOpen(false)
+              window.scrollTo({ top: 0, behavior: 'smooth' })
             }}
           />
           )}
