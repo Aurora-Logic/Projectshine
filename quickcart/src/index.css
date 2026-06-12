@@ -4635,3 +4635,7 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 .seg { padding: 3px; gap: 3px; }
 .seg-b { padding: 7px 12px; }
 .padd { bottom: -14px; }
+.pimg-wrap { isolation: isolate; }
+.pimg { z-index: 0; }
+.pbadge { z-index: 2; }
+.padd { z-index: 8; }
