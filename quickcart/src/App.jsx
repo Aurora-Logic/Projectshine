@@ -1303,6 +1303,14 @@ function ClearanceStore() {
 
 /* ---------------- Quiz + leaderboard ---------------- */
 
+function Bulbs({ n = 9 }) {
+  return (
+    <div className="blb-row" aria-hidden="true">
+      {Array.from({ length: n }, (_, i) => <i key={i} style={{ animationDelay: `${(i % 2) * 0.55}s` }} />)}
+    </div>
+  )
+}
+
 function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
   const [stage, setStage] = useState(autoStart ? 'playing' : 'idle') // idle | playing | done
   const [qi, setQi] = useState(0)
@@ -1346,42 +1354,53 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
   return (
     <>
       {stage === 'idle' && (
-        <Flex align="center" gap="3">
-          <Box flexGrow="1">
-            <span className="edition-pill" style={{ color: skin.btn }}>TODAY’S EDITION · {skin.name.toUpperCase()}</span>
-            <Heading size="5" mt="2" style={{ color: '#fff', letterSpacing: '-0.3px' }}>Daily Hardware Quiz</Heading>
-            <Text size="2" as="div" mt="1" style={{ color: 'rgba(255,255,255,.85)' }}>
-              3 questions · win an order coupon · new look every day
-            </Text>
-            <Button
-              size="2" mt="3" radius="full"
-              style={{ background: '#fff', color: skin.btn, fontWeight: 800 }}
-              onClick={start}
-            >
-              <RocketIcon width={14} height={14} /> Play now
-            </Button>
-          </Box>
-          <StarFilledIcon width={56} height={56} color="rgba(255,255,255,.25)" style={{ flex: 'none' }} />
-        </Flex>
+        <>
+          <Bulbs n={9} />
+          <Flex align="center" gap="3">
+            <Box flexGrow="1">
+              <span className="cz-pill">TONIGHT'S TABLE · {skin.name.toUpperCase()}</span>
+              <div className="cz-title">QUIZ NIGHT</div>
+              <Text size="2" as="div" mt="1" style={{ color: 'rgba(255,243,209,.85)' }}>
+                3 questions · 10s each · win up to ₹{QUIZ.length * 25} off
+              </Text>
+              <button className="cz-btn gold" style={{ marginTop: 14 }} onClick={start}>
+                <RocketIcon width={14} height={14} /> PLAY NOW
+              </button>
+            </Box>
+            <div className="chipstack" aria-hidden="true">
+              <span className="cas-chip c1" />
+              <span className="cas-chip c2" />
+              <span className="cas-chip c3" />
+            </div>
+          </Flex>
+        </>
       )}
 
       {stage === 'playing' && (
         <Box>
           <Flex align="center" justify="between">
-            <Text size="1" weight="bold" style={{ color: 'rgba(255,255,255,.7)' }}>
-              QUESTION {qi + 1} OF {QUIZ.length} · {Math.ceil(tleft)}s
-            </Text>
-            <Text size="1" weight="bold" style={{ color: skin.accent }}>
-              {correct} correct so far
-            </Text>
+            <div className="cz-qdots">
+              {QUIZ.map((_, i) => (
+                <i key={i} className={i < qi ? 'done' : i === qi ? 'cur' : ''} />
+              ))}
+              <Text size="1" weight="bold" style={{ color: '#F5C242', marginLeft: 8 }}>
+                ₹{correct * 25} in the bank
+              </Text>
+            </div>
+            <div className="cz-chip"><span>{Math.ceil(tleft)}</span></div>
           </Flex>
-          <div className="qbar">
-            <div className="qbar-fill" style={{ width: `${(tleft / QUIZ_SECONDS) * 100}%`, background: skin.accent }} />
+          <div className="qbar" style={{ background: 'rgba(255,255,255,.18)' }}>
+            <div
+              className="qbar-fill"
+              style={{ width: `${(tleft / QUIZ_SECONDS) * 100}%`, background: 'linear-gradient(90deg, #F5C242, #FFE9A8)' }}
+            />
           </div>
-          <Heading size="4" mt="2" style={{ color: '#fff', lineHeight: 1.3 }}>{QUIZ[qi].q}</Heading>
-          <Box mt="2">
+          <div className="cz-q">
+            <Text size="3" weight="bold" style={{ lineHeight: 1.35 }}>{QUIZ[qi].q}</Text>
+          </div>
+          <Box mt="3">
             {QUIZ[qi].opts.map((o, i) => {
-              let cls = 'quiz-opt'
+              let cls = 'cz-opt'
               if (picked !== null && i === QUIZ[qi].a) cls += ' correct'
               else if (picked === i) cls += ' wrong'
               return (
@@ -1395,24 +1414,24 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
       )}
 
       {stage === 'done' && (
-        <Flex align="center" gap="3">
-          <Box flexGrow="1">
-            <Heading size="5" style={{ color: '#fff' }}>
-              {correct > 0 ? `${correct}/${QUIZ.length} correct — ₹${correct * 25} OFF won!` : `${correct}/${QUIZ.length} — better luck tomorrow`}
-            </Heading>
-            <Text size="2" as="div" mt="1" style={{ color: 'rgba(255,255,255,.85)' }}>
-              {correct > 0 ? 'Coupon auto-applies on your next order. ' : ''}New quiz drops tomorrow at 8 AM.
-            </Text>
-            <Button
-              size="2" mt="3" radius="full" variant="outline"
-              style={{ color: '#fff', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,.5)', fontWeight: 700 }}
-              onClick={onLeaderboard}
-            >
-              View leaderboard
-            </Button>
-          </Box>
-          <StarFilledIcon width={56} height={56} color={skin.accent} style={{ flex: 'none' }} />
-        </Flex>
+        <div className="cz-done">
+          <Bulbs n={9} />
+          <div className={`cz-title big ${correct > 0 ? '' : 'dim'}`}>
+            {correct > 0 ? 'JACKPOT!' : 'HOUSE WINS'}
+          </div>
+          <Text size="2" as="div" style={{ color: 'rgba(255,243,209,.85)' }}>
+            {correct}/{QUIZ.length} correct{correct > 0 ? '' : ' — the table reopens tomorrow, 8 AM'}
+          </Text>
+          {correct > 0 && (
+            <div className="cz-ticket">
+              <span className="tk-amt">₹{correct * 25} OFF</span>
+              <span className="tk-sub">auto-applies on your next order</span>
+            </div>
+          )}
+          <button className="cz-btn" style={{ marginTop: 12 }} onClick={onLeaderboard}>
+            VIEW LEADERBOARD
+          </button>
+        </div>
       )}
     </>
   )
@@ -1420,7 +1439,7 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
 
 function QuizCard({ onFinish, skin }) {
   return (
-    <div className={`quiz-card deco-${skin.deco}`} id="quiz" style={{ background: skin.bg }}>
+    <div className="quiz-card czn" id="quiz">
       <QuizFlow skin={skin} onFinish={onFinish} onLeaderboard={() => scrollToId('leaderboard')} />
     </div>
   )
@@ -1429,9 +1448,9 @@ function QuizCard({ onFinish, skin }) {
 function QuizDialog({ open, onOpenChange, onFinish, skin }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content className={`quiz-dialog deco-${skin.deco}`} maxWidth="380px" aria-describedby={undefined} style={{ background: skin.bg }}>
-        <Dialog.Title size="4" mb="3" style={{ color: skin.accent, paddingRight: 32 }}>
-          Quiz time — win an order coupon
+      <Dialog.Content className="quiz-dialog czn" maxWidth="380px" aria-describedby={undefined}>
+        <Dialog.Title size="3" mb="3" align="center" style={{ color: '#F5C242', letterSpacing: '2px', textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>
+          THE NIGHTLY TABLE
         </Dialog.Title>
         <button className="quiz-close" onClick={() => onOpenChange(false)} aria-label="Close">
           <Cross2Icon width={15} height={15} />
@@ -1563,16 +1582,30 @@ function SpinDialog({ open, onOpenChange }) {
     }, 4200)
   }
 
-  const gradient = WHEEL.map((s, i) => `${s.color} ${i * segs}deg ${(i + 1) * segs}deg`).join(', ')
+  // thin gold separators between casino segments
+  const gradient = WHEEL.map((s, i) =>
+    `#F5C242 ${i * segs}deg ${i * segs + 1.4}deg, ${s.color} ${i * segs + 1.4}deg ${(i + 1) * segs}deg`
+  ).join(', ')
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content className="wheel-dialog" maxWidth="360px" aria-describedby={undefined}>
-        <Dialog.Title size="4" style={{ color: '#fff', paddingRight: 32 }}>Spin & Win</Dialog.Title>
+      <Dialog.Content className="wheel-dialog czn" maxWidth="360px" aria-describedby={undefined}>
+        <Bulbs n={11} />
+        <Dialog.Title size="3" align="center" mb="0" style={{ color: '#F5C242', letterSpacing: '2px', textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>
+          SPIN & WIN
+        </Dialog.Title>
         <button className="quiz-close" onClick={() => onOpenChange(false)} aria-label="Close">
           <Cross2Icon width={15} height={15} />
         </button>
         <div className="wheel-wrap">
+          <div className="wheel-rim" aria-hidden="true">
+            {Array.from({ length: 12 }, (_, i) => (
+              <span
+                key={i} className="rim-blb"
+                style={{ transform: `rotate(${i * 30}deg) translateY(-131px)`, animationDelay: `${(i % 2) * 0.55}s` }}
+              />
+            ))}
+          </div>
           <div className="wheel-pointer" />
           <div
             className="wheel"
@@ -1590,40 +1623,39 @@ function SpinDialog({ open, onOpenChange }) {
         </div>
         {state === 'done' && prize ? (
           <Flex direction="column" align="center" gap="1" mt="3" pb="2">
-            <Heading size="5" style={{ color: '#FFD43B' }}>
-              {prize.label === 'TRY AGAIN' ? 'So close!' : `You won ${prize.label}!`}
-            </Heading>
-            <Text size="2" align="center" style={{ color: 'rgba(255,255,255,.9)' }}>
-              {prize.label === 'TRY AGAIN'
-                ? 'No luck this time — your free spin is back tomorrow.'
-                : 'Auto-applied on your next order.'}
-            </Text>
-            <Button size="2" mt="2" radius="full" style={{ background: '#fff', color: '#B34A0A', fontWeight: 800 }}
-              onClick={() => onOpenChange(false)}>
-              Keep shopping
-            </Button>
+            <div className={`cz-title big ${prize.label === 'TRY AGAIN' ? 'dim' : ''}`}>
+              {prize.label === 'TRY AGAIN' ? 'SO CLOSE!' : 'WINNER!'}
+            </div>
+            {prize.label === 'TRY AGAIN' ? (
+              <Text size="2" align="center" style={{ color: 'rgba(255,243,209,.85)' }}>
+                The house edges it tonight — your free spin is back tomorrow.
+              </Text>
+            ) : (
+              <div className="cz-ticket">
+                <span className="tk-amt">{prize.label}</span>
+                <span className="tk-sub">auto-applies on your next order</span>
+              </div>
+            )}
+            <button className="cz-btn gold" style={{ marginTop: 10 }} onClick={() => onOpenChange(false)}>
+              KEEP SHOPPING
+            </button>
           </Flex>
         ) : state === 'used' ? (
           <Flex direction="column" align="center" gap="1" mt="3" pb="2">
-            <Heading size="5" style={{ color: '#FFD43B' }}>Spin used for today</Heading>
-            <Text size="2" align="center" style={{ color: 'rgba(255,255,255,.9)' }}>
-              Your next free spin lands tomorrow morning.
+            <div className="cz-title big dim">TABLE CLOSED</div>
+            <Text size="2" align="center" style={{ color: 'rgba(255,243,209,.85)' }}>
+              Spin used for today — your next free spin lands tomorrow morning.
             </Text>
-            <Button size="2" mt="2" radius="full" style={{ background: '#fff', color: '#B34A0A', fontWeight: 800 }}
-              onClick={() => onOpenChange(false)}>
-              Keep shopping
-            </Button>
+            <button className="cz-btn" style={{ marginTop: 10 }} onClick={() => onOpenChange(false)}>
+              KEEP SHOPPING
+            </button>
           </Flex>
         ) : (
           <Flex direction="column" align="center" gap="1" mt="3" pb="2">
-            <Button
-              size="3" radius="full" disabled={state === 'spinning'}
-              style={{ background: '#fff', color: '#B34A0A', fontWeight: 800, opacity: state === 'spinning' ? .7 : 1 }}
-              onClick={spin}
-            >
-              {state === 'spinning' ? 'Spinning…' : 'SPIN NOW'}
-            </Button>
-            <Text size="1" style={{ color: 'rgba(255,255,255,.8)' }}>1 free spin every day</Text>
+            <button className="cz-btn gold lg" disabled={state === 'spinning'} onClick={spin}>
+              {state === 'spinning' ? 'SPINNING…' : 'SPIN NOW'}
+            </button>
+            <Text size="1" style={{ color: 'rgba(255,243,209,.7)' }}>1 free spin every day · house always pays</Text>
           </Flex>
         )}
       </Dialog.Content>

@@ -229,12 +229,12 @@ for (const [dp, [top, bottom]] of Object.entries(SKY_BASES)) {
 }
 
 export const WHEEL = [
-  { label: '₹100 OFF', color: '#F76B15' },
-  { label: '₹75 OFF', color: '#6E56CF' },
-  { label: 'FREE DELIVERY', color: '#12A594' },
-  { label: '₹250 OFF', color: '#E5484D' },
-  { label: '5% OFF', color: '#0090FF' },
-  { label: 'TRY AGAIN', color: '#8B8D98' },
+  { label: '₹100 OFF', color: '#B3262E' },
+  { label: '₹75 OFF', color: '#23304A' },
+  { label: 'FREE DELIVERY', color: '#14633F' },
+  { label: '₹250 OFF', color: '#7A2FBF' },
+  { label: '5% OFF', color: '#B97E1C' },
+  { label: 'TRY AGAIN', color: '#454B5C' },
 ]
 
 export const QUIZ_SECONDS = 10
