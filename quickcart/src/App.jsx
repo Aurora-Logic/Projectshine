@@ -2873,6 +2873,9 @@ function OrderDetailSheet({ order, onClose, onChange }) {
 
 function AcctOrders({ lastOrder, onChange }) {
   const [view, setView] = useState(null)
+  const [preset, setPreset] = useState('fy')
+  const [from, setFrom] = useState(null)
+  const [to, setTo] = useState(null)
   const hist = [
     ...(lastOrder ? [{
       id: lastOrder.id, date: 'Today', status: 'In transit', ts: lastOrder.ts, addrLabel: lastOrder.addrLabel,
@@ -2883,6 +2886,24 @@ function AcctOrders({ lastOrder, onChange }) {
       items: o.items.map(([id, n]) => ({ p: FEED_POOL.find(p => p.id === id), n })).filter(x => x.p),
     })),
   ]
+  const nowTs = Date.now()
+  let f0 = 0
+  let t0 = Infinity
+  if (preset === 'custom') {
+    f0 = from ? from.getTime() : 0
+    t0 = to ? to.getTime() + 86399999 : Infinity
+  } else if (preset === '7d') {
+    f0 = nowTs - 7 * 864e5
+  } else if (preset === '30d') {
+    f0 = nowTs - 30 * 864e5
+  } else if (preset === 'qtr') {
+    const d = new Date()
+    f0 = new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1).getTime()
+  } else {
+    const d = new Date()
+    f0 = (d.getMonth() >= 3 ? new Date(d.getFullYear(), 3, 1) : new Date(d.getFullYear() - 1, 3, 1)).getTime()
+  }
+  const shownH = hist.filter(o => (o.ts || nowTs) >= f0 && (o.ts || nowTs) <= t0)
   const totalVal = hist.reduce((s, o) => s + o.items.reduce((x, { p, n }) => x + p.price * n, 0), 0)
   const repeat = (o, e) => {
     o.items.forEach(({ p, n }) => onChange(n, p, { noReco: true }))
@@ -2899,7 +2920,30 @@ function AcctOrders({ lastOrder, onChange }) {
           <Text size="1" color="gray">orders · {fmtL(totalVal + 1040000)} billed · all invoices below</Text>
         </Flex>
       </div>
-      {hist.map(o => {
+      <div className="seg" style={{ marginTop: 0 }}>
+        {[['7d', '7D'], ['30d', '30D'], ['qtr', 'Qtr'], ['fy', 'FY'], ['custom', 'Custom']].map(([k, l]) => (
+          <button key={k} className={`seg-b ${preset === k ? 'on' : ''}`} onClick={() => setPreset(k)}>{l}</button>
+        ))}
+      </div>
+      {preset === 'custom' && (
+        <Flex gap="2" mb="2">
+          <Box style={{ flex: 1 }}>
+            <Text size="1" color="gray" as="div" mb="1">From</Text>
+            <CalPicker value={from} onChange={setFrom} allowPast />
+          </Box>
+          <Box style={{ flex: 1 }}>
+            <Text size="1" color="gray" as="div" mb="1">To</Text>
+            <CalPicker value={to} onChange={setTo} allowPast />
+          </Box>
+        </Flex>
+      )}
+      <Text size="1" color="gray" as="div" mb="2" style={{ padding: '0 2px' }}>
+        Showing {shownH.length} invoice{shownH.length === 1 ? '' : 's'}
+      </Text>
+      {shownH.length === 0 && (
+        <div className="cp-card"><Text size="1" color="gray">No invoices in this range — widen the dates.</Text></div>
+      )}
+      {shownH.map(o => {
         const total = o.items.reduce((s, { p, n }) => s + p.price * n, 0)
         return (
           <div className="oh-card" key={`h-${o.id}`}>
@@ -3108,7 +3152,7 @@ function AcctCalc() {
 }
 
 /* shadcn-style date picker: field button + month-grid calendar */
-function CalPicker({ value, onChange }) {
+function CalPicker({ value, onChange, allowPast }) {
   const today = new Date()
   const [vm, setVm] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [open, setOpen] = useState(false)
@@ -3142,7 +3186,7 @@ function CalPicker({ value, onChange }) {
             {dow.map(d => <span key={d} className="cal-dow">{d}</span>)}
             {cells.map((d, i) => d === null ? <span key={`e${i}`} /> : (
               <button
-                key={d} disabled={isPast(d)}
+                key={d} disabled={!allowPast && isPast(d)}
                 className={`cal-day ${isSel(d) ? 'sel' : ''} ${isToday(d) ? 'today' : ''}`}
                 onClick={() => { onChange(new Date(vm.getFullYear(), vm.getMonth(), d)); setOpen(false) }}
               >

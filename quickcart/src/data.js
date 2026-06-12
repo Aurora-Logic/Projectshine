@@ -370,8 +370,10 @@ export const REORDER = [
 ]
 
 export const PAST_ORDERS = [
-  { id: 'QC-471203', date: 'Mon, 2 Jun', items: [['ba1', 20], ['ba3', 50], ['dl1', 24]] },
-  { id: 'QC-458819', date: 'Sat, 17 May', items: [['ba2', 30], ['ba1', 20], ['ws1', 8], ['ba5', 12]] },
+  { id: 'QC-471203', date: 'Mon, 2 Jun', ts: new Date('2026-06-02').getTime(), items: [['ba1', 20], ['ba3', 50], ['dl1', 24]] },
+  { id: 'QC-458819', date: 'Sat, 17 May', ts: new Date('2026-05-17').getTime(), items: [['ba2', 30], ['ba1', 20], ['ws1', 8], ['ba5', 12]] },
+  { id: 'QC-446102', date: 'Fri, 25 Apr', ts: new Date('2026-04-25').getTime(), items: [['ne1', 5], ['ba3', 40]] },
+  { id: 'QC-431877', date: 'Thu, 13 Mar', ts: new Date('2026-03-13').getTime(), items: [['dl1', 24], ['ba4', 10], ['ls1', 6]] },
 ]
 
 /* Performance dashboard data (₹ thousands for the trend) */
