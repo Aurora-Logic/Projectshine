@@ -4550,3 +4550,73 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   box-shadow: 0 8px 18px rgba(0, 0, 0, .12), inset 0 3px 8px rgba(0, 0, 0, .15);
 }
 .donut-hole { box-shadow: 0 2px 8px rgba(0, 0, 0, .12); }
+
+/* ---------- Pitch-black dealer performance ---------- */
+.sub-dark .cp-body { background: #050507; }
+.sub-dark .pdp-head { background: #0B0C0F; border-color: #1B1D23; }
+.sub-dark .pdp-head h1 { color: #F2F4F7; }
+.sub-dark .sheet-back { background: #1A1C22; color: #E8EAEE; }
+.sub-dark .dash-hero {
+  box-shadow: 0 6px 0 #03130C, 0 22px 48px rgba(27, 122, 79, .35), inset 0 1px 0 rgba(255, 255, 255, .14);
+}
+.cp-card.dk {
+  background: #111216;
+  border-color: #22242B;
+  box-shadow: 0 5px 0 #000, 0 16px 28px rgba(0, 0, 0, .55);
+  color: #E8EAEE;
+}
+.kpi.dk {
+  background: #111216;
+  border: 1px solid #22242B;
+  box-shadow: 0 4px 0 #000, 0 12px 20px rgba(0, 0, 0, .5);
+}
+.dk-bar {
+  height: 7px;
+  border-radius: 99px;
+  background: #23252C;
+  margin-top: 10px;
+  overflow: hidden;
+}
+.dk-bar.slim { height: 5px; margin-top: 6px; }
+.dk-bar > div {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #C98E1B, #F5C242);
+  transition: width .8s cubic-bezier(.22, 1, .36, 1);
+}
+.mini-bars {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 34px;
+  margin-top: 10px;
+}
+.mini-bars span { flex: 1; border-radius: 3px 3px 1px 1px; }
+.mini-line { width: 100%; height: 34px; margin-top: 10px; display: block; }
+.dkrow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 0;
+  border-bottom: 1px solid #1E2026;
+  width: 100%;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  font-family: inherit;
+}
+.dkrow:last-child { border-bottom: none; }
+.dkrow.act { cursor: pointer; }
+.dkrow.act:active { opacity: .7; }
+.sub-dark .seg { background: #1A1C22; }
+.sub-dark .seg-b { color: #8B93A0; }
+.sub-dark .seg-b.on { background: var(--green-9); color: #fff; box-shadow: none; }
+.sub-dark .bar span { background: #234534; }
+.sub-dark .bar.on span { background: linear-gradient(180deg, #FFE9A8, #F5C242); }
+.sub-dark .bar em { color: #7C8492; }
+.sub-dark .bar.on em { color: #fff; }
+.sub-dark .donut-hole { background: #111216; box-shadow: none; }
+.sub-dark .leg.on { background: #1C1E25; }
+.sub-dark .hbar { background: #23252C; }
+.sub-dark .d3-card { box-shadow: 0 5px 0 #000, 0 16px 28px rgba(0, 0, 0, .55); }

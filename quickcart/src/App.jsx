@@ -2620,9 +2620,9 @@ function Bars({ data }) {
   const si = Math.min(sel, data.length - 1)
   return (
     <>
-      <Flex align="baseline" gap="2" mt="2">
-        <Text size="5" weight="bold" style={{ letterSpacing: '-0.4px' }}>{fmtL(data[si][1] * 1000)}</Text>
-        <Text size="1" color="gray">{data[si][0]} purchases</Text>
+      <Flex align="baseline" gap="3" mt="2">
+        <Text size="5" weight="bold" style={{ letterSpacing: '-0.4px', whiteSpace: 'nowrap', flexShrink: 0 }}>{fmtL(data[si][1] * 1000)}</Text>
+        <Text size="1" style={{ color: '#98A0AB', whiteSpace: 'nowrap' }}>{data[si][0]} purchases</Text>
       </Flex>
       <div className="bars">
         {data.map(([m, v], i) => (
@@ -2666,105 +2666,163 @@ function Donut({ cats }) {
   )
 }
 
+/* tiny dark-mode charts for stat cards */
+function MiniBars({ data, color = '#2E6E4E', hi = -1 }) {
+  const mx = Math.max(...data)
+  return (
+    <div className="mini-bars">
+      {data.map((v, i) => (
+        <span key={i} style={{ height: `${22 + 78 * (v / mx)}%`, background: i === hi ? '#F5C242' : color }} />
+      ))}
+    </div>
+  )
+}
+
+function MiniLine({ data, color = '#3E63DD', fill }) {
+  const mx = Math.max(...data)
+  const mn = Math.min(...data)
+  const pt = (v, i) => `${(i / (data.length - 1)) * 100},${28 - 24 * ((v - mn) / (mx - mn || 1))}`
+  const pts = data.map(pt).join(' ')
+  return (
+    <svg className="mini-line" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true">
+      {fill && <polygon points={`0,32 ${pts} 100,32`} fill={color} opacity=".18" />}
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function AcctDash({ onReorder }) {
   const [per, setPer] = useState(12)
   const [tab, setTab] = useState('trend')
   const ready = useNextFrame()
   const k = DASH.kpis
   const big = useCountUp(k.month, true, 1100)
-  const last6 = DASH.months.slice(-6)
-  const mx = Math.max(...last6.map(d => d[1]))
-  const mn = Math.min(...last6.map(d => d[1]))
   const best = DASH.months.reduce((a, b) => (b[1] > a[1] ? b : a))
+  const bestIdx = DASH.months.findIndex(d => d[1] === best[1])
   const pctile = Math.round(((MY_RANK.of - MY_RANK.rank) / MY_RANK.of) * 100)
+  const mser = DASH.months.slice(-8).map(d => d[1])
+  const ordSer = mser.map(v => Math.round(v / 8.3))
+  const aovSer = mser.map((v, i) => v / ordSer[i])
+  const savSer = mser.map(v => v * 0.115)
+  const tgtPct = Math.min(100, Math.round((k.month / TARGETS.monthly.target) * 100))
   return (
     <>
       <div className="dash-hero d3h">
         <Flex align="center" gap="4">
-          <svg width="70" height="70" viewBox="0 0 70 70" style={{ flex: 'none' }}>
-            <circle cx="35" cy="35" r="28" stroke="rgba(255,255,255,.22)" strokeWidth="7" fill="none" />
+          <svg width="74" height="74" viewBox="0 0 74 74" style={{ flex: 'none' }}>
+            <circle cx="37" cy="37" r="30" stroke="rgba(255,255,255,.2)" strokeWidth="7" fill="none" />
             <circle
-              cx="35" cy="35" r="28" stroke="#FFD43B" strokeWidth="7" fill="none" strokeLinecap="round"
-              strokeDasharray={2 * Math.PI * 28}
-              strokeDashoffset={(2 * Math.PI * 28) * (1 - (ready ? Math.min(1, k.month / TARGETS.monthly.target) : 0))}
-              transform="rotate(-90 35 35)"
+              cx="37" cy="37" r="30" stroke="#FFD43B" strokeWidth="7" fill="none" strokeLinecap="round"
+              strokeDasharray={2 * Math.PI * 30}
+              strokeDashoffset={(2 * Math.PI * 30) * (1 - (ready ? Math.min(1, k.month / TARGETS.monthly.target) : 0))}
+              transform="rotate(-90 37 37)"
               style={{ transition: 'stroke-dashoffset 1.1s cubic-bezier(.22, 1, .36, 1)' }}
             />
-            <text x="35" y="40" textAnchor="middle" fill="#fff" fontSize="14" fontWeight="800">
-              {Math.round((k.month / TARGETS.monthly.target) * 100)}%
-            </text>
+            <text x="37" y="42" textAnchor="middle" fill="#fff" fontSize="15" fontWeight="800">{tgtPct}%</text>
           </svg>
           <Box style={{ minWidth: 0 }}>
-            <Text size="1" weight="bold" as="div" style={{ color: 'rgba(255,255,255,.7)', letterSpacing: '.6px', fontSize: 10 }}>
+            <Text size="1" weight="bold" as="div" style={{ color: 'rgba(255,255,255,.65)', letterSpacing: '.6px', fontSize: 10 }}>
               PURCHASES THIS MONTH
             </Text>
-            <Flex align="center" gap="2" mt="1">
-              <Text weight="bold" style={{ fontSize: 29, color: '#fff', letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums' }}>
-                {fmtL(big)}
-              </Text>
-              <span className="up-chip"><ChevronUpIcon width={12} height={12} /> {k.growth}% YoY</span>
-            </Flex>
-            <Text size="1" as="div" mt="1" style={{ color: 'rgba(255,255,255,.75)' }}>
-              {fmtL(TARGETS.monthly.target - k.month)} more unlocks the +2% rebate
+            <Text weight="bold" as="div" mt="1" style={{ fontSize: 32, color: '#fff', letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums' }}>
+              {fmtL(big)}
             </Text>
+            <span className="up-chip" style={{ marginTop: 6, display: 'inline-flex' }}>
+              <ChevronUpIcon width={12} height={12} /> {k.growth}% vs last year
+            </span>
           </Box>
         </Flex>
-        <div className="dash-spark">
-          {last6.map(([m, v]) => (
-            <div key={m} className="ds-col">
-              <span style={{ height: ready ? `${28 + 72 * ((v - mn) / (mx - mn || 1))}%` : '0%' }} />
-              <em>{m}</em>
-            </div>
-          ))}
+      </div>
+
+      <div className="cp-card dk">
+        <Flex align="center" justify="between">
+          <Text size="1" weight="bold" style={{ color: '#98A0AB', letterSpacing: '.5px', fontSize: 10.5 }}>
+            MONTHLY REBATE
+          </Text>
+          <Text size="1" weight="bold" style={{ color: '#F5C242' }}>+2% at {fmtL(TARGETS.monthly.target)}</Text>
+        </Flex>
+        <Text size="3" weight="bold" as="div" mt="1" style={{ color: '#F2F4F7' }}>
+          {fmtL(TARGETS.monthly.target - k.month)} to go
+        </Text>
+        <div className="dk-bar">
+          <div style={{ width: ready ? `${tgtPct}%` : '0%' }} />
         </div>
       </div>
 
       <div className="kpi-grid">
-        <div className="kpi d3k" style={{ background: 'var(--blue-2)', borderColor: 'var(--blue-4)', '--kedge': 'var(--blue-5)' }}>
-          <Text size="1" style={{ color: 'var(--blue-11)', fontWeight: 700 }}>Orders</Text>
-          <Text size="4" weight="bold" as="div">{k.orders}</Text>
-          <Text size="1" as="div" style={{ color: 'var(--green-10)', fontWeight: 700 }}>▲ 3 vs May</Text>
+        <div className="kpi dk">
+          <Text size="1" style={{ color: 'var(--blue-9)', fontWeight: 700 }}>Orders</Text>
+          <Flex align="baseline" gap="2">
+            <Text size="4" weight="bold" as="div" style={{ color: '#F2F4F7' }}>{k.orders}</Text>
+            <Text style={{ fontSize: 10, color: '#56C271', fontWeight: 800 }}>▲ 3</Text>
+          </Flex>
+          <MiniBars data={ordSer} color="#2A4364" />
         </div>
-        <div className="kpi d3k" style={{ background: 'var(--violet-2)', borderColor: 'var(--violet-4)', '--kedge': 'var(--violet-5)' }}>
-          <Text size="1" style={{ color: 'var(--violet-11)', fontWeight: 700 }}>Avg order</Text>
-          <Text size="4" weight="bold" as="div">₹{(k.aov / 1000).toFixed(1)}k</Text>
-          <Text size="1" as="div" style={{ color: 'var(--green-10)', fontWeight: 700 }}>▲ 6% vs last qtr</Text>
+        <div className="kpi dk">
+          <Text size="1" style={{ color: 'var(--violet-9)', fontWeight: 700 }}>Avg order</Text>
+          <Flex align="baseline" gap="2">
+            <Text size="4" weight="bold" as="div" style={{ color: '#F2F4F7' }}>₹{(k.aov / 1000).toFixed(1)}k</Text>
+            <Text style={{ fontSize: 10, color: '#56C271', fontWeight: 800 }}>▲ 6%</Text>
+          </Flex>
+          <MiniLine data={aovSer} color="#8E7AF0" />
         </div>
-        <div className="kpi d3k" style={{ background: 'var(--green-2)', borderColor: 'var(--green-4)', '--kedge': 'var(--green-5)' }}>
-          <Text size="1" style={{ color: 'var(--green-11)', fontWeight: 700 }}>Saved</Text>
-          <Text size="4" weight="bold" as="div">₹{(k.saved / 1000).toFixed(1)}k</Text>
-          <Text size="1" as="div" style={{ color: 'var(--green-10)', fontWeight: 700 }}>▲ ₹2.1k vs May</Text>
+        <div className="kpi dk">
+          <Text size="1" style={{ color: 'var(--green-9)', fontWeight: 700 }}>Saved</Text>
+          <Flex align="baseline" gap="2">
+            <Text size="4" weight="bold" as="div" style={{ color: '#F2F4F7' }}>₹{(k.saved / 1000).toFixed(1)}k</Text>
+            <Text style={{ fontSize: 10, color: '#56C271', fontWeight: 800 }}>▲ ₹2.1k</Text>
+          </Flex>
+          <MiniLine data={savSer} color="#46B576" fill />
         </div>
-        <div className="kpi d3k" style={{ background: 'var(--amber-2)', borderColor: 'var(--amber-4)', '--kedge': 'var(--amber-5)' }}>
-          <Text size="1" style={{ color: 'var(--amber-11)', fontWeight: 700 }}>Best month</Text>
-          <Text size="4" weight="bold" as="div">{fmtL(best[1] * 1000)}</Text>
-          <Text size="1" color="gray" as="div">{best[0]} — your record</Text>
+        <div className="kpi dk">
+          <Text size="1" style={{ color: '#F5C242', fontWeight: 700 }}>Best month</Text>
+          <Flex align="baseline" gap="2">
+            <Text size="4" weight="bold" as="div" style={{ color: '#F2F4F7' }}>{fmtL(best[1] * 1000)}</Text>
+            <Text style={{ fontSize: 10, color: '#98A0AB', fontWeight: 700 }}>{best[0]}</Text>
+          </Flex>
+          <MiniBars data={DASH.months.map(d => d[1])} hi={bestIdx} />
         </div>
       </div>
 
-      <div className="hl-rail">
-        {[
-          [StarFilledIcon, 'amber', 'Top 25%', 'in HSR Layout', null],
-          [CounterClockwiseClockIcon, 'green', '4 regulars due', 'tap to restock', onReorder],
-          [BarChartIcon, 'blue', `Ahead of ${pctile}%`, 'of regional dealers', null],
-          [RocketIcon, 'violet', '3-month streak', 'consistent growth', null],
-          [CheckIcon, 'green', '₹10L+ lifetime', 'milestone crossed', null],
-          [RocketIcon, 'amber', `${fmtL(best[1] * 1000 - k.month)} to go`, `to beat your ${best[0]} record`, null],
-        ].map(([Icon, c, t, s, onClick]) => (
-          <button
-            key={t} className={`hl ${onClick ? 'act' : ''}`}
-            onClick={onClick || undefined}
-          >
-            <span className="bdg-ic" style={{ background: `var(--${c}-3)`, color: `var(--${c}-11)`, marginBottom: 6 }}>
-              <Icon width={14} height={14} />
-            </span>
-            <Text weight="bold" as="div" style={{ fontSize: 12.5 }}>{t}</Text>
-            <Text as="div" style={{ fontSize: 10, color: 'var(--gray-10)' }}>{s}</Text>
-          </button>
-        ))}
+      <div className="cp-card dk">
+        <Text size="1" weight="bold" as="div" style={{ color: '#98A0AB', letterSpacing: '.5px', fontSize: 10.5 }}>
+          HIGHLIGHTS
+        </Text>
+        <div className="dkrow">
+          <span className="bdg-ic" style={{ background: 'rgba(245,194,66,.14)', color: '#F5C242' }}>
+            <StarFilledIcon width={14} height={14} />
+          </span>
+          <Text size="2" weight="bold" style={{ flex: 1, color: '#F2F4F7' }}>Top 25% dealer in HSR Layout</Text>
+        </div>
+        <div className="dkrow">
+          <span className="bdg-ic" style={{ background: 'rgba(62,99,221,.16)', color: '#7E9BF2' }}>
+            <BarChartIcon width={14} height={14} />
+          </span>
+          <Box flexGrow="1" style={{ minWidth: 0 }}>
+            <Text size="2" weight="bold" style={{ color: '#F2F4F7' }}>Ahead of {pctile}% of dealers</Text>
+            <div className="dk-bar slim"><div style={{ width: ready ? `${pctile}%` : '0%' }} /></div>
+          </Box>
+        </div>
+        <button className="dkrow act" onClick={onReorder}>
+          <span className="bdg-ic" style={{ background: 'rgba(70,181,118,.16)', color: '#56C271' }}>
+            <CounterClockwiseClockIcon width={14} height={14} />
+          </span>
+          <Text size="2" weight="bold" style={{ flex: 1, textAlign: 'left', color: '#F2F4F7' }}>
+            4 regulars due — restock in one tap
+          </Text>
+          <ChevronRightIcon width={15} height={15} color="#5A6270" />
+        </button>
+        <div className="dkrow">
+          <span className="bdg-ic" style={{ background: 'rgba(245,194,66,.14)', color: '#F5C242' }}>
+            <RocketIcon width={14} height={14} />
+          </span>
+          <Text size="2" weight="bold" style={{ flex: 1, color: '#F2F4F7' }}>
+            {fmtL(best[1] * 1000 - k.month)} from beating your {best[0]} record
+          </Text>
+        </div>
       </div>
 
-      <div className="cp-card d3-card">
+      <div className="cp-card dk d3-card">
         <div className="seg" style={{ marginTop: 0, marginBottom: 14 }}>
           {[['trend', 'Trend'], ['mix', 'Category mix'], ['brands', 'Brands']].map(([kk, l]) => (
             <button key={kk} className={`seg-b ${tab === kk ? 'on' : ''}`} onClick={() => setTab(kk)}>{l}</button>
@@ -2773,7 +2831,7 @@ function AcctDash({ onReorder }) {
         {tab === 'trend' && (
           <>
             <Flex align="center" justify="between">
-              <Text size="2" weight="bold">Purchases</Text>
+              <Text size="2" weight="bold" style={{ color: '#F2F4F7' }}>Purchases</Text>
               <div className="seg" style={{ margin: 0 }}>
                 {[[6, '6M'], [12, '1Y']].map(([n, l]) => (
                   <button key={l} className={`seg-b ${per === n ? 'on' : ''}`} onClick={() => setPer(n)}>{l}</button>
@@ -2788,9 +2846,9 @@ function AcctDash({ onReorder }) {
           <Box pt="1">
             {DASH.brands.map(([b, pct], i) => (
               <Flex key={b} align="center" gap="3" mt={i === 0 ? '1' : '2'}>
-                <Text size="1" weight="bold" style={{ width: 76, flex: 'none' }}>{b}</Text>
+                <Text size="1" weight="bold" style={{ width: 76, flex: 'none', color: '#F2F4F7' }}>{b}</Text>
                 <div className="hbar"><div style={{ width: ready ? `${pct}%` : '0%' }} /></div>
-                <Text size="1" color="gray" style={{ width: 34, textAlign: 'right', flex: 'none' }}>{pct}%</Text>
+                <Text size="1" style={{ width: 34, textAlign: 'right', flex: 'none', color: '#98A0AB' }}>{pct}%</Text>
               </Flex>
             ))}
           </Box>
@@ -3774,7 +3832,7 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, o
 
       <PageExit open={sub !== null}>
       {sub && (
-        <div className="acct-sub">
+        <div className={`acct-sub ${sub === 'dash' ? 'sub-dark' : ''}`}>
           <div className="pdp-head">
             <button className="sheet-back" onClick={backSub} aria-label="Back"><ArrowLeftIcon /></button>
             <Heading size="4" style={{ flex: 1, letterSpacing: '-0.3px' }}>{ACCT_TITLES[sub]}</Heading>
