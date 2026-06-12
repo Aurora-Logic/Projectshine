@@ -122,7 +122,7 @@ function sparkle(e) {
   for (let i = 0; i < 6; i++) {
     const s = document.createElement('span')
     s.className = 'spark'
-    s.style.background = ['#12A594', '#FFD43B', '#7CCEC2'][i % 3]
+    s.style.background = ['#30A46C', '#FFD43B', '#A2DEB7'][i % 3]
     s.style.left = `${e.clientX}px`
     s.style.top = `${e.clientY}px`
     s.style.setProperty('--dx', `${Math.random() * 90 - 45}px`)
@@ -475,7 +475,7 @@ function AddControl({ qty, onAdd, onRemove, onBulk }) {
   if (qty === 0) {
     return (
       <Button
-        className="padd stepin" variant="outline" color="teal" size="2"
+        className="padd stepin" variant="outline" color="green" size="2"
         onClick={onAdd} style={{ fontWeight: 800, margin: 0 }}
       >
         ADD
@@ -483,7 +483,7 @@ function AddControl({ qty, onAdd, onRemove, onBulk }) {
     )
   }
   return (
-    <Flex className="padd stepin" align="center" justify="between" style={{ background: 'var(--teal-9)' }}>
+    <Flex className="padd stepin" align="center" justify="between" style={{ background: 'var(--green-9)' }}>
       <IconButton size="1" onClick={onRemove} style={{ background: 'transparent', color: '#fff' }}>
         <MinusIcon />
       </IconButton>
@@ -542,7 +542,7 @@ const ProductCard = memo(function ProductCard({ p, grid, onChange }) {
         {p.stock != null && (
           <Text size="1" as="div" weight="bold" style={{
             fontSize: 10.5,
-            color: oos ? 'var(--red-10)' : p.stock <= 10 ? 'var(--amber-11)' : 'var(--teal-10)',
+            color: oos ? 'var(--red-10)' : p.stock <= 10 ? 'var(--amber-11)' : 'var(--green-10)',
           }}>
             {oos
               ? `Out of stock · ships in ${p.lead} days`
@@ -666,7 +666,7 @@ function RecoStrip({ items, onClose, onChange }) {
   return (
     <div className="rstrip">
       <Flex align="center" justify="between" px="3" pb="2">
-        <Text size="1" weight="bold" style={{ color: 'var(--teal-11)', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" style={{ color: 'var(--green-11)', fontSize: 10.5 }}>
           PEOPLE ALSO ADD
         </Text>
         <button className="reco-x" onClick={onClose} aria-label="Dismiss">
@@ -687,7 +687,7 @@ function RecoStrip({ items, onClose, onChange }) {
             {x.stock != null && (
               <Text as="div" weight="bold" style={{
                 fontSize: 10,
-                color: x.stock === 0 ? 'var(--red-10)' : x.stock <= 10 ? 'var(--amber-11)' : 'var(--teal-10)',
+                color: x.stock === 0 ? 'var(--red-10)' : x.stock <= 10 ? 'var(--amber-11)' : 'var(--green-10)',
               }}>
                 {x.stock === 0 ? `Ships in ${x.lead} days` : x.stock <= 10 ? `Only ${x.stock} left` : `In stock · ${x.stock}+`}
               </Text>
@@ -705,7 +705,7 @@ function RecoStrip({ items, onClose, onChange }) {
                 )}
               </Box>
               <Button
-                size="1" color="teal" radius="full" style={{ fontWeight: 800, height: 26, padding: '0 12px', flex: 'none' }}
+                size="1" color="green" radius="full" style={{ fontWeight: 800, height: 26, padding: '0 12px', flex: 'none' }}
                 onClick={(e) => {
                   e.stopPropagation()
                   if (openQty) openQty(x, null, { noReco: true })
@@ -848,7 +848,7 @@ function FilterSheet({ group, onGroup, cat = 'All', b, setB, f, setF, count }) {
               <Box>
                 <Flex align="center" justify="between">
                   <Text size="2" weight="bold">Min load capacity</Text>
-                  <Text size="2" weight="bold" style={{ color: 'var(--teal-11)' }}>
+                  <Text size="2" weight="bold" style={{ color: 'var(--green-11)' }}>
                     {f.load > 0 ? `≥ ${f.load} kg` : 'Any'}
                   </Text>
                 </Flex>
@@ -902,7 +902,7 @@ function FilterSheet({ group, onGroup, cat = 'All', b, setB, f, setF, count }) {
           <Button size="3" variant="soft" color="gray" radius="full" onClick={() => onGroup(null)}>
             Close
           </Button>
-          <Button size="3" color="teal" radius="full" style={{ flex: 1, fontWeight: 800 }} onClick={() => onGroup(null)}>
+          <Button size="3" color="green" radius="full" style={{ flex: 1, fontWeight: 800 }} onClick={() => onGroup(null)}>
             Show {count} result{count === 1 ? '' : 's'}
           </Button>
         </div>
@@ -1223,7 +1223,7 @@ function ComboCard({ c, onChange }) {
           <Text weight="bold" style={{ fontSize: 16, letterSpacing: '-0.2px' }}>₹{c.price.toLocaleString('en-IN')}</Text>
           <Text size="1" color="gray" style={{ textDecoration: 'line-through' }}>₹{c.was.toLocaleString('en-IN')}</Text>
         </Flex>
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--teal-11)', marginTop: 2 }}>
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--green-11)', marginTop: 2 }}>
           You save ₹{(c.was - c.price).toLocaleString('en-IN')}
         </Text>
       </div>
@@ -1440,7 +1440,7 @@ function LeaderCol({ entry, index, max, animate }) {
         {fmtL(shown)}
       </Text>
       {e.top && <StarFilledIcon width={12} height={12} color="var(--amber-9)" />}
-      <div className="lb-av" style={{ background: e.me ? 'var(--teal-9)' : e.color, width: 30, height: 30, fontSize: 12, animationDelay: `${index * 110}ms` }}>
+      <div className="lb-av" style={{ background: e.me ? 'var(--green-9)' : e.color, width: 30, height: 30, fontSize: 12, animationDelay: `${index * 110}ms` }}>
         {e.name[0]}
       </div>
       <div
@@ -1449,7 +1449,7 @@ function LeaderCol({ entry, index, max, animate }) {
           height: animate ? Math.max(14, Math.round((e.value / max) * 150)) : 8,
           transitionDelay: `${index * 110}ms`,
           background: e.me
-            ? 'linear-gradient(180deg, var(--teal-9), var(--teal-11))'
+            ? 'linear-gradient(180deg, var(--green-9), var(--green-11))'
             : `linear-gradient(180deg, ${e.color}CC, ${e.color}66)`,
         }}
       />
@@ -1643,7 +1643,7 @@ function Leaderboard() {
           </Box>
           {next && (
             <Box style={{ textAlign: 'right' }}>
-              <Text size="2" weight="bold" as="div" style={{ color: 'var(--teal-11)' }}>
+              <Text size="2" weight="bold" as="div" style={{ color: 'var(--green-11)' }}>
                 {fmtL(next.min - myVol)} to {next.name}
               </Text>
               <Text size="1" color="gray" as="div" mt="1">{next.perk}</Text>
@@ -1865,7 +1865,7 @@ function BrandDay({ onShop }) {
             <Text size="2" weight="bold" as="div" truncate>{BRAND_DAY.name}</Text>
             <Text size="1" color="gray" as="div" truncate>{BRAND_DAY.sub}</Text>
           </Box>
-          <Button size="2" color="teal" radius="full" style={{ fontWeight: 800, flex: 'none' }} onClick={onShop}>
+          <Button size="2" color="green" radius="full" style={{ fontWeight: 800, flex: 'none' }} onClick={onShop}>
             {BRAND_DAY.cta}
           </Button>
         </Flex>
@@ -1965,7 +1965,7 @@ function CartBar({ cart }) {
         <Text key={cart.count} className="linepop" size="2" weight="bold" as="div">
           {cart.count} item{cart.count === 1 ? '' : 's'} · ₹{cart.total}
         </Text>
-        <Text size="1" weight="medium" as="div" style={{ color: 'var(--teal-4)' }}>{note}</Text>
+        <Text size="1" weight="medium" as="div" style={{ color: 'var(--green-4)' }}>{note}</Text>
       </Box>
       <Flex align="center" gap="1">
         <Text size="2" weight="bold">View cart</Text>
@@ -2047,7 +2047,7 @@ function QtySheet({ q, onClose, onConfirm }) {
         </div>
         {tier && (
           <div className={`qs-meter ${unlocked ? 'done' : ''}`}>
-            <Text size="1" weight="bold" as="div" style={{ color: unlocked ? 'var(--teal-11)' : 'var(--amber-11)' }}>
+            <Text size="1" weight="bold" as="div" style={{ color: unlocked ? 'var(--green-11)' : 'var(--amber-11)' }}>
               {unlocked
                 ? `${tier.pct}% bulk price unlocked — ₹${saved.toLocaleString('en-IN')} savings on invoice`
                 : `Add ${tier.thr - n} more to unlock ₹${tier.bp.toLocaleString('en-IN')}/pc (${tier.pct}% off)`}
@@ -2105,7 +2105,7 @@ function AddressSheet({ addrs, sel, onPick, onAdd, onClose }) {
               value={addr} onChange={(e) => setAddr(e.target.value)}
             />
             <Button
-              size="2" color="teal" mt="2" style={{ fontWeight: 800, width: '100%' }}
+              size="2" color="green" mt="2" style={{ fontWeight: 800, width: '100%' }}
               disabled={!label.trim() || !addr.trim()}
               onClick={() => { onAdd({ id: `a${Date.now()}`, label: label.trim(), addr: addr.trim() }); onClose() }}
             >
@@ -2167,7 +2167,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
         {items.length === 0 ? (
           <Box p="6" style={{ textAlign: 'center' }}>
             <Text size="2" color="gray" as="div">Your cart is empty — add products to get rolling</Text>
-            <Button mt="3" size="2" color="teal" radius="full" style={{ fontWeight: 800 }} onClick={onClose}>
+            <Button mt="3" size="2" color="green" radius="full" style={{ fontWeight: 800 }} onClick={onClose}>
               Browse products
             </Button>
           </Box>
@@ -2190,7 +2190,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
                       <Img src={img(p.ph, 120)} alt="" />
                       <Box flexGrow="1" style={{ minWidth: 0 }}>
                         <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{p.name}</Text>
-                        <Text as="div" style={{ fontSize: 10.5, color: bulkOn ? 'var(--teal-11)' : 'var(--gray-10)', fontWeight: bulkOn ? 700 : 500 }}>
+                        <Text as="div" style={{ fontSize: 10.5, color: bulkOn ? 'var(--green-11)' : 'var(--gray-10)', fontWeight: bulkOn ? 700 : 500 }}>
                           ₹{p.price.toLocaleString('en-IN')}{bulkOn ? ` · ${t.pct}% bulk off applied` : ''}
                         </Text>
                       </Box>
@@ -2228,7 +2228,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
                       <Flex align="center" justify="between" mt="1">
                         <Text size="1" weight="bold">₹{d.price.toLocaleString('en-IN')}</Text>
                         <Button
-                          size="1" color="teal" radius="full" style={{ fontWeight: 800, height: 22, padding: '0 10px' }}
+                          size="1" color="green" radius="full" style={{ fontWeight: 800, height: 22, padding: '0 10px' }}
                           onClick={() => openQty && openQty(d, null, { noReco: true })}
                         >
                           ADD
@@ -2278,7 +2278,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
                   <Text size="2" weight="bold" as="div">Standard · today by 6 PM</Text>
                   <Text size="1" color="gray" as="div">FREE above ₹{FREE_DELIVERY_AT}</Text>
                 </span>
-                <Text size="1" weight="bold" style={baseFee === 0 ? { color: 'var(--teal-10)' } : undefined}>
+                <Text size="1" weight="bold" style={baseFee === 0 ? { color: 'var(--green-10)' } : undefined}>
                   {baseFee === 0 ? 'FREE' : `₹${baseFee}`}
                 </Text>
               </button>
@@ -2303,7 +2303,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
                   <Text size="1" as="div" mt="1" style={{ lineHeight: 1.4 }}>{addr.addr}</Text>
                 </Box>
                 <Button
-                  size="1" variant="soft" color="teal" radius="full" style={{ fontWeight: 800, flex: 'none' }}
+                  size="1" variant="soft" color="green" radius="full" style={{ fontWeight: 800, flex: 'none' }}
                   onClick={() => setAddrSheet(true)}
                 >
                   Change
@@ -2329,19 +2329,19 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
               <Flex justify="between" mt="2"><Text size="1" color="gray">Item total</Text><Text size="1" weight="bold">₹{cart.total.toLocaleString('en-IN')}</Text></Flex>
               {bulkSave > 0 && (
                 <Flex justify="between" mt="1">
-                  <Text size="1" style={{ color: 'var(--teal-11)' }}>Bulk price savings</Text>
-                  <Text size="1" weight="bold" style={{ color: 'var(--teal-11)' }}>−₹{bulkSave.toLocaleString('en-IN')}</Text>
+                  <Text size="1" style={{ color: 'var(--green-11)' }}>Bulk price savings</Text>
+                  <Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>−₹{bulkSave.toLocaleString('en-IN')}</Text>
                 </Flex>
               )}
               {schemeOff > 0 && (
                 <Flex justify="between" mt="1">
-                  <Text size="1" style={{ color: 'var(--teal-11)' }}>Volume scheme ({slab.off}%)</Text>
-                  <Text size="1" weight="bold" style={{ color: 'var(--teal-11)' }}>−₹{schemeOff.toLocaleString('en-IN')}</Text>
+                  <Text size="1" style={{ color: 'var(--green-11)' }}>Volume scheme ({slab.off}%)</Text>
+                  <Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>−₹{schemeOff.toLocaleString('en-IN')}</Text>
                 </Flex>
               )}
               <Flex justify="between" mt="1">
                 <Text size="1" color="gray">Delivery</Text>
-                <Text size="1" weight="bold" style={baseFee === 0 ? { color: 'var(--teal-10)' } : undefined}>{baseFee === 0 ? 'FREE' : `₹${baseFee}`}</Text>
+                <Text size="1" weight="bold" style={baseFee === 0 ? { color: 'var(--green-10)' } : undefined}>{baseFee === 0 ? 'FREE' : `₹${baseFee}`}</Text>
               </Flex>
               {express && (
                 <Flex justify="between" mt="1">
@@ -2389,7 +2389,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
             <Heading size="5" mt="3" style={{ letterSpacing: '-0.3px' }}>Order placed!</Heading>
             <Text size="2" color="gray" as="div" mt="1">PO {placed.id} · ₹{placed.amt.toLocaleString('en-IN')}</Text>
             <Text size="1" color="gray" as="div" mt="1">Invoice & dispatch details on WhatsApp + email</Text>
-            <Button mt="4" size="3" color="teal" radius="full" style={{ fontWeight: 800, width: '100%' }} onClick={onPlaced}>
+            <Button mt="4" size="3" color="green" radius="full" style={{ fontWeight: 800, width: '100%' }} onClick={onPlaced}>
               Done
             </Button>
           </div>
@@ -2558,7 +2558,7 @@ function ProductPage({ p, onClose, onChange, cart }) {
           )}
           {p.stock != null && (
             <Text size="1" as="div" mt="2" weight="bold" style={{
-              color: oos ? 'var(--red-10)' : p.stock <= 10 ? 'var(--amber-11)' : 'var(--teal-10)',
+              color: oos ? 'var(--red-10)' : p.stock <= 10 ? 'var(--amber-11)' : 'var(--green-10)',
             }}>
               {oos
                 ? `Out of stock · ships in ${p.lead} days`
@@ -2573,7 +2573,7 @@ function ProductPage({ p, onClose, onChange, cart }) {
           {tier && (
             <div className="bulk-box">
               <div className="bulk-row">
-                <Text size="1" weight="bold" style={{ color: 'var(--teal-11)', fontSize: 10.5, letterSpacing: '.5px' }}>
+                <Text size="1" weight="bold" style={{ color: 'var(--green-11)', fontSize: 10.5, letterSpacing: '.5px' }}>
                   DEALER BULK PRICING
                 </Text>
                 <Text size="1" color="gray">per pc / set</Text>
@@ -2587,7 +2587,7 @@ function ProductPage({ p, onClose, onChange, cart }) {
                   <Text size="2" weight="bold">{tier.thr}+ pcs</Text>
                   <span className="off-pill">{tier.pct}% OFF</span>
                 </Flex>
-                <Text size="2" weight="bold" style={{ color: 'var(--teal-11)' }}>₹{tier.bp.toLocaleString('en-IN')}</Text>
+                <Text size="2" weight="bold" style={{ color: 'var(--green-11)' }}>₹{tier.bp.toLocaleString('en-IN')}</Text>
               </div>
             </div>
           )}
@@ -2606,7 +2606,7 @@ function ProductPage({ p, onClose, onChange, cart }) {
                   ₹{(p.price + club.price).toLocaleString('en-IN')} <Text size="1" color="gray" weight="medium">for both</Text>
                 </Text>
                 <Button
-                  size="1" color="teal" radius="full" mt="2" style={{ fontWeight: 800 }}
+                  size="1" color="green" radius="full" mt="2" style={{ fontWeight: 800 }}
                   onClick={(e) => {
                     onChange(1, p, { noReco: true }); onChange(1, club, { noReco: true })
                     sparkle(e); setAdded(a => a + 1)
@@ -2942,7 +2942,7 @@ export default function App() {
   }
 
   return (
-    <Theme accentColor="teal" grayColor="slate" radius="large">
+    <Theme accentColor="green" grayColor="slate" radius="large">
       <QtyCtx.Provider value={openQty}>
       <PdpCtx.Provider value={openPdp}>
       <CartCtx.Provider value={openCart}>
@@ -3095,7 +3095,7 @@ export default function App() {
             <div className="reco">
               <Img className="reco-img" src={img(reco.ph, 100)} alt="" />
               <Box flexGrow="1" style={{ minWidth: 0 }}>
-                <Text size="1" weight="bold" as="div" style={{ color: 'var(--teal-11)', fontSize: 10.5 }}>
+                <Text size="1" weight="bold" as="div" style={{ color: 'var(--green-11)', fontSize: 10.5 }}>
                   PEOPLE ALSO ADD
                 </Text>
                 <Text size="2" weight="bold" as="div" truncate>
@@ -3103,7 +3103,7 @@ export default function App() {
                 </Text>
               </Box>
               <Button
-                size="1" color="teal" radius="full" style={{ fontWeight: 800, flex: 'none' }}
+                size="1" color="green" radius="full" style={{ fontWeight: 800, flex: 'none' }}
                 onClick={() => { const r = reco; setReco(null); openQty(r, null, { noReco: true }) }}
               >
                 ADD
