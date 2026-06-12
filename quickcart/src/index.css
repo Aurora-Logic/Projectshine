@@ -4651,3 +4651,19 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 .pimg { z-index: 0; }
 .pbadge { z-index: 2; }
 .padd { z-index: 8; }
+
+/* the fixed footer must never eat taps meant for the feed beneath it
+   (empty-state CartBar is hidden only visually) — same fix as .plp-cartwrap */
+.footer { pointer-events: none; }
+.footer .navrow, .footer .cartbar.show, .footer .reco { pointer-events: auto; }
+
+/* 16px inputs: below 16 triggers iOS Safari focus-zoom (login is already 16) */
+.cp-input, .cp-note { font-size: 16px; }
+
+/* AA contrast: white text sits on green-11 (4.72:1), not green-9 (3.16:1) */
+.qs-cta { background: var(--green-11); }
+.cartbar { background: var(--green-11); }
+.cs-step, .ro-step { background: var(--green-11); }
+.slot.on { background: var(--green-11); border-color: var(--green-11); }
+.cal-day.sel { background: var(--green-11); }
+.lg-cta { background: var(--green-11); }

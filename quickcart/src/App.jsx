@@ -4,7 +4,7 @@ import {
 } from '@radix-ui/themes'
 import {
   MagnifyingGlassIcon, ChevronDownIcon, ChevronRightIcon, ChevronUpIcon, PersonIcon,
-  LightningBoltIcon, StarFilledIcon, MinusIcon, PlusIcon, TimerIcon, Cross2Icon,
+  LightningBoltIcon, StarFilledIcon, MinusIcon, PlusIcon, Cross2Icon,
   HomeIcon, DashboardIcon, CounterClockwiseClockIcon, RocketIcon, ArrowLeftIcon,
   MixerHorizontalIcon, GearIcon, FileTextIcon, DiscIcon, CheckIcon,
   BarChartIcon, BellIcon, LockClosedIcon, ExitIcon, RulerSquareIcon, SewingPinIcon,
@@ -13,8 +13,8 @@ import {
 } from '@radix-ui/react-icons'
 import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
-  FEED_POOL, CATEGORIES, BANNERS, COMBOS, CLEARANCE_TILES, QUIZ,
-  LEADERS, SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
+  FEED_POOL, CATEGORIES, BANNERS, COMBOS, QUIZ,
+  SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
   BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES, REORDER, PAST_ORDERS, DASH, CREDIT, CAT_SCHEMES,
 } from './data.js'
 import './App.css'
@@ -306,7 +306,7 @@ function CartGlyph(props) {
   )
 }
 
-function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCount, plain, onTargets, onAccount }) {
+function TopBar({ compact, dp, cond, brand, onBrand, onSearch, cartCount, plain, onTargets, onAccount }) {
   const openCart = useContext(CartCtx)
   const [hint, setHint] = useState(0)
   useEffect(() => {
@@ -360,7 +360,7 @@ function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCoun
           <div className="tgt-mini-bar">
             <div className="tgt-mini-fill" style={{ width: `${Math.min(100, Math.round((TARGETS.monthly.done / TARGETS.monthly.target) * 100))}%` }} />
           </div>
-          <Text size="1" weight="bold" style={{ color: '#FFD43B', flex: 'none' }}>
+          <Text size="1" weight="bold" style={{ color: '#fff', flex: 'none' }}>
             {Math.round((TARGETS.monthly.done / TARGETS.monthly.target) * 100)}% · ₹{Math.round((TARGETS.monthly.target - TARGETS.monthly.done) / 1000)}k to go
           </Text>
           <ChevronRightIcon width={12} height={12} color="rgba(255,255,255,.7)" style={{ flex: 'none' }} />
@@ -515,7 +515,7 @@ function AddControl({ qty, onAdd, onRemove, onBulk }) {
     )
   }
   return (
-    <Flex className="padd stepin on" align="center" justify="between" style={{ background: 'var(--green-9)' }}>
+    <Flex className="padd stepin on" align="center" justify="between" style={{ background: 'var(--green-11)' }}>
       <IconButton size="1" aria-label="Decrease quantity" onClick={onRemove} style={{ background: 'transparent', color: '#fff' }}>
         <MinusIcon />
       </IconButton>
@@ -1275,39 +1275,6 @@ function ComboCard({ c, onChange }) {
   )
 }
 
-function ClearanceStore() {
-  return (
-    <div className="band-clearance" id="season-store">
-      <Flex align="center" justify="between">
-        <Box>
-          <Flex align="center" gap="2">
-            <Heading size="6" style={{ color: '#fff', letterSpacing: '-0.4px' }}>Clearance stock</Heading>
-            <span className="cl-pill">UP TO 60% OFF</span>
-          </Flex>
-          <Text size="2" as="div" mt="1" style={{ color: 'rgba(255,255,255,.7)' }}>
-            Last units — gone when they’re gone
-          </Text>
-        </Box>
-        <Text size="2" weight="bold" style={{ color: '#fff', cursor: 'pointer', flex: 'none' }}>See all</Text>
-      </Flex>
-      <Grid columns="2" gap="3" mt="4">
-        {CLEARANCE_TILES.map(t => (
-          <div className="m-tile" key={t.label}>
-            <div className="m-label" style={{ display: 'block' }}>
-              <Text size="2" weight="bold" as="div" style={{ color: '#fff', lineHeight: 1.3 }}>{t.label}</Text>
-              <Text size="1" weight="bold" as="div" mt="1" style={{ color: '#FFD43B' }}>Only {t.left} left</Text>
-            </div>
-            <div style={{ position: 'relative' }}>
-              <Img src={img(t.ph, 280)} alt={t.label} loading="lazy" style={{ display: 'block', width: '100%', height: 104, objectFit: 'cover' }} />
-              <span className="cl-off">-{t.off}%</span>
-            </div>
-          </div>
-        ))}
-      </Grid>
-    </div>
-  )
-}
-
 /* ---------------- Quiz + leaderboard ---------------- */
 
 function Bulbs({ n = 9 }) {
@@ -1327,7 +1294,7 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
 
   const start = () => { setStage('playing'); setQi(0); setCorrect(0); setPicked(null) }
 
-  const advance = (isRight) => {
+  const advance = () => {
     if (qi + 1 < QUIZ.length) { setQi(q => q + 1); setPicked(null) }
     else {
       if (onFinish) onFinish()
@@ -1340,7 +1307,7 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
     setPicked(i)
     const isRight = i === QUIZ[qi].a
     if (isRight) { setCorrect(c => c + 1); sparkle(e) }
-    setTimeout(() => advance(isRight), 900)
+    setTimeout(() => advance(), 900)
   }
 
   // 10s countdown per question — time out counts as a miss
@@ -1354,7 +1321,7 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
   useEffect(() => {
     if (stage === 'playing' && picked === null && tleft === 0) {
       setPicked(-1)
-      setTimeout(() => advance(false), 900)
+      setTimeout(() => advance(), 900)
     }
   }, [tleft]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1492,38 +1459,6 @@ function useCountUp(target, go, dur = 900, delay = 0) {
     return () => { cancelAnimationFrame(raf); clearTimeout(settle) }
   }, [go, target, dur, delay])
   return v
-}
-
-function LeaderCol({ entry, index, max, animate }) {
-  const e = entry
-  const shown = useCountUp(e.value, animate, 900, index * 110)
-  return (
-    <div className={`lbv-col ${e.me ? 'me' : ''}`}>
-      <Text size="1" weight="bold" color={e.me ? 'green' : 'gray'} style={{ fontSize: 10.5 }}>
-        {fmtL(shown)}
-      </Text>
-      {e.top && <StarFilledIcon width={12} height={12} color="var(--amber-9)" />}
-      <div className="lb-av" style={{ background: e.me ? 'var(--green-9)' : e.color, width: 30, height: 30, fontSize: 12, animationDelay: `${index * 110}ms` }}>
-        {e.name[0]}
-      </div>
-      <div
-        className="lbv-bar"
-        style={{
-          height: animate ? Math.max(14, Math.round((e.value / max) * 150)) : 8,
-          transitionDelay: `${index * 110}ms`,
-          background: e.me
-            ? 'linear-gradient(180deg, var(--green-9), var(--green-11))'
-            : `linear-gradient(180deg, ${e.color}CC, ${e.color}66)`,
-        }}
-      />
-      <Text size="1" weight="bold" color={e.me ? 'green' : 'gray'} style={{ fontSize: 10.5 }}>
-        #{e.rank}
-      </Text>
-      <Text size="1" weight={e.me ? 'bold' : 'medium'} truncate style={{ fontSize: 10.5, maxWidth: '100%' }}>
-        {e.name}
-      </Text>
-    </div>
-  )
 }
 
 function GameRow({ onSpin }) {
@@ -2045,7 +1980,7 @@ function CartBar({ cart }) {
       </Flex>
       <Box flexGrow="1">
         <Text key={cart.count} className="linepop" size="2" weight="bold" as="div">
-          {cart.count} item{cart.count === 1 ? '' : 's'} · ₹{cart.total}
+          {cart.count} item{cart.count === 1 ? '' : 's'} · ₹{cart.total.toLocaleString('en-IN')}
         </Text>
         <Text size="1" weight="medium" as="div" style={{ color: 'var(--green-4)' }}>{note}</Text>
       </Box>
@@ -2315,6 +2250,41 @@ function AcctLists({ onChange }) {
 }
 
 /* ---------------- Credit ledger (30-day dealer credit) ---------------- */
+
+/* GST invoice generated on-device (restored; Sprint-1 reworks to bill snapshot) */
+function downloadInvoice(o) {
+  let gst = { gstin: '29ABCDE1234F1Z5', name: 'Bora Hardware & Plywood' }
+  try { gst = { ...gst, ...(JSON.parse(localStorage.getItem('qc-gst') || 'null') || {}) } } catch { /* defaults */ }
+  const total = o.items.reduce((s, { p, n }) => s + p.price * n, 0)
+  const taxable = Math.round(total / 1.18)
+  const tax = total - taxable
+  const rows = o.items.map(({ p, n }) => `
+    <tr><td>${p.name}</td><td class="r">${n}</td><td class="r">₹${p.price.toLocaleString('en-IN')}</td><td class="r">₹${(p.price * n).toLocaleString('en-IN')}</td></tr>`).join('')
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${o.id}</title><style>
+    body{font-family:-apple-system,Segoe UI,sans-serif;margin:32px;color:#1a1a1a}
+    h1{font-size:20px;margin:0;color:#0E4A2F} .mut{color:#777;font-size:12px}
+    table{width:100%;border-collapse:collapse;margin-top:18px;font-size:13px}
+    th,td{padding:8px 10px;border-bottom:1px solid #e5e5e5;text-align:left} .r{text-align:right}
+    th{background:#F1F8F4;font-size:11px;letter-spacing:.4px;text-transform:uppercase}
+    .tot td{font-weight:700;border-top:2px solid #0E4A2F;border-bottom:none}
+    .top{display:flex;justify-content:space-between;align-items:flex-start}
+  </style></head><body>
+    <div class="top"><div><h1>QuickCart</h1><div class="mut">Furniture hardware for dealers<br/>GSTIN 29QCKRT5678K1Z9 · Bengaluru</div></div>
+    <div class="mut" style="text-align:right">TAX INVOICE<br/><b style="color:#1a1a1a">PO ${o.id}</b><br/>${o.date}</div></div>
+    <p class="mut" style="margin-top:16px">Billed to<br/><b style="color:#1a1a1a">${gst.name}</b><br/>GSTIN ${gst.gstin.toUpperCase()}</p>
+    <table><tr><th>Item</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th></tr>${rows}
+    <tr><td colspan="3" class="r mut">Taxable value</td><td class="r">₹${taxable.toLocaleString('en-IN')}</td></tr>
+    <tr><td colspan="3" class="r mut">CGST 9% + SGST 9%</td><td class="r">₹${tax.toLocaleString('en-IN')}</td></tr>
+    <tr class="tot"><td colspan="3" class="r">Grand total</td><td class="r">₹${total.toLocaleString('en-IN')}</td></tr></table>
+    <p class="mut">Input credit available on this invoice. Computer-generated — no signature required.</p>
+  </body></html>`
+  const blob = new Blob([html], { type: 'text/html' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `Invoice-${o.id}.html`
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
 
 function downloadLedger() {
   let paid = []
@@ -2893,7 +2863,13 @@ function OrderDetailPage({ order, onClose, onChange }) {
     return t && n >= t.thr ? s + (p.price - t.bp) * n : s
   }, 0)
   const live = order.status !== 'Delivered'
-  const elapsed = live && order.ts ? (Date.now() - order.ts) / 1000 : Infinity
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!live) return undefined
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [live])
+  const elapsed = live && order.ts ? (now - order.ts) / 1000 : Infinity
   let si = 0
   ORDER_STAGES.forEach(([, t], i) => { if (elapsed >= t) si = i })
   if (!live) si = ORDER_STAGES.length - 1
@@ -3053,8 +3029,8 @@ function AcctOrders({ lastOrder, onChange }) {
           ORDERS THIS FY
         </Text>
         <Flex align="baseline" gap="2" mt="1">
-          <Text weight="bold" style={{ fontSize: 27, letterSpacing: '-0.6px' }}>{hist.length + 12}</Text>
-          <Text size="1" color="gray">orders · {fmtL(totalVal + 1040000)} billed · tap any for invoice</Text>
+          <Text weight="bold" style={{ fontSize: 27, letterSpacing: '-0.6px' }}>{hist.length}</Text>
+          <Text size="1" color="gray">orders · {fmtL(totalVal)} billed · tap any for invoice</Text>
         </Flex>
       </div>
       <div className="seg" style={{ marginTop: 0, marginBottom: 12 }}>
@@ -3228,8 +3204,39 @@ function AcctAddr() {
   )
 }
 
-function AcctCalc() {
+/* recommendation row shared by the calculators */
+function CalcSugg({ p, qty, note }) {
   const openQty = useContext(QtyCtx)
+  if (!p) {
+    return (
+      <div className="calc-out">
+        <Text size="1" weight="bold" style={{ color: 'var(--amber-11)' }}>
+          Above 60 kg — talk to support for heavy-duty options
+        </Text>
+      </div>
+    )
+  }
+  return (
+    <div className="calc-out">
+      <Text size="1" weight="bold" as="div" style={{ color: 'var(--green-11)' }}>{note}</Text>
+      <Flex align="center" gap="3" mt="2">
+        <Img src={img(p.ph, 100)} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover' }} />
+        <Box flexGrow="1" style={{ minWidth: 0 }}>
+          <Text size="1" weight="bold" as="div" className="clamp1">{p.name}</Text>
+          <Text size="1" color="gray" as="div">₹{p.price.toLocaleString('en-IN')}{p.bulk ? ` · ${p.bulk}` : ''}</Text>
+        </Box>
+        <Button
+          size="1" color="green" radius="full" style={{ fontWeight: 800, flex: 'none' }}
+          onClick={() => openQty && openQty(p, null, { noReco: true })}
+        >
+          ADD{qty ? ` ${qty}` : ''}
+        </Button>
+      </Flex>
+    </div>
+  )
+}
+
+function AcctCalc() {
   const [tab, setTab] = useState('slide')
   const [wt, setWt] = useState(30)
   const [sz, setSz] = useState(450)
@@ -3239,24 +3246,6 @@ function AcctCalc() {
     .sort((a, b) => a.load - b.load)[0]
   const hingeCount = ht < 900 ? 2 : ht < 1500 ? 3 : ht < 2100 ? 4 : 5
   const hinge = FEED_POOL.find(p => /hinge/i.test(p.name))
-  const Sugg = ({ p, qty, note }) => p ? (
-    <div className="calc-out">
-      <Text size="1" weight="bold" as="div" style={{ color: 'var(--green-11)' }}>{note}</Text>
-      <Flex align="center" gap="3" mt="2">
-        <Img src={img(p.ph, 100)} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover' }} />
-        <Box flexGrow="1" style={{ minWidth: 0 }}>
-          <Text size="1" weight="bold" as="div" className="clamp1">{p.name}</Text>
-          <Text size="1" color="gray" as="div">₹{p.price.toLocaleString('en-IN')}{p.bulk ? ` · ${p.bulk}` : ''}</Text>
-        </Box>
-        <Button size="1" color="green" radius="full" style={{ fontWeight: 800, flex: 'none' }}
-          onClick={() => openQty && openQty(p, null, { noReco: true })}>
-          ADD{qty ? ` ${qty}` : ''}
-        </Button>
-      </Flex>
-    </div>
-  ) : (
-    <div className="calc-out"><Text size="1" weight="bold" style={{ color: 'var(--amber-11)' }}>Above 60 kg — talk to support for heavy-duty options</Text></div>
-  )
   return (
     <>
       <div className="seg" style={{ marginTop: 0 }}>
@@ -3275,7 +3264,7 @@ function AcctCalc() {
               <button key={s} className={`seg-b ${sz === s ? 'on' : ''}`} style={{ flex: 1 }} onClick={() => setSz(s)}>{s} mm</button>
             ))}
           </Flex>
-          <Sugg p={slide} note={`For ${wt} kg · recommended ${slide ? `${slide.load} kg rated` : ''}`} />
+          <CalcSugg p={slide} note={`For ${wt} kg · recommended ${slide ? `${slide.load} kg rated` : ''}`} />
         </div>
       ) : (
         <div className="cp-card">
@@ -3283,7 +3272,7 @@ function AcctCalc() {
           <Text size="1" color="gray" as="div" mt="1">Door height (mm)</Text>
           <input className="cp-input" style={{ marginTop: 4 }} type="number" min="300" max="3000" value={ht}
             onChange={(e) => setHt(Math.max(300, +e.target.value || 0))} />
-          <Sugg p={hinge} qty={hingeCount} note={`${ht} mm door → ${hingeCount} hinges per door`} />
+          <CalcSugg p={hinge} qty={hingeCount} note={`${ht} mm door → ${hingeCount} hinges per door`} />
         </div>
       )}
     </>
@@ -3715,7 +3704,7 @@ const ACCT_TITLES = {
   notif: 'Notification preferences', privacy: 'Account privacy',
 }
 
-function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, onCategory, onGoReorder }) {
+function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCategory, onGoReorder }) {
   const [sub, setSub] = useState(() => {
     const h = window.location.hash
     if (h === '#dash') return 'dash'
@@ -4280,11 +4269,16 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
 const ORDER_STAGES = [['Placed', 0], ['Packed', 45], ['On the way', 150], ['Delivered', 300]]
 
 function OrderCard({ order, onDismiss, onReorder, onAddMore }) {
-  const [now, setNow] = useState(Date.now())
+  const [now, setNow] = useState(() => Date.now())
+  const doneAt = order.ts + ORDER_STAGES[ORDER_STAGES.length - 1][1] * 1000
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000)
+    if (Date.now() >= doneAt) return undefined
+    const t = setInterval(() => {
+      setNow(Date.now())
+      if (Date.now() >= doneAt) clearInterval(t)
+    }, 1000)
     return () => clearInterval(t)
-  }, [])
+  }, [doneAt])
   const [rated, setRated] = useState(order.rated || 0)
   const elapsed = Math.max(0, (now - order.ts) / 1000)
   let si = 0
@@ -4432,10 +4426,15 @@ const imgData = async (url) => {
 }
 
 async function generateEstimate({ cust, items, bill }) {
-  const [{ jsPDF }, { default: autoTable }, fontN, fontB, fontD, mark, ...brands] = await Promise.all([
+  // product thumbnails: square JPEGs fetched per line item; a failed fetch
+  // degrades to a neutral placeholder square rather than failing the export
+  const thumb = (ph) => fetchB64(`https://images.unsplash.com/photo-${ph}?fit=crop&w=160&h=160&q=70&fm=jpg`)
+    .then(b => 'data:image/jpeg;base64,' + b).catch(() => null)
+  const [{ jsPDF }, { default: autoTable }, fontN, fontB, mark, thumbs, ...brands] = await Promise.all([
     import('jspdf'), import('jspdf-autotable'),
-    fetchB64('/fonts/DejaVuSans.ttf'), fetchB64('/fonts/DejaVuSans-Bold.ttf'), fetchB64('/fonts/DejaVuSerif-Bold.ttf'),
+    fetchB64('/fonts/DejaVuSans.ttf'), fetchB64('/fonts/DejaVuSans-Bold.ttf'),
     imgData('/icon-192.png'),
+    Promise.all(items.map(({ p }) => thumb(p.ph))),
     ...Object.values(BRAND_LOGOS).map(imgData),
   ])
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true })
@@ -4443,109 +4442,119 @@ async function generateEstimate({ cust, items, bill }) {
   doc.addFont('DejaVuSans.ttf', 'DejaVu', 'normal')
   doc.addFileToVFS('DejaVuSans-Bold.ttf', fontB)
   doc.addFont('DejaVuSans-Bold.ttf', 'DejaVu', 'bold')
-  doc.addFileToVFS('DejaVuSerif-Bold.ttf', fontD)
-  doc.addFont('DejaVuSerif-Bold.ttf', 'DejaVuSerif', 'bold')
 
-  const W = 210, H = 297, M = 14
-  const GREEN = [20, 99, 63], GOLD = [245, 194, 66], CREAM = [253, 246, 231]
-  const INK = [24, 28, 33], GRAY = [110, 117, 125], WARM = [154, 124, 61]
+  const W = 210, H = 297, M = 18
+  const GREEN = [20, 99, 63], INK = [26, 28, 31], GRAY = [105, 110, 116]
+  const PAPER = [242, 242, 240], HAIR = [203, 203, 198]
   const inr = (n) => '₹' + n.toLocaleString('en-IN')
   const no = `QE-${String(Date.now()).slice(-6)}`
-  const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  const d = new Date()
+  const today = [String(d.getDate()).padStart(2, '0'), String(d.getMonth() + 1).padStart(2, '0'), d.getFullYear()].join('.')
+  const paper = () => doc.setFillColor(...PAPER).rect(0, 0, W, H, 'F')
+  paper()
 
-  // ---- header: deep-green editorial band
-  doc.setFillColor(...GREEN).rect(0, 0, W, 46, 'F')
-  doc.setFillColor(255, 255, 255).roundedRect(M, 11, 19, 19, 4.5, 4.5, 'F')
-  doc.addImage(mark.data, 'PNG', M + 3, 14, 13, 13)
-  doc.setFont('DejaVu', 'bold').setFontSize(19).setTextColor(255, 255, 255).text('QuickCart', M + 24, 20.5)
-  doc.setFont('DejaVu', 'normal').setFontSize(8.5).setTextColor(196, 224, 207)
-    .text('Furniture hardware for beautiful interiors', M + 24, 26.5)
-  doc.setFont('DejaVuSerif', 'bold').setFontSize(26).setTextColor(...GOLD).text('Estimate', W - M, 22, { align: 'right' })
-  doc.setFont('DejaVu', 'normal').setFontSize(8.5).setTextColor(225, 238, 230)
-    .text(`${no} · ${today} · valid 7 days`, W - M, 28.5, { align: 'right' })
-  // designer touch: a cabinet-finish palette strip
-  const pal = [GOLD, [255, 233, 168], [228, 239, 231], [201, 142, 27], [255, 255, 255]]
-  let px = W - M - (5 * 9 + 4 * 3)
-  for (const c of pal) { doc.setFillColor(...c).roundedRect(px, 37.5, 9, 2.6, 1.3, 1.3, 'F'); px += 12 }
+  // ---- masthead: wordmark left, monogram right (Swiss editorial)
+  doc.setFont('DejaVu', 'bold').setFontSize(27).setTextColor(...GREEN).text('QuickCart', M, 33)
+  doc.addImage(mark.data, 'PNG', W - M - 11, 22, 11, 11)
 
-  // ---- brand showcase: warm cream band right under the masthead
-  doc.setFillColor(...CREAM).rect(0, 46, W, 27, 'F')
-  doc.setFont('DejaVu', 'bold').setFontSize(7.5).setTextColor(...WARM).setCharSpace(0.6)
-  doc.text('AUTHORIZED DEALER · THE BRANDS BEHIND BEAUTIFUL INTERIORS', W / 2, 53.5, { align: 'center' })
-  doc.setCharSpace(0)
-  const lh = 7.5, pad = 4, chipH = 13
-  const sizes = brands.map(b => ({ ...b, dw: (b.w / b.h) * lh }))
-  const stripW = sizes.reduce((s, b) => s + b.dw + pad * 2, 0) + (sizes.length - 1) * 5
-  let bx = (W - stripW) / 2
-  for (const b of sizes) {
-    doc.setFillColor(255, 255, 255).setDrawColor(233, 220, 193).setLineWidth(0.3)
-      .roundedRect(bx, 57, b.dw + pad * 2, chipH, 2.5, 2.5, 'FD')
-    doc.addImage(b.data, 'PNG', bx + pad, 57 + (chipH - lh) / 2, b.dw, lh)
-    bx += b.dw + pad * 2 + 5
-  }
+  // ---- information columns
+  doc.setFont('DejaVu', 'normal').setFontSize(9.5).setTextColor(...INK)
+  doc.text('Customer Information', M, 72).text('Dealer Information', 112, 72)
+  doc.setFontSize(9).setTextColor(...GRAY)
+  const custLines = [cust.name, cust.phone, ...(cust.site ? doc.splitTextToSize(cust.site, 80) : [])].filter(Boolean)
+  doc.text(custLines, M, 79)
+  doc.text(['Virag Bora — QuickCart dealer', '304 Maple Heights, HSR Layout', 'Bengaluru 560102', '+91 98450 00000'], 112, 79)
 
-  // ---- prepared for / from: two soft cards
-  const cardW = (W - 2 * M - 6) / 2
-  const card = (x, cap, name, lines) => {
-    doc.setFillColor(246, 248, 247).roundedRect(x, 79, cardW, 27, 3, 3, 'F')
-    doc.setFont('DejaVu', 'bold').setFontSize(7).setTextColor(...GRAY).setCharSpace(0.5).text(cap, x + 6, 85.5)
-    doc.setCharSpace(0)
-    doc.setFont('DejaVu', 'bold').setFontSize(10).setTextColor(...INK).text(name, x + 6, 91.5)
-    doc.setFont('DejaVu', 'normal').setFontSize(8.5).setTextColor(...GRAY).text(lines, x + 6, 96.5)
-  }
-  const custLines = [cust.phone, ...(cust.site ? doc.splitTextToSize(cust.site, cardW - 12).slice(0, 2) : [])].filter(Boolean)
-  card(M, 'PREPARED FOR', cust.name, custLines)
-  card(M + cardW + 6, 'FROM', 'Virag Bora · QuickCart dealer', ['304 Maple Heights, HSR Layout', 'Bengaluru 560102'])
+  // ---- title row between hairlines: Estimate · number · date
+  const tTop = 79 + Math.max(custLines.length, 4) * 4.6 + 9
+  doc.setDrawColor(...HAIR).setLineWidth(0.3).line(M, tTop, W - M, tTop)
+  doc.setFont('DejaVu', 'normal').setFontSize(21).setTextColor(...INK)
+  doc.text('Estimate', M, tTop + 13)
+  doc.text(no, W / 2, tTop + 13, { align: 'center' })
+  doc.text(today, W - M, tTop + 13, { align: 'right' })
+  doc.line(M, tTop + 20, W - M, tTop + 20)
 
-  // ---- items table
+  // ---- items table: hairline rows, product thumbnails
   autoTable(doc, {
-    startY: 113,
-    margin: { left: M, right: M, bottom: 18 },
-    head: [['#', 'Item', 'Pack / spec', 'Qty', 'Rate', 'Amount']],
-    body: items.map(({ p, n }, i) => [i + 1, p.name, p.qty || '—', n, inr(p.price), inr(p.price * n)]),
-    styles: { font: 'DejaVu', fontSize: 8.5, textColor: INK, cellPadding: 2.6 },
-    headStyles: { fillColor: GREEN, textColor: 255, fontStyle: 'bold', fontSize: 8 },
-    alternateRowStyles: { fillColor: [250, 247, 240] },
+    startY: tTop + 30,
+    margin: { left: M, right: M, bottom: 42 },
+    head: [['Qty', '', 'Item no', 'Description', 'Unit price', 'Amount']],
+    body: items.map(({ p, n }) => [n, '', p.id.toUpperCase(), `${p.name}\n${p.qty || ''}`, inr(p.price), inr(p.price * n)]),
+    theme: 'plain',
+    styles: { font: 'DejaVu', fontSize: 9, textColor: INK, cellPadding: { top: 3.2, bottom: 3.2, left: 0, right: 2 }, valign: 'middle' },
+    headStyles: { fontSize: 9, textColor: INK, lineWidth: { bottom: 0.35 }, lineColor: INK },
+    bodyStyles: { lineWidth: { bottom: 0.18 }, lineColor: HAIR },
     columnStyles: {
-      0: { cellWidth: 8, halign: 'right' },
-      3: { cellWidth: 12, halign: 'right' },
-      4: { cellWidth: 24, halign: 'right' },
+      0: { cellWidth: 13 },
+      1: { cellWidth: 15, minCellHeight: 15 },
+      2: { cellWidth: 22, textColor: GRAY },
+      3: { cellWidth: 'auto' },
+      4: { cellWidth: 26, halign: 'right', textColor: GRAY },
       5: { cellWidth: 28, halign: 'right' },
+    },
+    willDrawPage: (data) => { if (data.pageNumber > 1) paper() },
+    didParseCell: (data) => {
+      if (data.section === 'head' && data.column.index >= 4) data.cell.styles.halign = 'right'
+    },
+    didDrawCell: (data) => {
+      if (data.section !== 'body' || data.column.index !== 1) return
+      const t = thumbs[data.row.index]
+      const s = 10, ix = data.cell.x, iy = data.cell.y + (data.cell.height - s) / 2
+      if (t) doc.addImage(t, 'JPEG', ix, iy, s, s)
+      else doc.setFillColor(225, 225, 221).rect(ix, iy, s, s, 'F')
     },
   })
 
-  // ---- totals card — same numbers as the on-screen bill
-  let y = doc.lastAutoTable.finalY + 8
-  const nRows = 2 + (bill.bulkSave > 0 ? 1 : 0) + (bill.schemeOff > 0 ? 1 : 0)
-  const boxH = nRows * 5.5 + 19
-  if (y + boxH > H - 22) { doc.addPage(); y = 20 }
-  const bxX = 110, bxW = W - M - bxX
-  doc.setFillColor(246, 248, 247).roundedRect(bxX, y - 5, bxW, boxH, 3, 3, 'F')
-  const row = (label, val, green) => {
-    doc.setFont('DejaVu', 'normal').setFontSize(9).setTextColor(...(green ? GREEN : GRAY))
-    doc.text(label, bxX + 6, y)
-    doc.text(val, bxX + bxW - 6, y, { align: 'right' })
-    y += 5.5
+  // ---- totals: hairline-separated right block (same numbers as the cart bill)
+  let y = doc.lastAutoTable.finalY + 14
+  const rows = [
+    ['Item total', inr(bill.itemTotal)],
+    bill.bulkSave > 0 && ['Bulk price savings', '−' + inr(bill.bulkSave)],
+    bill.schemeOff > 0 && [`Volume scheme (${bill.slabPct}%)`, '−' + inr(bill.schemeOff)],
+    ['Delivery' + (bill.express ? ' (express · 1 hr)' : ''), bill.fee === 0 ? 'FREE' : inr(bill.fee)],
+  ].filter(Boolean)
+  const blockH = (rows.length + 1) * 9 + 16
+  if (y + blockH > H - 46) { doc.addPage(); paper(); y = 40 }
+  const tx = 118
+  for (const [label, val] of rows) {
+    doc.setFont('DejaVu', 'normal').setFontSize(9).setTextColor(...GRAY)
+    doc.text(label, tx, y)
+    doc.setTextColor(...INK).text(val, W - M, y, { align: 'right' })
+    doc.setDrawColor(...HAIR).setLineWidth(0.18).line(tx, y + 3, W - M, y + 3)
+    y += 9
   }
-  y += 2.5
-  row('Item total', inr(bill.itemTotal))
-  if (bill.bulkSave > 0) row('Bulk price savings', '−' + inr(bill.bulkSave), true)
-  if (bill.schemeOff > 0) row(`Volume scheme (${bill.slabPct}%)`, '−' + inr(bill.schemeOff), true)
-  row('Delivery' + (bill.express ? ' (express · 1 hr)' : ''), bill.fee === 0 ? 'FREE' : inr(bill.fee))
-  doc.setFillColor(...GREEN).roundedRect(bxX + 3, y - 2.5, bxW - 6, 9.5, 2, 2, 'F')
-  doc.setFont('DejaVu', 'bold').setFontSize(10).setTextColor(255, 255, 255).text('Estimate total', bxX + 7.5, y + 3.5)
-  doc.setTextColor(...GOLD).text(inr(bill.toPay), bxX + bxW - 9.5, y + 3.5, { align: 'right' })
-  doc.setFont('DejaVu', 'normal').setFontSize(7.5).setTextColor(...GRAY)
-    .text(['Trade estimate only — GST as applicable.', 'Prices valid 7 days from the date above.'], M, y + 1)
+  doc.setFont('DejaVu', 'bold').setFontSize(10).setTextColor(...INK)
+  doc.text('Total', tx, y)
+  doc.text(inr(bill.toPay), W - M, y, { align: 'right' })
+  doc.setDrawColor(...INK).setLineWidth(0.35).line(tx, y + 3.5, W - M, y + 3.5)
+  doc.setFont('DejaVu', 'normal').setFontSize(8.5).setTextColor(...INK)
+    .text(doc.splitTextToSize('Please confirm this estimate within 7 days — GST as applicable.', W - M - tx), tx, y + 12)
 
-  // ---- footer band on every page
+  // ---- last page: brand logos row above the footer
+  const ly = 256
+  doc.setFont('DejaVu', 'normal').setFontSize(6.5).setTextColor(...GRAY).setCharSpace(0.5)
+  doc.text('AUTHORIZED DEALER FOR', M, ly)
+  doc.setCharSpace(0)
+  const lh = 5.5
+  let bx = M
+  for (const b of brands) {
+    const dw = (b.w / b.h) * lh
+    doc.addImage(b.data, 'PNG', bx, ly + 3, dw, lh)
+    bx += dw + 8
+  }
+
+  // ---- footer on every page: hairline + green contact columns + side text
   const pages = doc.getNumberOfPages()
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i)
-    doc.setFillColor(...GOLD).rect(0, H - 11.8, W, 0.8, 'F')
-    doc.setFillColor(...GREEN).rect(0, H - 11, W, 11, 'F')
-    doc.setFont('DejaVu', 'normal').setFontSize(7.5).setTextColor(225, 238, 230)
-      .text(`Generated with QuickCart · ${today} · trade prices · 90-min delivery`, W / 2, H - 4.8, { align: 'center' })
+    doc.setDrawColor(...GREEN).setLineWidth(0.4).line(M, H - 23, W - M, H - 23)
+    doc.setFont('DejaVu', 'normal').setFontSize(7.5).setTextColor(...GREEN)
+    doc.text(['estimates@quickcart.in', 'quickcart-nine-iota.vercel.app'], M, H - 17.5)
+    doc.text(['304 Maple Heights, HSR Layout', 'Bengaluru 560102'], 72, H - 17.5)
+    doc.text(['Trade prices · GST billing', '90-min site delivery'], 128, H - 17.5)
+    doc.text(['GSTIN', '29AAACQ1234L1ZQ'], 174, H - 17.5)
+    doc.setFontSize(6.5)
+      .text('QuickCart · Furniture Hardware · Registered dealer — Bengaluru', 9, H - 12, { angle: 90 })
   }
 
   doc.save(`${no} ${cust.name.trim()} estimate.pdf`)
@@ -4631,6 +4640,11 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
         <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
         <Heading size="4" style={{ flex: 1, letterSpacing: '-0.3px' }}>Your cart</Heading>
         <Text size="1" weight="bold" color="gray">{cart.count} item{cart.count === 1 ? '' : 's'}</Text>
+        {items.length > 0 && (
+          <button className="sheet-back" onClick={() => setEstSheet(true)} aria-label="Download estimate PDF" title="Download estimate">
+            <FileTextIcon width={16} height={16} />
+          </button>
+        )}
       </div>
       <div className="cp-body">
         {items.length === 0 ? (
@@ -5261,9 +5275,9 @@ export default function App() {
     const m = window.location.hash.match(/^#campaign-(\d)$/)
     return m && CAMPAIGN_HEADERS[+m[1]] ? CAMPAIGN_HEADERS[+m[1]] : null
   }, [])
-  const T = heroVariant === 'fest'
-    ? { ...heroPal, icon: '' }
-    : ((campaign && !sim) ? campaign : SKY[sky.dp][sky.cond])
+  const T = useMemo(() => (heroVariant === 'fest'
+    ? { ...heroPal }
+    : ((campaign && !sim) ? campaign : SKY[sky.dp][sky.cond])), [heroVariant, heroPal, campaign, sim, sky])
   // Quiz edition rotates daily, independent of weather — novelty is the hook
   const quizSkin = simSkin ?? QUIZ_SKINS[Math.floor(Date.now() / 86400000) % QUIZ_SKINS.length]
 
@@ -5411,7 +5425,7 @@ export default function App() {
   useEffect(() => {
     if (!cartOpen) return
     if (!window.history.state?.qcCart) window.history.pushState({ qcCart: true }, '')
-    const onPop = () => setCartOpen(false)
+    const onPop = () => { if (!qtyRef.current) setCartOpen(false) }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [cartOpen])
@@ -5560,7 +5574,7 @@ export default function App() {
       <CartCtx.Provider value={openCart}>
       <div className="app">
         <TopBar
-          compact={scrolled} weather={{ icon: T.icon }} dp={sky.dp} cond={sky.cond}
+          compact={scrolled} dp={sky.dp} cond={sky.cond}
           brand={brand} onBrand={setBrand} onSearch={() => setSheet({ items: FEED_POOL })}
           cartCount={cart.count} plain={heroVariant === 'fest'}
           onTargets={() => { acctInitSub.current = 'dash'; setAcctOpen(true) }}
@@ -5713,7 +5727,7 @@ export default function App() {
         <PageExit open={acctOpen}>
           {acctOpen && (
           <AccountPage
-            onClose={closeAcct} onChange={changeCart} cart={cart} lastOrder={order}
+            onClose={closeAcct} onChange={changeCart} lastOrder={order}
             subRef={acctSubRef} initialSub={acctInitSub.current}
             onCategory={(cat) => { setAcctOpen(false); setPlp(cat) }}
             onGoReorder={() => { setAcctOpen(false); setReorderOpen(true) }}

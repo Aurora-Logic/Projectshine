@@ -2,7 +2,7 @@
   "name": "QuickCart — Furniture Hardware",
   "short_name": "QuickCart",
   "description": "Furniture hardware for dealers, delivered in hours",
-  "start_url": "/",
+  "start_url": "/#home",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#30A46C",
