@@ -2731,3 +2731,79 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   vertical-align: 2px;
   white-space: nowrap;
 }
+
+/* ---------- Live order status card ---------- */
+.ocard {
+  background: #fff;
+  border: 1px solid var(--gray-4);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
+}
+.oc-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green-9);
+  animation: ocpulse 2.4s ease-in-out infinite;
+  flex: none;
+}
+.oc-pulse.done { animation: none; }
+@keyframes ocpulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .3; }
+}
+.oc-track { margin-top: 12px; }
+.oc-line {
+  height: 4px;
+  border-radius: 99px;
+  background: var(--gray-4);
+  overflow: hidden;
+}
+.oc-line > div {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--green-9);
+  transition: width 1s linear;
+}
+.oc-steps { display: flex; margin-top: 6px; }
+.oc-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.oc-step:first-child { align-items: flex-start; }
+.oc-step:last-child { align-items: flex-end; }
+.oc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gray-5); }
+.oc-dot.on { background: var(--green-9); }
+.oc-window {
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  background: var(--amber-2);
+  border: 1px solid var(--amber-4);
+  color: var(--amber-11);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  border-radius: 12px;
+  padding: 9px 12px;
+  margin-top: 12px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.oc-stars { display: flex; gap: 2px; }
+.oc-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--gray-6);
+  padding: 2px;
+  display: flex;
+}
+.oc-star.on { color: var(--amber-9); }
+@media (prefers-reduced-motion: reduce) {
+  .oc-pulse { animation: none; }
+}

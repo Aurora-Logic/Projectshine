@@ -2064,6 +2064,98 @@ function QtySheet({ q, onClose, onConfirm }) {
   )
 }
 
+/* ---------------- Live order status card (home, after placing) ---------------- */
+
+const ORDER_STAGES = [['Placed', 0], ['Packed', 45], ['On the way', 150], ['Delivered', 300]]
+
+function OrderCard({ order, onDismiss, onReorder, onAddMore }) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const [rated, setRated] = useState(order.rated || 0)
+  const elapsed = Math.max(0, (now - order.ts) / 1000)
+  let si = 0
+  ORDER_STAGES.forEach(([, t], i) => { if (elapsed >= t) si = i })
+  const nextT = ORDER_STAGES[si + 1]?.[1]
+  const frac = nextT ? Math.min(1, (elapsed - ORDER_STAGES[si][1]) / (nextT - ORDER_STAGES[si][1])) : 1
+  const fill = ((si + frac) / (ORDER_STAGES.length - 1)) * 100
+  const delivered = si === ORDER_STAGES.length - 1
+  const windowLeft = Math.max(0, 300 - Math.floor(elapsed))
+  const mmss = `${Math.floor(windowLeft / 60)}:${String(windowLeft % 60).padStart(2, '0')}`
+  const head = delivered ? 'Order delivered' : si === 2 ? 'Out for delivery' : si === 1 ? 'Order packed' : 'Order placed'
+  const eta = delivered
+    ? 'Delivered — invoice sent on email'
+    : si === 2
+      ? (order.express ? 'Arriving in ~15 min' : 'Arriving today by 6 PM')
+      : si === 1 ? 'Packed at depot — rider assigning' : 'Confirmed at depot'
+  const rate = (n) => {
+    setRated(n)
+    localStorage.setItem('qc-order', JSON.stringify({ ...order, rated: n }))
+  }
+  return (
+    <Box px="4" pt="4">
+      <div className="ocard">
+        <Flex align="center" justify="between">
+          <Flex align="center" gap="2">
+            <span className={`oc-pulse ${delivered ? 'done' : ''}`} />
+            <Text size="2" weight="bold">{head}</Text>
+          </Flex>
+          <Text size="1" weight="bold" color="gray">PO {order.id}</Text>
+        </Flex>
+        <Text size="1" color="gray" as="div" mt="1">{eta} · {order.addrLabel}</Text>
+        <div className="oc-track">
+          <div className="oc-line"><div style={{ width: `${fill}%` }} /></div>
+          <div className="oc-steps">
+            {ORDER_STAGES.map(([label], i) => (
+              <div key={label} className="oc-step">
+                <span className={`oc-dot ${i <= si ? 'on' : ''}`} />
+                <Text style={{ fontSize: 9.5 }} color={i <= si ? undefined : 'gray'} weight={i === si ? 'bold' : 'regular'}>
+                  {label}
+                </Text>
+              </div>
+            ))}
+          </div>
+        </div>
+        <Flex align="center" gap="2" mt="3">
+          <Flex>
+            {(order.items || []).slice(0, 3).map(({ p }) => (
+              <Img key={`oc-${p.id}`} className="thumb" src={img(p.ph, 80)} alt="" />
+            ))}
+          </Flex>
+          <Text size="1" weight="bold" style={{ whiteSpace: 'nowrap' }}>
+            {order.count} items · ₹{order.amt.toLocaleString('en-IN')}
+          </Text>
+          <Text size="1" color="gray" style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}>Target at {order.tPct}%</Text>
+        </Flex>
+        {!delivered && windowLeft > 0 && (
+          <button className="oc-window" onClick={onAddMore}>
+            Forgot something? Add to this order · {mmss} left
+          </button>
+        )}
+        {delivered && (
+          <Flex align="center" gap="2" mt="3">
+            <div className="oc-stars">
+              {[1, 2, 3, 4, 5].map(n => (
+                <button key={n} className={`oc-star ${n <= rated ? 'on' : ''}`} onClick={() => rate(n)} aria-label={`${n} stars`}>
+                  <StarFilledIcon width={17} height={17} />
+                </button>
+              ))}
+            </div>
+            <Button size="1" color="green" radius="full" style={{ fontWeight: 800, marginLeft: 'auto', flex: 'none' }} onClick={onReorder}>
+              Reorder
+            </Button>
+            <button className="reco-x" onClick={onDismiss} aria-label="Dismiss">
+              <Cross2Icon width={13} height={13} />
+            </button>
+          </Flex>
+        )}
+      </div>
+    </Box>
+  )
+}
+
 /* ---------------- Cart page — items, schemes, address, instructions ---------------- */
 
 function loadAddrs() {
@@ -2199,7 +2291,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
                         <Text key={n} className="numpop" size="1" weight="bold" style={{ width: 26, textAlign: 'center', color: '#fff' }}>{n}</Text>
                         <button onClick={() => onChange(1, p, { noReco: true })} aria-label="More"><PlusIcon width={12} height={12} /></button>
                       </div>
-                      <Text size="1" weight="bold" style={{ width: 60, textAlign: 'right', flex: 'none' }}>₹{(n * p.price).toLocaleString('en-IN')}</Text>
+                      <Text size="1" weight="bold" style={{ minWidth: 60, textAlign: 'right', flex: 'none', whiteSpace: 'nowrap' }}>₹{(n * p.price).toLocaleString('en-IN')}</Text>
                     </div>
                     {t && !bulkOn && (
                       <button className="cs-nudge" onClick={() => onChange(t.thr - n, p, { noReco: true })}>
@@ -2373,7 +2465,17 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
           </Box>
           <button
             className="qs-cta" style={{ marginTop: 0, flex: 1, justifyContent: 'center' }}
-            onClick={(e) => { sparkle(e); setPlaced({ id: `QC-${String(Date.now()).slice(-6)}`, amt: toPay }) }}
+            onClick={(e) => {
+              sparkle(e)
+              setPlaced({
+                id: `QC-${String(Date.now()).slice(-6)}`,
+                amt: toPay, count: cart.count, ts: Date.now(), express,
+                addrLabel: addr.label, tPct,
+                items: Object.values(cart.items).map(({ p, n }) => ({
+                  p: { id: p.id, ph: p.ph, name: p.name, price: p.price, mrp: p.mrp, bulk: p.bulk }, n,
+                })),
+              })
+            }}
           >
             Place order
           </button>
@@ -2389,7 +2491,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
             <Heading size="5" mt="3" style={{ letterSpacing: '-0.3px' }}>Order placed!</Heading>
             <Text size="2" color="gray" as="div" mt="1">PO {placed.id} · ₹{placed.amt.toLocaleString('en-IN')}</Text>
             <Text size="1" color="gray" as="div" mt="1">Invoice & dispatch details on WhatsApp + email</Text>
-            <Button mt="4" size="3" color="green" radius="full" style={{ fontWeight: 800, width: '100%' }} onClick={onPlaced}>
+            <Button mt="4" size="3" color="green" radius="full" style={{ fontWeight: 800, width: '100%' }} onClick={() => onPlaced(placed)}>
               Done
             </Button>
           </div>
@@ -2728,6 +2830,21 @@ export default function App() {
   const [pdp, setPdp] = useState(() => (window.location.hash === '#pdp' ? FEED_POOL[0] : null))
   const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
   const [cartOpen, setCartOpen] = useState(window.location.hash === '#cart')
+  const [order, setOrder] = useState(() => {
+    if (window.location.hash === '#order') {
+      return {
+        id: 'QC-482913', amt: 5240, count: 14, ts: Date.now() - 100000, express: false,
+        addrLabel: 'Shop', tPct: 65,
+        items: [{ p: BUY_AGAIN[0], n: 12 }, { p: DEALS[0], n: 2 }],
+      }
+    }
+    try { return JSON.parse(localStorage.getItem('qc-order') || 'null') } catch { return null }
+  })
+  const dismissOrder = () => { setOrder(null); localStorage.removeItem('qc-order') }
+  const reorder = () => {
+    order?.items?.forEach(({ p, n }) => changeCart(n, p, { noReco: true }))
+    setCartOpen(true)
+  }
   const [plp, setPlp] = useState(() => {
     if (window.location.hash.startsWith('#fsheet')) return 'Hinges'
     if (window.location.hash === '#strip') return 'All'
@@ -2961,6 +3078,13 @@ export default function App() {
           </div>
         )}
 
+        {order && (
+          <OrderCard
+            order={order} onDismiss={dismissOrder} onReorder={reorder}
+            onAddMore={() => scrollToId('deals')}
+          />
+        )}
+
         <BestSellers onCat={(c) => setPlp(c)} />
 
         {brand !== 'ALL' && (
@@ -3086,7 +3210,12 @@ export default function App() {
         {cartOpen && (
           <CartPage
             cart={cart} onClose={closeCart} onChange={changeCart}
-            onPlaced={() => { setCart({ count: 0, total: 0, photos: [], items: {} }); closeCart() }}
+            onPlaced={(rec) => {
+              setOrder(rec)
+              localStorage.setItem('qc-order', JSON.stringify(rec))
+              setCart({ count: 0, total: 0, photos: [], items: {} })
+              closeCart()
+            }}
           />
         )}
 
