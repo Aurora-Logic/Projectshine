@@ -2037,6 +2037,41 @@ function loadLists() {
 }
 const saveLists = (l) => localStorage.setItem('qc-lists', JSON.stringify(l))
 
+/* Structured Indian address form: line 1/2, landmark, city, pincode */
+function AddrFields({ onSave, cta = 'Save address' }) {
+  const [label, setLabel] = useState('')
+  const [l1, setL1] = useState('')
+  const [l2, setL2] = useState('')
+  const [lm, setLm] = useState('')
+  const [ct, setCt] = useState('')
+  const [pin, setPin] = useState('')
+  const valid = label.trim() && l1.trim() && ct.trim() && pin.length === 6
+  const save = () => {
+    const addr = [
+      l1.trim(), l2.trim(), lm.trim() && `Near ${lm.trim()}`, `${ct.trim()} ${pin}`,
+    ].filter(Boolean).join(', ')
+    onSave({ id: `a${Date.now()}`, label: label.trim(), addr })
+  }
+  return (
+    <div className="addr-form">
+      <input className="cp-input" placeholder="Label — e.g. Site 2, New godown" value={label} onChange={(e) => setLabel(e.target.value)} />
+      <input className="cp-input" placeholder="Line 1 — shop / building no." value={l1} onChange={(e) => setL1(e.target.value)} />
+      <input className="cp-input" placeholder="Line 2 — street / area (optional)" value={l2} onChange={(e) => setL2(e.target.value)} />
+      <input className="cp-input" placeholder="Landmark (optional)" value={lm} onChange={(e) => setLm(e.target.value)} />
+      <Flex gap="2">
+        <input className="cp-input" style={{ flex: 1.4 }} placeholder="City" value={ct} onChange={(e) => setCt(e.target.value)} />
+        <input
+          className="cp-input" style={{ flex: 1 }} placeholder="Pincode" inputMode="numeric" maxLength={6}
+          value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+        />
+      </Flex>
+      <Button size="2" color="green" style={{ fontWeight: 800, width: '100%' }} disabled={!valid} onClick={save}>
+        {cta}
+      </Button>
+    </div>
+  )
+}
+
 /* Save-to-list sheet, opened from the product page bookmark */
 function ListSheet({ p, onClose }) {
   const [lists, setLists] = useState(loadLists)
@@ -2405,12 +2440,7 @@ const WaMark = () => (
   </svg>
 )
 
-const LOGIN_JOY = [
-  '12,400+ dealers order on QuickCart daily',
-  'Dealers saved ₹2.1 Cr via schemes last month',
-  'Express delivery — at your shop in 1 hour',
-  '30-day interest-free credit for dealers',
-]
+
 
 function LoginGate({ onDone }) {
   const [tab, setTab] = useState('phone')
@@ -2419,20 +2449,22 @@ function LoginGate({ onDone }) {
   const [em, setEm] = useState('')
   const [otp, setOtp] = useState('')
   const [reqSent, setReqSent] = useState(false)
-  const [joy, setJoy] = useState(0)
-  useEffect(() => {
-    const t = setInterval(() => setJoy(j => (j + 1) % LOGIN_JOY.length), 2600)
-    return () => clearInterval(t)
-  }, [])
+  const h = new Date().getHours()
+  const greet = h < 12 ? 'GOOD MORNING' : h < 17 ? 'GOOD AFTERNOON' : 'GOOD EVENING'
   const ready = tab === 'phone' ? ph.length === 10 : /\S+@\S+\.\S+/.test(em)
   return (
     <div className="login2">
-      <Heading style={{ fontSize: 32, letterSpacing: '-1px', marginTop: 30 }}>
-        {stage === 'otp' ? 'Enter OTP' : 'Dealer login'}
+      <Text size="1" weight="bold" as="div" style={{ color: 'var(--green-10)', letterSpacing: '.9px', fontSize: 11, marginTop: 36 }}>
+        {stage === 'otp' ? 'ALMOST THERE' : greet}
+      </Text>
+      <Heading style={{ fontSize: 31, letterSpacing: '-1px', marginTop: 4 }}>
+        {stage === 'otp' ? 'One last step' : 'Welcome back, partner'}
       </Heading>
-      <div className="lg-joy" key={joy}>
-        <StarFilledIcon width={12} height={12} /> {LOGIN_JOY[joy]}
-      </div>
+      {stage === 'cred' && (
+        <Text size="2" color="gray" as="div" mt="2" style={{ lineHeight: 1.5 }}>
+          Your counter's command centre — orders, credit and margins in one place.
+        </Text>
+      )}
       {stage === 'cred' ? (
         <>
           <div className="lg-tabs">
@@ -2578,7 +2610,7 @@ function Donut({ cats }) {
   )
 }
 
-function AcctDash() {
+function AcctDash({ onReorder }) {
   const [per, setPer] = useState(12)
   const ready = useNextFrame()
   const k = DASH.kpis
@@ -2597,18 +2629,35 @@ function AcctDash() {
   return (
     <>
       <div className="dash-hero">
-        <Text size="1" weight="bold" as="div" style={{ color: 'rgba(255,255,255,.7)', letterSpacing: '.6px', fontSize: 10 }}>
-          PURCHASES THIS MONTH
-        </Text>
-        <Flex align="center" gap="2" mt="1">
-          <Text weight="bold" style={{ fontSize: 34, color: '#fff', letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums' }}>
-            {fmtL(big)}
-          </Text>
-          <span className="up-chip"><ChevronUpIcon width={12} height={12} /> {k.growth}% YoY</span>
+        <Flex align="center" gap="4">
+          <svg width="70" height="70" viewBox="0 0 70 70" style={{ flex: 'none' }}>
+            <circle cx="35" cy="35" r="28" stroke="rgba(255,255,255,.22)" strokeWidth="7" fill="none" />
+            <circle
+              cx="35" cy="35" r="28" stroke="#FFD43B" strokeWidth="7" fill="none" strokeLinecap="round"
+              strokeDasharray={2 * Math.PI * 28}
+              strokeDashoffset={(2 * Math.PI * 28) * (1 - (ready ? Math.min(1, k.month / TARGETS.monthly.target) : 0))}
+              transform="rotate(-90 35 35)"
+              style={{ transition: 'stroke-dashoffset 1.1s cubic-bezier(.22, 1, .36, 1)' }}
+            />
+            <text x="35" y="40" textAnchor="middle" fill="#fff" fontSize="14" fontWeight="800">
+              {Math.round((k.month / TARGETS.monthly.target) * 100)}%
+            </text>
+          </svg>
+          <Box style={{ minWidth: 0 }}>
+            <Text size="1" weight="bold" as="div" style={{ color: 'rgba(255,255,255,.7)', letterSpacing: '.6px', fontSize: 10 }}>
+              PURCHASES THIS MONTH
+            </Text>
+            <Flex align="center" gap="2" mt="1">
+              <Text weight="bold" style={{ fontSize: 29, color: '#fff', letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums' }}>
+                {fmtL(big)}
+              </Text>
+              <span className="up-chip"><ChevronUpIcon width={12} height={12} /> {k.growth}% YoY</span>
+            </Flex>
+            <Text size="1" as="div" mt="1" style={{ color: 'rgba(255,255,255,.75)' }}>
+              {fmtL(TARGETS.monthly.target - k.month)} more unlocks the +2% rebate
+            </Text>
+          </Box>
         </Flex>
-        <Text size="1" as="div" mt="1" style={{ color: 'rgba(255,255,255,.75)' }}>
-          {fmtL(TARGETS.monthly.target - k.month)} more unlocks the +2% monthly rebate
-        </Text>
         <div className="dash-spark">
           {last6.map(([m, v]) => (
             <div key={m} className="ds-col">
@@ -2635,17 +2684,17 @@ function AcctDash() {
         <div className="kpi" style={{ background: 'var(--blue-2)', borderColor: 'var(--blue-4)' }}>
           <Text size="1" style={{ color: 'var(--blue-11)', fontWeight: 700 }}>Orders</Text>
           <Text size="4" weight="bold" as="div">{k.orders}</Text>
-          <Text size="1" color="gray" as="div">this month</Text>
+          <Text size="1" as="div" style={{ color: 'var(--green-10)', fontWeight: 700 }}>▲ 3 vs May</Text>
         </div>
         <div className="kpi" style={{ background: 'var(--violet-2)', borderColor: 'var(--violet-4)' }}>
           <Text size="1" style={{ color: 'var(--violet-11)', fontWeight: 700 }}>Avg order</Text>
           <Text size="4" weight="bold" as="div">₹{(k.aov / 1000).toFixed(1)}k</Text>
-          <Text size="1" color="gray" as="div">last 90 days</Text>
+          <Text size="1" as="div" style={{ color: 'var(--green-10)', fontWeight: 700 }}>▲ 6% vs last qtr</Text>
         </div>
         <div className="kpi" style={{ background: 'var(--green-2)', borderColor: 'var(--green-4)' }}>
           <Text size="1" style={{ color: 'var(--green-11)', fontWeight: 700 }}>Saved</Text>
           <Text size="4" weight="bold" as="div">₹{(k.saved / 1000).toFixed(1)}k</Text>
-          <Text size="1" color="gray" as="div">bulk + schemes</Text>
+          <Text size="1" as="div" style={{ color: 'var(--green-10)', fontWeight: 700 }}>▲ ₹2.1k vs May</Text>
         </div>
         <div className="kpi" style={{ background: 'var(--amber-2)', borderColor: 'var(--amber-4)' }}>
           <Text size="1" style={{ color: 'var(--amber-11)', fontWeight: 700 }}>Best month</Text>
@@ -2672,6 +2721,15 @@ function AcctDash() {
           <div className="pct-bar"><div style={{ width: ready ? `${pctile}%` : '0%' }} /></div>
         </Box>
       </div>
+      <button className="insight act" onClick={onReorder}>
+        <span className="bdg-ic" style={{ background: 'var(--green-3)', color: 'var(--green-11)', flex: 'none' }}>
+          <CounterClockwiseClockIcon width={14} height={14} />
+        </span>
+        <Text size="1" style={{ lineHeight: 1.45, flex: 1, textAlign: 'left' }}>
+          <b>4 regulars are due</b> for reorder — restock them in one tap
+        </Text>
+        <ChevronRightIcon width={14} height={14} color="var(--gray-8)" style={{ flex: 'none' }} />
+      </button>
       <div className="cp-card">
         <Flex align="center" justify="between">
           <Text size="2" weight="bold">Purchases</Text>
@@ -2823,25 +2881,47 @@ function AcctOrders({ lastOrder, onChange }) {
       items: o.items.map(([id, n]) => ({ p: FEED_POOL.find(p => p.id === id), n })).filter(x => x.p),
     })),
   ]
+  const totalVal = hist.reduce((s, o) => s + o.items.reduce((x, { p, n }) => x + p.price * n, 0), 0)
+  const repeat = (o, e) => {
+    o.items.forEach(({ p, n }) => onChange(n, p, { noReco: true }))
+    sparkle(e)
+  }
   return (
     <>
-      <div className="cp-card">
-        {hist.map(o => (
-          <div className="ro-past" key={`h-${o.id}`} onClick={() => setView(o)}>
-            <Flex>
-              {o.items.slice(0, 3).map(({ p }) => (
-                <Img key={`hp-${o.id}-${p.id}`} className="thumb" src={img(p.ph, 80)} alt="" />
-              ))}
-            </Flex>
-            <Box flexGrow="1" style={{ minWidth: 0 }}>
-              <Text size="1" weight="bold" as="div">{o.date} · {o.items.length} items · ₹{o.items.reduce((s, { p, n }) => s + p.price * n, 0).toLocaleString('en-IN')}</Text>
-              <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>PO {o.id} · tap for invoice & tracking</Text>
-            </Box>
-            <span className={`st-chip ${o.status === 'Delivered' ? 'ok' : ''}`}>{o.status}</span>
-            <ChevronRightIcon width={14} height={14} color="var(--gray-8)" style={{ flex: 'none' }} />
-          </div>
-        ))}
+      <div className="sub-hero blue">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--blue-11)', fontSize: 10, letterSpacing: '.6px' }}>
+          ORDERS THIS FY
+        </Text>
+        <Flex align="baseline" gap="2" mt="1">
+          <Text weight="bold" style={{ fontSize: 27, letterSpacing: '-0.6px' }}>{hist.length + 12}</Text>
+          <Text size="1" color="gray">orders · {fmtL(totalVal + 1040000)} billed · all invoices below</Text>
+        </Flex>
       </div>
+      {hist.map(o => {
+        const total = o.items.reduce((s, { p, n }) => s + p.price * n, 0)
+        return (
+          <div className="oh-card" key={`h-${o.id}`}>
+            <Flex align="center" justify="between">
+              <Text size="2" weight="bold">{o.date}</Text>
+              <span className={`st-chip ${o.status === 'Delivered' ? 'ok' : ''}`}>{o.status}</span>
+            </Flex>
+            <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>PO {o.id} · {o.items.length} SKUs</Text>
+            <Flex align="center" gap="2" mt="2">
+              <Flex>
+                {o.items.slice(0, 3).map(({ p }) => (
+                  <Img key={`hp-${o.id}-${p.id}`} className="thumb" src={img(p.ph, 80)} alt="" />
+                ))}
+              </Flex>
+              <Text size="2" weight="bold" style={{ marginLeft: 'auto' }}>₹{total.toLocaleString('en-IN')}</Text>
+            </Flex>
+            <div className="oh-actions">
+              <button onClick={() => downloadInvoice(o)}><FileTextIcon width={13} height={13} /> Invoice</button>
+              <button onClick={(e) => repeat(o, e)}><CounterClockwiseClockIcon width={13} height={13} /> Repeat</button>
+              <button className="pri" onClick={() => setView(o)}>Details</button>
+            </div>
+          </div>
+        )
+      })}
       {view && <OrderDetailSheet key={view.id} order={view} onClose={() => setView(null)} onChange={onChange} />}
     </>
   )
@@ -2927,17 +3007,12 @@ function AcctAddr() {
   const [addrs, setAddrs] = useState(loadAddrs)
   const [sel, setSel] = usePersisted('qc-addr-sel', loadAddrs()[0].id)
   const [adding, setAdding] = useState(false)
-  const [label, setLabel] = useState('')
-  const [addr, setAddr] = useState('')
-  const save = () => {
-    const a = { id: `a${Date.now()}`, label: label.trim(), addr: addr.trim() }
+  const addNew = (a) => {
     const next = [...addrs, a]
     setAddrs(next)
     localStorage.setItem('qc-addr', JSON.stringify(next))
     setSel(a.id)
     setAdding(false)
-    setLabel('')
-    setAddr('')
   }
   const remove = (id) => {
     const next = addrs.filter(a => a.id !== id)
@@ -2960,11 +3035,7 @@ function AcctAddr() {
         </div>
       ))}
       {adding ? (
-        <div className="addr-form">
-          <input className="cp-input" placeholder="Label — e.g. Site 2" value={label} onChange={(e) => setLabel(e.target.value)} />
-          <textarea className="cp-note" rows={2} placeholder="Full address" value={addr} onChange={(e) => setAddr(e.target.value)} />
-          <Button size="2" color="green" mt="2" style={{ fontWeight: 800, width: '100%' }} disabled={!label.trim() || !addr.trim()} onClick={save}>Save address</Button>
-        </div>
+        <AddrFields onSave={addNew} />
       ) : (
         <button className="addr-add" onClick={() => setAdding(true)}><PlusIcon width={14} height={14} /> Add new address</button>
       )}
@@ -3035,13 +3106,37 @@ function AcctCalc() {
 }
 
 function VisitForm({ kind }) {
-  const key = kind === 'site' ? 'qc-site' : 'qc-display'
-  const [done, setDone] = usePersisted(key, null)
+  const storeKey = kind === 'site' ? 'qc-visits-site' : 'qc-visits-display'
+  const [reqs, setReqs] = usePersisted(storeKey, [])
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 5000)
+    return () => clearInterval(t)
+  }, [])
+  const [cName, setCName] = useState('')
+  const [cPh, setCPh] = useState('')
   const [type, setType] = useState(kind === 'site' ? 'New site' : 'Today')
   const [slot, setSlot] = useState('11 AM')
   const [city, setCity] = useState('')
   const [notes, setNotes] = useState('')
   const opts = kind === 'site' ? ['New site', 'Renovation', 'Project bid'] : ['Today', 'Tomorrow', 'Saturday']
+  const valid = cName.trim() && cPh.length === 10 && (kind === 'display' || city.trim())
+  const submit = (e) => {
+    sparkle(e)
+    setReqs([{
+      id: `V${String(Date.now()).slice(-5)}`, cName: cName.trim(), cPh, type, slot,
+      city: city.trim(), notes: notes.trim(), ts: Date.now(),
+    }, ...reqs])
+    setCName('')
+    setCPh('')
+    setCity('')
+    setNotes('')
+  }
+  const STAGES = kind === 'site' ? ['Received', 'Team assigned', 'Visit scheduled'] : ['Received', 'Slot confirmed', 'Visited']
+  const stageOf = (r) => {
+    const el = (now - r.ts) / 1000
+    return el < 90 ? 0 : el < 240 ? 1 : 2
+  }
   const hero = kind === 'display' ? (
     <div className="sub-photo">
       <Img src={img(BRAND_DAY.ph, 700)} alt="" />
@@ -3056,64 +3151,84 @@ function VisitForm({ kind }) {
       <Text size="1" weight="bold" style={{ color: 'var(--orange-11)' }}>Our team comes with samples, catalogues and a measuring kit</Text>
     </div>
   )
-  if (done) {
-    return (
-      <>
-      {hero}
-      <div className="cp-card">
-        <Flex align="center" gap="2">
-          <span className="st-chip ok"><CheckIcon width={10} height={10} /> Requested</span>
-          <Text size="2" weight="bold">{done.type}{done.slot ? ` · ${done.slot}` : ''}</Text>
-        </Flex>
-        <Text size="1" color="gray" as="div" mt="2">
-          {kind === 'site' ? 'Our team will call within 4 working hours to confirm the visit.' : 'See you at the Ebco Display Centre, 100 Ft Road, Indiranagar · 10 AM–7 PM.'}
-        </Text>
-        <Button mt="3" size="1" variant="soft" color="green" radius="full" style={{ fontWeight: 800 }} onClick={() => setDone(null)}>
-          {kind === 'site' ? 'Submit another' : 'Change slot'}
-        </Button>
-      </div>
-      </>
-    )
-  }
   return (
     <>
-    {hero}
-    <div className="cp-card">
-      {kind === 'display' && (
-        <>
-          <Text size="2" weight="bold" as="div">Ebco Display Centre</Text>
-          <Text size="1" color="gray" as="div" mt="1">100 Ft Road, Indiranagar, Bengaluru · 10 AM–7 PM · full kitchen + wardrobe range on live display</Text>
-        </>
+      {hero}
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          {kind === 'site' ? 'BOOK A SITE VISIT' : 'BOOK A SHOWROOM SLOT'}
+        </Text>
+        <Text size="1" color="gray" as="div" mt="1">
+          Visiting for a customer? Add their details — we'll prep accordingly.
+        </Text>
+        <input
+          className="cp-input" style={{ marginTop: 10 }} placeholder="Customer / firm name"
+          value={cName} onChange={(e) => setCName(e.target.value)}
+        />
+        <input
+          className="cp-input" placeholder="Customer phone (10 digits)" inputMode="numeric" maxLength={10}
+          value={cPh} onChange={(e) => setCPh(e.target.value.replace(/\D/g, ''))}
+        />
+        <Text size="1" color="gray" as="div">{kind === 'site' ? 'Visit type' : 'Day'}</Text>
+        <Flex gap="2" mt="1" mb="2">
+          {opts.map(o => (
+            <button key={o} className={`seg-b ${type === o ? 'on' : ''}`} style={{ flex: 1 }} onClick={() => setType(o)}>{o}</button>
+          ))}
+        </Flex>
+        {kind === 'display' ? (
+          <>
+            <Text size="1" color="gray" as="div">Slot</Text>
+            <Flex gap="2" mt="1" mb="2">
+              {['11 AM', '2 PM', '5 PM'].map(o => (
+                <button key={o} className={`seg-b ${slot === o ? 'on' : ''}`} style={{ flex: 1 }} onClick={() => setSlot(o)}>{o}</button>
+              ))}
+            </Flex>
+          </>
+        ) : (
+          <input
+            className="cp-input" placeholder="Site location — area / city"
+            value={city} onChange={(e) => setCity(e.target.value)}
+          />
+        )}
+        <textarea
+          className="cp-note" rows={2}
+          placeholder={kind === 'site' ? 'What should the team bring?' : 'Anything specific the customer wants to see?'}
+          value={notes} onChange={(e) => setNotes(e.target.value)}
+        />
+        <Button mt="3" size="2" color="green" style={{ fontWeight: 800, width: '100%' }} disabled={!valid} onClick={submit}>
+          Submit request
+        </Button>
+      </div>
+      {reqs.length > 0 && (
+        <div className="cp-card">
+          <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+            YOUR REQUESTS
+          </Text>
+          {reqs.map(r => {
+            const si = stageOf(r)
+            return (
+              <div className="vr-row" key={r.id}>
+                <div className="vr-av">{(r.cName || 'C').slice(0, 1).toUpperCase()}</div>
+                <Box flexGrow="1" style={{ minWidth: 0 }}>
+                  <Text size="2" weight="bold" as="div" className="clamp1">{r.cName}</Text>
+                  <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>
+                    {r.type}{kind === 'display' ? ` · ${r.slot}` : r.city ? ` · ${r.city}` : ''} · #{r.id}
+                  </Text>
+                  <Flex gap="1" mt="1" align="center">
+                    {STAGES.map((s, i) => <span key={s} className={`vr-dot ${i <= si ? 'on' : ''}`} />)}
+                    <Text weight="bold" style={{ marginLeft: 6, color: si === 2 ? 'var(--green-11)' : 'var(--amber-11)', fontSize: 10 }}>
+                      {STAGES[si]}
+                    </Text>
+                  </Flex>
+                </Box>
+                <a className="vr-call" href={`tel:+91${r.cPh}`} aria-label="Call customer">
+                  <MobileIcon width={14} height={14} />
+                </a>
+              </div>
+            )
+          })}
+        </div>
       )}
-      <Text size="1" color="gray" as="div" mt="2">{kind === 'site' ? 'Visit type' : 'Day'}</Text>
-      <Flex gap="2" mt="1">
-        {opts.map(o => (
-          <button key={o} className={`seg-b ${type === o ? 'on' : ''}`} style={{ flex: 1 }} onClick={() => setType(o)}>{o}</button>
-        ))}
-      </Flex>
-      {kind === 'display' ? (
-        <>
-          <Text size="1" color="gray" as="div" mt="2">Slot</Text>
-          <Flex gap="2" mt="1">
-            {['11 AM', '2 PM', '5 PM'].map(o => (
-              <button key={o} className={`seg-b ${slot === o ? 'on' : ''}`} style={{ flex: 1 }} onClick={() => setSlot(o)}>{o}</button>
-            ))}
-          </Flex>
-        </>
-      ) : (
-        <>
-          <Text size="1" color="gray" as="div" mt="2">Site location</Text>
-          <input className="cp-input" style={{ marginTop: 4 }} placeholder="Area / city" value={city} onChange={(e) => setCity(e.target.value)} />
-          <Text size="1" color="gray" as="div">What should the team bring?</Text>
-          <textarea className="cp-note" rows={2} placeholder="e.g. Kitchen systems catalogue, Quadro samples" value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </>
-      )}
-      <Button mt="3" size="2" color="green" style={{ fontWeight: 800, width: '100%' }}
-        disabled={kind === 'site' && !city.trim()}
-        onClick={(e) => { sparkle(e); setDone(kind === 'site' ? { type, city, notes } : { type, slot }) }}>
-        {kind === 'site' ? 'Request site visit' : 'Book display centre slot'}
-      </Button>
-    </div>
     </>
   )
 }
@@ -3251,12 +3366,14 @@ const ACCT_TITLES = {
   notif: 'Notification preferences', privacy: 'Account privacy',
 }
 
-function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, onCategory }) {
+function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, onCategory, onGoReorder }) {
   const [sub, setSub] = useState(() => {
     const h = window.location.hash
     if (h === '#dash') return 'dash'
     if (h === '#credit') return 'credit'
     if (h === '#lists') return 'lists'
+    if (h === '#orders') return 'orders'
+    if (h === '#site') return 'site'
     return initialSub || null
   })
   const [lo, setLo] = useState(null) // null | 'confirm' | 'out'
@@ -3274,7 +3391,7 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, o
   }, [sub !== null]) // eslint-disable-line react-hooks/exhaustive-deps
   const renderSub = () => {
     switch (sub) {
-      case 'dash': return <AcctDash />
+      case 'dash': return <AcctDash onReorder={onGoReorder} />
       case 'orders': return <AcctOrders lastOrder={lastOrder} onChange={onChange} />
       case 'credit': return <AcctCredit />
       case 'lists': return <AcctLists onChange={onChange} />
@@ -3906,8 +4023,6 @@ function loadAddrs() {
 
 function AddressSheet({ addrs, sel, onPick, onAdd, onClose }) {
   const [adding, setAdding] = useState(false)
-  const [label, setLabel] = useState('')
-  const [addr, setAddr] = useState('')
   return (
     <div className="qsheet-overlay" onClick={onClose}>
       <div className="qsheet" onClick={(e) => e.stopPropagation()}>
@@ -3925,23 +4040,7 @@ function AddressSheet({ addrs, sel, onPick, onAdd, onClose }) {
           ))}
         </div>
         {adding ? (
-          <div className="addr-form">
-            <input
-              className="cp-input" placeholder="Label — e.g. Site 2, New godown"
-              value={label} onChange={(e) => setLabel(e.target.value)}
-            />
-            <textarea
-              className="cp-note" rows={2} placeholder="Full address"
-              value={addr} onChange={(e) => setAddr(e.target.value)}
-            />
-            <Button
-              size="2" color="green" mt="2" style={{ fontWeight: 800, width: '100%' }}
-              disabled={!label.trim() || !addr.trim()}
-              onClick={() => { onAdd({ id: `a${Date.now()}`, label: label.trim(), addr: addr.trim() }); onClose() }}
-            >
-              Save address
-            </Button>
-          </div>
+          <AddrFields onSave={(a) => { onAdd(a); onClose() }} />
         ) : (
           <button className="addr-add" onClick={() => setAdding(true)}>
             <PlusIcon width={14} height={14} /> Add new address
@@ -4609,7 +4708,7 @@ export default function App() {
   const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
   const [cartOpen, setCartOpen] = useState(window.location.hash === '#cart')
   const [reorderOpen, setReorderOpen] = useState(['#reorder', '#pastorder'].includes(window.location.hash))
-  const [acctOpen, setAcctOpen] = useState(['#account', '#dash', '#credit', '#lists'].includes(window.location.hash))
+  const [acctOpen, setAcctOpen] = useState(['#account', '#dash', '#credit', '#lists', '#orders', '#site'].includes(window.location.hash))
   const acctSubRef = useRef(false)
   const acctInitSub = useRef(null)
   const [authed, setAuthed] = useState(() => {
@@ -5030,6 +5129,7 @@ export default function App() {
             onClose={closeAcct} onChange={changeCart} cart={cart} lastOrder={order}
             subRef={acctSubRef} initialSub={acctInitSub.current}
             onCategory={(cat) => { setAcctOpen(false); setPlp(cat) }}
+            onGoReorder={() => { setAcctOpen(false); setReorderOpen(true) }}
           />
         )}
 
