@@ -13,6 +13,7 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>window.onerror = (m) => { document.title = 'ERR:' + m }; window.addEventListener('unhandledrejection', e => { document.title = 'REJ:' + e.reason })</script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

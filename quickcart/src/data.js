@@ -94,8 +94,8 @@ export const BANNERS = [
   },
   {
     key: 'season', glow: '#3A3F4A', bg: 'linear-gradient(135deg, #2E323B, #17181C)',
-    title: 'Clearance sale is on', sub: 'Up to 60% off · last units only', cta: 'Grab now',
-    ph: '1484154218962-a197022b5858', anchor: 'season-store',
+    title: 'Flash sale is on', sub: 'Up to 60% off · last units only', cta: 'Grab now',
+    ph: '1484154218962-a197022b5858', anchor: 'deals',
   },
   {
     key: 'quiz', bg: 'linear-gradient(135deg, #6E56CF, #49369B)',
@@ -311,3 +311,18 @@ export const CAMPAIGN_HEADERS = [
   { name: 'Ebco Days', a: '#2F5FD0', b: '#2349A8', c: '#1A3A8C', d: '#122B6B', icon: '⚙️' },
   { name: 'Festive Sale', a: '#B83280', b: '#8E2C72', c: '#6B2160', d: '#4E1746', icon: '🎉' },
 ]
+
+/* Hero v2 ("fest" takeover, client direction): yellow promo + 2x2 category tiles */
+export const FEST = {
+  title: 'Hinge Fest',
+  off: '\u20b9150 OFF',
+  cta: 'SHOP NOW',
+  ph: '1594026112284-02bb6f3352fe',
+  cat: 'Hinges',
+  tiles: [
+    { l: 'Soft-Close Hinges', cat: 'Hinges', ph: '1556911220-bff31c812dba' },
+    { l: 'Drawer Channels', cat: 'Drawer Slides', ph: '1595428774223-ef52624120d2' },
+    { l: 'Handles & Knobs', cat: 'Handles', ph: '1489171078254-c3365d6e359f' },
+    { l: 'Locks & Latches', cat: 'Locks', ph: '1558002038-1055907df827' },
+  ],
+}

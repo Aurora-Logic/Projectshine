@@ -12,7 +12,7 @@ import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
   FEED_POOL, CATEGORIES, BANNERS, COMBOS, CLEARANCE_TILES, QUIZ,
   LEADERS, SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
-  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS,
+  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST,
 } from './data.js'
 import './App.css'
 
@@ -244,7 +244,7 @@ function CartGlyph(props) {
   )
 }
 
-function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCount }) {
+function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCount, plain }) {
   const [hint, setHint] = useState(0)
   useEffect(() => {
     const t = setInterval(() => setHint(h => (h + 1) % SEARCH_HINTS.length), 2500)
@@ -253,7 +253,7 @@ function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCoun
 
   return (
     <div className={`topbar ${compact ? 'compact' : ''}`}>
-      <SkyLayer dp={dp} cond={cond} />
+      {!plain && <SkyLayer dp={dp} cond={cond} />}
       <Flex align="center" gap="3" className="loc-row" mb="3">
         <Box flexGrow="1" style={{ cursor: 'pointer', minWidth: 0 }}>
           <Flex align="center" gap="2">
@@ -261,7 +261,7 @@ function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCoun
             <ChevronDownIcon width={14} height={14} color="#fff" style={{ flex: 'none' }} />
           </Flex>
           <Text size="1" truncate as="div" style={{ color: 'rgba(255,255,255,.72)' }}>
-            304, Maple Heights · {weather.icon}
+            304, Maple Heights{plain ? '' : ` · ${weather.icon}`}
           </Text>
         </Box>
         <div className="avatar" aria-label="Cart">
@@ -289,6 +289,19 @@ function TopBar({ compact, weather, dp, cond, brand, onBrand, onSearch, cartCoun
         <Text size="1" weight="bold" color="amber" style={{ flex: 'none' }}>View board</Text>
         <ChevronRightIcon width={13} height={13} color="var(--amber-11)" style={{ flex: 'none' }} />
       </div>
+
+      {plain && (
+        <div className="tgt-mini" title="Analytics page coming soon">
+          <Text size="1" weight="bold" style={{ color: '#fff', flex: 'none' }}>Monthly target</Text>
+          <div className="tgt-mini-bar">
+            <div className="tgt-mini-fill" style={{ width: `${Math.min(100, Math.round((TARGETS.monthly.done / TARGETS.monthly.target) * 100))}%` }} />
+          </div>
+          <Text size="1" weight="bold" style={{ color: '#FFD43B', flex: 'none' }}>
+            {Math.round((TARGETS.monthly.done / TARGETS.monthly.target) * 100)}% · ₹{Math.round((TARGETS.monthly.target - TARGETS.monthly.done) / 1000)}k to go
+          </Text>
+          <ChevronRightIcon width={12} height={12} color="rgba(255,255,255,.7)" style={{ flex: 'none' }} />
+        </div>
+      )}
 
       <div className="tabs-t">
         {HEADER_TABS.map((t, i) => {
@@ -1552,6 +1565,86 @@ function Leaderboard() {
 
 /* ---------------- Categories / feed / chrome ---------------- */
 
+/* Hero v2: client "fest" takeover — promo card + 2x2 category tiles, scalloped edge */
+function FestHero({ onCat }) {
+  return (
+    <div className="fest-wrap">
+      <div className="fest-grid">
+        <button className="fest-promo" onClick={() => onCat(FEST.cat)}>
+          <Text as="div" weight="bold" style={{ fontSize: 21, lineHeight: 1.15, color: '#2b2200' }}>{FEST.title}</Text>
+          <Text as="div" weight="bold" style={{ fontSize: 19, color: '#2b2200' }}>{FEST.off}</Text>
+          <span className="fest-cta">{FEST.cta}</span>
+          <Img className="fest-promo-img" src={img(FEST.ph, 300)} alt="" />
+        </button>
+        <div className="fest-tiles">
+          {FEST.tiles.map(t => (
+            <button key={t.l} className="fest-tile" onClick={() => onCat(t.cat)}>
+              <Img src={img(t.ph, 300)} alt={t.l} loading="lazy" />
+              <span className="fest-tl">{t.l}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="fest-scallop" />
+      <div className="fest-dots">
+        {Array.from({ length: 12 }, (_, i) => <span key={i} />)}
+      </div>
+    </div>
+  )
+}
+
+/* Flash Sale — Deal of the day + Clearance merged: timer, discounts, selling-fast bars */
+function FlashCard({ p, onChange }) {
+  const [qty, setQty] = useState(0)
+  const add = (e) => { setQty(q => q + 1); onChange(1, p); sparkle(e) }
+  const remove = () => { setQty(q => q - 1); onChange(-1, p) }
+  const pct = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0
+  const sold = Math.max(15, Math.min(95, 100 - (p.stock ?? 50)))
+  return (
+    <div className="flash-card">
+      <div className="pimg-wrap" style={{ aspectRatio: 'auto', height: 104 }}>
+        <Img className="pimg" src={img(p.ph, 320)} alt={p.name} style={{ borderRadius: '16px 16px 0 0' }} />
+        {pct > 0 && <span className="flash-off">-{pct}%</span>}
+        <AddControl qty={qty} onAdd={add} onRemove={remove} />
+      </div>
+      <div className="flash-body">
+        <Text as="div" weight="bold" className="clamp1" style={{ fontSize: 12.5 }}>{p.name}</Text>
+        <Flex align="center" gap="2" mt="1">
+          <Text size="2" weight="bold">₹{p.price.toLocaleString('en-IN')}</Text>
+          {p.mrp && <Text size="1" color="gray" style={{ textDecoration: 'line-through' }}>₹{p.mrp.toLocaleString('en-IN')}</Text>}
+        </Flex>
+        <div className="flash-bar"><div style={{ width: `${sold}%` }} /></div>
+        <Text as="div" weight="bold" style={{ fontSize: 10, color: p.stock === 0 ? 'var(--red-10)' : 'var(--amber-11)' }}>
+          {p.stock === 0 ? `Out · ships in ${p.lead} days` : p.stock <= 10 ? `Selling fast · only ${p.stock} left` : `${sold}% claimed`}
+        </Text>
+      </div>
+    </div>
+  )
+}
+
+function FlashSale({ items, onChange, onSeeAll }) {
+  if (items.length === 0) return null
+  return (
+    <div className="band-flash cv" id="deals">
+      <Flex align="center" justify="between" px="4">
+        <Flex align="center" gap="3" style={{ minWidth: 0 }}>
+          <Heading size="4" style={{ color: '#fff', letterSpacing: '-0.2px' }}>⚡ Flash sale</Heading>
+          <DealTimer />
+        </Flex>
+        <Text size="2" weight="bold" style={{ color: 'rgba(255,255,255,.9)', cursor: 'pointer', flex: 'none' }} onClick={onSeeAll}>
+          See all
+        </Text>
+      </Flex>
+      <Box px="4" mt="1" mb="3">
+        <Text size="1" style={{ color: 'rgba(255,255,255,.8)' }}>Deals + clearance · up to 60% off · last units</Text>
+      </Box>
+      <div className="hscroll">
+        {items.map(p => <FlashCard key={`fl-${p.id}`} p={p} onChange={onChange} />)}
+      </div>
+    </div>
+  )
+}
+
 /* Dealer targets dashboard: monthly / quarterly / yearly purchase progress */
 const fmtL = (n) => (n >= 100000 ? `₹${(n / 100000).toFixed(2)}L` : `₹${n.toLocaleString('en-IN')}`)
 
@@ -1760,6 +1853,7 @@ export default function App() {
   const [sim, setSim] = useState(null)
   const [simSkin, setSimSkin] = useState(null)
   const simEnabled = window.location.hash === '#sim'
+  const heroVariant = window.location.hash === '#hero-classic' ? 'classic' : 'fest'
   const sky = sim ?? fetchedSky
   // Campaign takeover ONLY when explicitly scheduled (hash preview / future campaign flag).
   // Default is always weather + time of day — consistent across opens.
@@ -1767,7 +1861,8 @@ export default function App() {
     const m = window.location.hash.match(/^#campaign-(\d)$/)
     return m && CAMPAIGN_HEADERS[+m[1]] ? CAMPAIGN_HEADERS[+m[1]] : null
   }, [])
-  const T = (campaign && !sim) ? campaign : SKY[sky.dp][sky.cond]
+  const FEST_T = { a: '#2C5F50', b: '#234D41', c: '#1D4237', d: '#142F27', icon: '' }
+  const T = heroVariant === 'fest' ? FEST_T : ((campaign && !sim) ? campaign : SKY[sky.dp][sky.cond])
   // Quiz edition rotates daily, independent of weather — novelty is the hook
   const quizSkin = simSkin ?? QUIZ_SKINS[Math.floor(Date.now() / 86400000) % QUIZ_SKINS.length]
 
@@ -1917,12 +2012,16 @@ export default function App() {
         <TopBar
           compact={scrolled} weather={{ icon: T.icon }} dp={sky.dp} cond={sky.cond}
           brand={brand} onBrand={setBrand} onSearch={() => setSheet({ items: FEED_POOL })}
-          cartCount={cart.count}
+          cartCount={cart.count} plain={heroVariant === 'fest'}
         />
 
-        <div className="header-extend" style={glow ? { '--banner-glow': glow } : undefined}>
-          <BannerCarousel quizSkin={quizSkin} onGlow={setGlow} />
-        </div>
+        {heroVariant === 'fest' ? (
+          <FestHero onCat={(c) => setPlp(c)} />
+        ) : (
+          <div className="header-extend" style={glow ? { '--banner-glow': glow } : undefined}>
+            <BannerCarousel quizSkin={quizSkin} onGlow={setGlow} />
+          </div>
+        )}
 
         {brand !== 'ALL' && (
           <div className="filter-strip">
@@ -1943,17 +2042,15 @@ export default function App() {
           />
         )}
 
-        <TargetsCard />
+        {heroVariant === 'classic' && <TargetsCard />}
 
         <CategoryGrid onPick={openCategory} onSeeAll={() => setPlp('All')} />
 
-        {bf(DEALS).length > 0 && (
-          <Shelf
-            title="Deal of the day" items={bf(DEALS)} onChange={changeCart}
-            extra={<DealTimer />} band="band-deal" light id="deals" 
-            onSeeAll={() => setSheet({ items: bf(DEALS), title: 'Deal of the day' })}
-          />
-        )}
+        <FlashSale
+          items={applyF(bf(DEALS), { ...DEFAULT_F, sort: 3 }, 'ALL')}
+          onChange={changeCart}
+          onSeeAll={() => setSheet({ items: bf(DEALS), title: 'Flash sale' })}
+        />
 
         {/* engagement break #1: timed quiz right after the urgency band */}
         <QuizCard onFinish={markPlayed} skin={quizSkin} />
@@ -1974,8 +2071,6 @@ export default function App() {
 
         {/* engagement break #2: daily spin + streak check-in mid-page */}
         <GameRow onSpin={() => setWheelOpen(true)} />
-
-        {brand === 'ALL' && <ClearanceStore />}
 
         {homeMode === 'brand' ? (
           <>
