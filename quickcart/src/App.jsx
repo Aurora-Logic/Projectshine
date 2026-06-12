@@ -589,55 +589,224 @@ const MERCH_ROWS = [
   { icon: '🚚', t: 'Free delivery above ₹999', s: 'Straight to your site, no surge' },
 ]
 
+/* ---------- Shared filter system: subcat · brand · material · load · size · deals · sort ---------- */
+
+const DEFAULT_F = { deals: false, spec: null, sort: 0, mat: null, load: 0, size: null }
+const MATERIALS = [...new Set(FEED_POOL.map(p => p.mat).filter(Boolean))]
+const SIZES = [450, 500, 600]
+const matThumb = (m) => FEED_POOL.find(p => p.mat === m)?.ph
+
+function applyF(list, f, b) {
+  let out = list
+  if (b !== 'ALL') out = out.filter(p => p.brand === b)
+  if (f.spec) out = out.filter(p => `${p.name} ${p.qty}`.toLowerCase().includes(f.spec[1]))
+  if (f.mat) out = out.filter(p => p.mat === f.mat)
+  if (f.load > 0) out = out.filter(p => (p.load || 0) >= f.load)
+  if (f.size) out = out.filter(p => p.size === f.size)
+  if (f.deals) out = out.filter(p => p.tag)
+  out = [...out]
+  if (f.sort === 1) out.sort((x, y) => x.price - y.price)
+  if (f.sort === 2) out.sort((x, y) => y.price - x.price)
+  if (f.sort === 3) out.sort((x, y) => ((y.mrp || y.price) - y.price) / (y.mrp || y.price) - ((x.mrp || x.price) - x.price) / (x.mrp || x.price))
+  return out
+}
+
+const fBadges = (f, b) => ({
+  sub: f.spec ? 1 : 0,
+  brand: b !== 'ALL' ? 1 : 0,
+  material: f.mat ? 1 : 0,
+  load: f.load > 0 ? 1 : 0,
+  size: f.size ? 1 : 0,
+  deal: f.deals ? 1 : 0,
+  sort: f.sort > 0 ? 1 : 0,
+})
+
+const fSummary = (f, b) => [
+  b !== 'ALL' && b.charAt(0).toUpperCase() + b.slice(1),
+  f.spec && f.spec[0],
+  f.mat,
+  f.load > 0 && `≥ ${f.load} kg`,
+  f.size && `${f.size}mm`,
+  f.deals && 'Deals only',
+  f.sort > 0 && SORT_OPTIONS[f.sort],
+].filter(Boolean)
+
+function FilterSheet({ group, onGroup, cat = 'All', b, setB, f, setF, count }) {
+  if (!group) return null
+  const set = (patch) => setF(cur => ({ ...cur, ...patch }))
+  const badges = fBadges(f, b)
+  const groups = [
+    ['sub', 'Subcategory'], ['brand', 'Brand'], ['material', 'Material'],
+    ['load', 'Load'], ['size', 'Size'], ['deal', 'Deals'], ['sort', 'Sort'],
+  ]
+  return (
+    <div className="bsheet-overlay" onClick={() => onGroup(null)}>
+      <div className="bsheet fsheet" onClick={(e) => e.stopPropagation()}>
+        <Flex align="center" justify="between" px="4" pt="4" pb="3">
+          <Heading size="4">Filters & sorting</Heading>
+          <Text size="2" weight="bold" color="red" style={{ cursor: 'pointer' }}
+            onClick={() => { setB('ALL'); setF(DEFAULT_F) }}>
+            Clear all
+          </Text>
+        </Flex>
+        <div className="fs-body">
+          <div className="fs-rail">
+            {groups.map(([k, l]) => (
+              <div key={k} className={`fs-group ${group === k ? 'on' : ''}`} onClick={() => onGroup(k)}>
+                {badges[k] > 0 && <span className="fs-badge">{badges[k]}</span>}
+                <Text size="1" weight="bold">{l}</Text>
+              </div>
+            ))}
+          </div>
+          <div className="fs-pane">
+            {group === 'sub' && (
+              cat === 'All' ? (
+                <Text size="2" color="gray">
+                  Pick a category first — subcategories live inside each category.
+                </Text>
+              ) : (
+                <div className="fs-tiles">
+                  {(SUBCATS[cat] || []).map(([label, kw]) => {
+                    const th = subcatThumb(kw)
+                    const on = f.spec?.[1] === kw
+                    return (
+                      <button key={kw} className={`fs-tile ${on ? 'on' : ''}`} onClick={() => set({ spec: on ? null : [label, kw] })}>
+                        {th && <Img className="ph" src={img(th, 220)} alt="" />}
+                        <div className="fs-cap"><Text size="2" weight="bold">{label}</Text></div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            )}
+            {group === 'brand' && (
+              <div className="fs-tiles">
+                <button className={`fs-tile ${b === 'ALL' ? 'on' : ''}`} onClick={() => setB('ALL')}>
+                  <div className="media">
+                    <DashboardIcon width={26} height={26} color="var(--gray-11)" />
+                  </div>
+                  <div className="fs-cap"><Text size="2" weight="bold">All brands</Text></div>
+                </button>
+                {BRAND_KEYS.slice(1).map(k => (
+                  <button key={k} className={`fs-tile ${b === k ? 'on' : ''}`} onClick={() => setB(cur => (cur === k ? 'ALL' : k))}>
+                    <div className="media">
+                      <img className="lg" src={BRAND_LOGOS[k]} alt={k} />
+                    </div>
+                    <div className="fs-cap"><Text size="2" weight="bold">{k.charAt(0).toUpperCase() + k.slice(1)}</Text></div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {group === 'material' && (
+              <div className="fs-tiles">
+                {MATERIALS.map(m => {
+                  const th = matThumb(m)
+                  const on = f.mat === m
+                  return (
+                    <button key={m} className={`fs-tile ${on ? 'on' : ''}`} onClick={() => set({ mat: on ? null : m })}>
+                      {th && <Img className="ph" src={img(th, 220)} alt="" />}
+                      <div className="fs-cap"><Text size="2" weight="bold">{m}</Text></div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {group === 'load' && (
+              <Box>
+                <Flex align="center" justify="between">
+                  <Text size="2" weight="bold">Min load capacity</Text>
+                  <Text size="2" weight="bold" style={{ color: 'var(--teal-11)' }}>
+                    {f.load > 0 ? `≥ ${f.load} kg` : 'Any'}
+                  </Text>
+                </Flex>
+                <input
+                  type="range" className="ldr" min="0" max="60" step="5" value={f.load}
+                  onChange={(e) => set({ load: +e.target.value })}
+                />
+                <Flex align="center" justify="between">
+                  <Text size="1" color="gray">Any</Text>
+                  <Text size="1" color="gray">60 kg</Text>
+                </Flex>
+                <Text size="1" color="gray" as="div" mt="3">
+                  Filters slides, systems & arms by rated load. Unrated items hide when set.
+                </Text>
+              </Box>
+            )}
+            {group === 'size' && (
+              <div className="fs-tiles">
+                {SIZES.map(sz => {
+                  const on = f.size === sz
+                  return (
+                    <button key={sz} className={`fs-tile ${on ? 'on' : ''}`} onClick={() => set({ size: on ? null : sz })}>
+                      <div className="media"><Text weight="bold" style={{ fontSize: 24 }}>{sz}<span style={{ fontSize: 13 }}>mm</span></Text></div>
+                      <div className="fs-cap"><Text size="2" weight="bold">{sz} mm</Text></div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {group === 'deal' && (
+              <div className="fs-tiles">
+                <button className={`fs-tile ${!f.deals ? 'on' : ''}`} onClick={() => set({ deals: false })}>
+                  <div className="media"><Text size="7">🗂️</Text></div>
+                  <div className="fs-cap"><Text size="2" weight="bold">All items</Text></div>
+                </button>
+                <button className={`fs-tile ${f.deals ? 'on' : ''}`} onClick={() => set({ deals: true })}>
+                  <div className="media"><Text size="7">🏷️</Text></div>
+                  <div className="fs-cap"><Text size="2" weight="bold">Deals only</Text></div>
+                </button>
+              </div>
+            )}
+            {group === 'sort' && SORT_OPTIONS.map((o, i) => (
+              <button key={o} className="bsheet-row" onClick={() => set({ sort: i })}>
+                <span className={`radio ${i === f.sort ? 'on' : ''}`} />
+                <Text size="2" weight={i === f.sort ? 'bold' : 'medium'}>{o}</Text>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="fs-foot">
+          <Button size="3" variant="soft" color="gray" radius="full" onClick={() => onGroup(null)}>
+            Close
+          </Button>
+          <Button size="3" color="teal" radius="full" style={{ flex: 1, fontWeight: 800 }} onClick={() => onGroup(null)}>
+            Show {count} result{count === 1 ? '' : 's'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBrand = 'ALL', recoStrip, onRecoClose }) {
   const [b, setB] = useState(homeBrand)
-  const [deals, setDeals] = useState(false)
-  const [spec, setSpec] = useState(null) // selected subcategory: [label, kw]
-  const [sort, setSort] = useState(0)
+  const [f, setF] = useState(DEFAULT_F)
   // #fsheet hash opens the filter sheet for design review
-  const [fOpen, setFOpen] = useState(() => (window.location.hash === '#fsheet' ? 'sub' : null))
+  const [fOpen, setFOpen] = useState(() => {
+    const m = window.location.hash.match(/^#fsheet(?:-(\w+))?$/)
+    return m ? (m[1] || 'sub') : null
+  })
   const mainRef = useRef(null)
-  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1)
-  const clearAll = () => { setB('ALL'); setDeals(false); setSpec(null); setSort(0) }
-  const badges = {
-    sub: spec ? 1 : 0,
-    brand: b !== 'ALL' ? 1 : 0,
-    deal: deals ? 1 : 0,
-    sort: sort > 0 ? 1 : 0,
-  }
-  const badgeTotal = Object.values(badges).reduce((a, x) => a + x, 0)
+  const badgeTotal = Object.values(fBadges(f, b)).reduce((a, x) => a + x, 0)
 
   // rail hop → back to top, and subcategories are category-specific so they reset
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0 })
-    setSpec(null)
+    setF(cur => ({ ...cur, spec: null }))
   }, [cat])
 
   const inCat = useMemo(() => FEED_POOL.filter(CAT_RULES[cat] || (() => true)), [cat])
   const dealsAvail = inCat.filter(p => p.tag).length
 
-  const products = useMemo(() => {
-    let list = inCat
-    if (b !== 'ALL') list = list.filter(p => p.brand === b)
-    if (spec) list = list.filter(p => `${p.name} ${p.qty}`.toLowerCase().includes(spec[1]))
-    if (deals) list = list.filter(p => p.tag)
-    list = [...list]
-    if (sort === 1) list.sort((x, y) => x.price - y.price)
-    if (sort === 2) list.sort((x, y) => y.price - x.price)
-    if (sort === 3) list.sort((x, y) => ((y.mrp || y.price) - y.price) / (y.mrp || y.price) - ((x.mrp || x.price) - x.price) / (x.mrp || x.price))
-    return list
-  }, [inCat, b, spec, deals, sort])
+  const products = useMemo(() => applyF(inCat, f, b), [inCat, f, b])
 
   const railImg = (PLP_RAIL.find(r => r[1] === cat) || PLP_RAIL[0])[0]
   const pageReady = useNextFrame()
-  const gridKey = `${cat}|${b}|${spec}|${deals}|${sort}`
+  const gridKey = `${cat}|${b}|${JSON.stringify(f)}`
   const summary = [
     `${products.length} item${products.length === 1 ? '' : 's'}`,
-    b !== 'ALL' && b.charAt(0).toUpperCase() + b.slice(1),
-    spec && spec[0],
-    deals && 'Deals only',
-    sort > 0 && SORT_OPTIONS[sort],
-  ].filter(Boolean).join(' · ')
+    ...fSummary(f, b),
+  ].join(' · ')
 
   // merch strip after every 6th product breaks grid monotony
   const cells = []
@@ -678,22 +847,22 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
         <div className="plp-main" ref={mainRef}>
           <div className="plp-sticky">
             <div className="plp-chips">
-              <button className={`pchip ${badgeTotal > 0 ? 'on' : ''}`} onClick={() => setFOpen(cat === 'All' ? 'brand' : 'sub')}>
+              <button className={`pchip ${badgeTotal > 0 ? 'on' : ''}`} onClick={() => setFOpen(cat === 'All' ? 'material' : 'sub')}>
                 <MixerHorizontalIcon width={13} height={13} />
                 Filters{badgeTotal > 0 ? ` · ${badgeTotal}` : ''}
               </button>
-              <button className={`pchip ${sort > 0 ? 'on' : ''}`} onClick={() => setFOpen('sort')}>
-                {sort > 0 ? SORT_OPTIONS[sort] : 'Sort'} <ChevronDownIcon width={13} height={13} />
+              <button className={`pchip ${f.sort > 0 ? 'on' : ''}`} onClick={() => setFOpen('sort')}>
+                {f.sort > 0 ? SORT_OPTIONS[f.sort] : 'Sort'} <ChevronDownIcon width={13} height={13} />
               </button>
-              <button className={`pchip ${deals ? 'on' : ''}`} onClick={() => setDeals(d => !d)}>
+              <button className={`pchip ${f.deals ? 'on' : ''}`} onClick={() => setF(cur => ({ ...cur, deals: !cur.deals }))}>
                 Deals only
               </button>
               {(SUBCATS[cat] || []).map(([label, kw]) => {
                 const th = subcatThumb(kw)
                 return (
                   <button
-                    key={kw} className={`pchip ${spec?.[1] === kw ? 'on' : ''}`}
-                    onClick={() => setSpec(cur => (cur?.[1] === kw ? null : [label, kw]))}
+                    key={kw} className={`pchip ${f.spec?.[1] === kw ? 'on' : ''}`}
+                    onClick={() => setF(cur => ({ ...cur, spec: cur.spec?.[1] === kw ? null : [label, kw] }))}
                   >
                     {th && <Img className="pi" src={img(th, 80)} alt="" />}
                     {label}
@@ -703,7 +872,7 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
               {BRAND_KEYS.slice(1).map(k => (
                 <button key={k} className={`pchip ${b === k ? 'on' : ''}`} onClick={() => setB(cur => (cur === k ? 'ALL' : k))}>
                   <img className="pi-logo" src={BRAND_LOGOS[k]} alt="" />
-                  {cap(k)}
+                  {k.charAt(0).toUpperCase() + k.slice(1)}
                 </button>
               ))}
             </div>
@@ -711,18 +880,18 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
 
           <button
             className="plp-banner"
-            onClick={() => dealsAvail > 0 && setDeals(d => !d)}
+            onClick={() => dealsAvail > 0 && setF(cur => ({ ...cur, deals: !cur.deals }))}
             style={{ cursor: dealsAvail > 0 ? 'pointer' : 'default' }}
           >
             <Box flexGrow="1">
               <Text size="3" weight="bold" as="div" style={{ color: '#5c3a10', letterSpacing: '-0.2px' }}>
                 {dealsAvail > 0
-                  ? (deals ? 'Showing deals only' : `${dealsAvail} deal${dealsAvail === 1 ? '' : 's'} live in ${cat === 'All' ? 'fittings' : cat.toLowerCase()}`)
+                  ? (f.deals ? 'Showing deals only' : `${dealsAvail} deal${dealsAvail === 1 ? '' : 's'} live in ${cat === 'All' ? 'fittings' : cat.toLowerCase()}`)
                   : `Pro picks: ${cat === 'All' ? 'every fitting' : cat.toLowerCase()}`}
               </Text>
               <Text size="1" weight="medium" as="div" mt="1" style={{ color: '#7a5420' }}>
                 {dealsAvail > 0
-                  ? (deals ? 'Tap to see everything again' : 'Trade prices · tap to show only deals')
+                  ? (f.deals ? 'Tap to see everything again' : 'Trade prices · tap to show only deals')
                   : 'Trade prices · GST billing · 90-min delivery'}
               </Text>
             </Box>
@@ -758,7 +927,7 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
           ) : (
             <Flex direction="column" align="center" py="8" gap="2">
               <Text size="2" weight="bold" color="gray">Nothing matches these filters</Text>
-              <Button size="1" radius="full" variant="soft" onClick={() => { setB('ALL'); setDeals(false); setSpec(null); setSort(0) }}>
+              <Button size="1" radius="full" variant="soft" onClick={() => { setB('ALL'); setF(DEFAULT_F) }}>
                 Clear filters
               </Button>
             </Flex>
@@ -822,94 +991,10 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
         <CartBar cart={cart} />
       </div>
 
-      {fOpen && (
-        <div className="bsheet-overlay" onClick={() => setFOpen(null)}>
-          <div className="bsheet fsheet" onClick={(e) => e.stopPropagation()}>
-            <Flex align="center" justify="between" px="4" pt="4" pb="3">
-              <Heading size="4">Filters & sorting</Heading>
-              <Text size="2" weight="bold" color="red" style={{ cursor: 'pointer' }} onClick={clearAll}>
-                Clear all
-              </Text>
-            </Flex>
-            <div className="fs-body">
-              <div className="fs-rail">
-                {[['sub', 'Subcategory'], ['brand', 'Brand'], ['deal', 'Deals'], ['sort', 'Sort']].map(([k, l]) => (
-                  <div key={k} className={`fs-group ${fOpen === k ? 'on' : ''}`} onClick={() => setFOpen(k)}>
-                    {badges[k] > 0 && <span className="fs-badge">{badges[k]}</span>}
-                    <Text size="1" weight="bold">{l}</Text>
-                  </div>
-                ))}
-              </div>
-              <div className="fs-pane">
-                {fOpen === 'sub' && (
-                  cat === 'All' ? (
-                    <Text size="2" color="gray">
-                      Pick a category from the page’s left rail first — subcategories live inside each category.
-                    </Text>
-                  ) : (
-                    <div className="fs-tiles">
-                      {(SUBCATS[cat] || []).map(([label, kw]) => {
-                        const th = subcatThumb(kw)
-                        const on = spec?.[1] === kw
-                        return (
-                          <button key={kw} className={`fs-tile ${on ? 'on' : ''}`} onClick={() => setSpec(on ? null : [label, kw])}>
-                            {th && <Img className="ph" src={img(th, 220)} alt="" />}
-                            <div className="fs-cap"><Text size="2" weight="bold">{label}</Text></div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )
-                )}
-                {fOpen === 'brand' && (
-                  <div className="fs-tiles">
-                    <button className={`fs-tile ${b === 'ALL' ? 'on' : ''}`} onClick={() => setB('ALL')}>
-                      <div className="media">
-                        <DashboardIcon width={26} height={26} color="var(--gray-11)" />
-                      </div>
-                      <div className="fs-cap"><Text size="2" weight="bold">All brands</Text></div>
-                    </button>
-                    {BRAND_KEYS.slice(1).map(k => (
-                      <button key={k} className={`fs-tile ${b === k ? 'on' : ''}`} onClick={() => setB(cur => (cur === k ? 'ALL' : k))}>
-                        <div className="media">
-                          <img className="lg" src={BRAND_LOGOS[k]} alt={k} />
-                        </div>
-                        <div className="fs-cap"><Text size="2" weight="bold">{cap(k)}</Text></div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {fOpen === 'deal' && (
-                  <div className="fs-tiles">
-                    <button className={`fs-tile ${!deals ? 'on' : ''}`} onClick={() => setDeals(false)}>
-                      <div className="media"><Text size="7">🗂️</Text></div>
-                      <div className="fs-cap"><Text size="2" weight="bold">All items</Text></div>
-                    </button>
-                    <button className={`fs-tile ${deals ? 'on' : ''}`} onClick={() => setDeals(true)}>
-                      <div className="media"><Text size="7">🏷️</Text></div>
-                      <div className="fs-cap"><Text size="2" weight="bold">Deals only</Text></div>
-                    </button>
-                  </div>
-                )}
-                {fOpen === 'sort' && SORT_OPTIONS.map((o, i) => (
-                  <button key={o} className="bsheet-row" onClick={() => setSort(i)}>
-                    <span className={`radio ${i === sort ? 'on' : ''}`} />
-                    <Text size="2" weight={i === sort ? 'bold' : 'medium'}>{o}</Text>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="fs-foot">
-              <Button size="3" variant="soft" color="gray" radius="full" onClick={() => setFOpen(null)}>
-                Close
-              </Button>
-              <Button size="3" color="teal" radius="full" style={{ flex: 1, fontWeight: 800 }} onClick={() => setFOpen(null)}>
-                Show {products.length} result{products.length === 1 ? '' : 's'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <FilterSheet
+        group={fOpen} onGroup={setFOpen} cat={cat}
+        b={b} setB={setB} f={f} setF={setF} count={products.length}
+      />
     </div>
   )
 }
@@ -919,8 +1004,10 @@ function SearchSheet({ sheet, onClose, onChange }) {
   const [q, setQ] = useState(sheet?.query || '')
   const [b, setB] = useState('ALL')
   const [cat, setCat] = useState('All')
+  const [f, setF] = useState(DEFAULT_F)
+  const [fOpen, setFOpen] = useState(null)
   const [pageReady, setPageReady] = useState(false)
-  useEffect(() => { setQ(sheet?.query || ''); setB('ALL'); setCat('All') }, [sheet])
+  useEffect(() => { setQ(sheet?.query || ''); setB('ALL'); setCat('All'); setF(DEFAULT_F); setFOpen(null) }, [sheet])
   useEffect(() => {
     setPageReady(false)
     if (!sheet) return
@@ -930,9 +1017,7 @@ function SearchSheet({ sheet, onClose, onChange }) {
   if (!sheet) return null
 
   const ql = q.trim().toLowerCase()
-  const base = sheet.items
-    .filter(CAT_RULES[cat] || (() => true))
-    .filter(p => b === 'ALL' || p.brand === b)
+  const base = applyF(sheet.items.filter(CAT_RULES[cat] || (() => true)), f, b)
   const hits = base.filter(p => !ql || `${p.name} ${p.qty}`.toLowerCase().includes(ql))
   const fallback = ql && hits.length === 0
   const shown = fallback ? base : hits
@@ -951,6 +1036,15 @@ function SearchSheet({ sheet, onClose, onChange }) {
             <MagnifyingGlassIcon width={16} height={16} />
           </TextField.Slot>
         </TextField.Root>
+        <button
+          className="sheet-back" aria-label="Filters" style={{ position: 'relative' }}
+          onClick={() => setFOpen(cat === 'All' ? 'material' : 'sub')}
+        >
+          <MixerHorizontalIcon width={17} height={17} />
+          {Object.values(fBadges(f, b)).reduce((a, x) => a + x, 0) > 0 && (
+            <span className="fs-dot" />
+          )}
+        </button>
       </div>
       <div className="plp-body">
         <div className="plp-rail">
@@ -979,6 +1073,7 @@ function SearchSheet({ sheet, onClose, onChange }) {
                 : [
                     `${shown.length} item${shown.length === 1 ? '' : 's'}`,
                     cat !== 'All' && cat,
+                    ...fSummary(f, b),
                     sheet.title,
                   ].filter(Boolean).join(' · ')}
             </Text>
@@ -990,6 +1085,10 @@ function SearchSheet({ sheet, onClose, onChange }) {
           </Grid>
         </div>
       </div>
+      <FilterSheet
+        group={fOpen} onGroup={setFOpen} cat={cat}
+        b={b} setB={setB} f={f} setF={setF} count={shown.length}
+      />
     </div>
   )
 }
@@ -1680,7 +1779,7 @@ export default function App() {
   const [sheet, setSheet] = useState(() =>
     window.location.hash === '#search' ? { items: FEED_POOL } : null)
   const [plp, setPlp] = useState(() => {
-    if (window.location.hash === '#fsheet') return 'Hinges'
+    if (window.location.hash.startsWith('#fsheet')) return 'Hinges'
     if (window.location.hash === '#strip') return 'All'
     const m = window.location.hash.match(/^#plp(?:-(\w+))?$/)
     if (!m) return null

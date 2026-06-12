@@ -1686,6 +1686,23 @@ body {
   to { transform: translateY(0); opacity: 1; }
 }
 
+.ldr {
+  width: 100%;
+  margin: 14px 0 6px;
+  accent-color: var(--teal-9);
+  height: 24px;
+}
+.fs-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--teal-9);
+  border: 2px solid #fff;
+}
+
 /* ---------- Reduced motion: respect the OS setting ---------- */
 @media (prefers-reduced-motion: reduce) {
   .cloud, .star, .drop, .flake, .gust, .leafy, .fogband,
