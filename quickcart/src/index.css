@@ -1818,7 +1818,8 @@ body {
 .fest-scallop {
   height: 14px;
   margin: 16px -12px 0;
-  background-image: radial-gradient(circle at 12px 0, var(--hdr-d, #142F27) 12px, transparent 13px);
+  border-top: 1px solid var(--hdr-d, #142F27);
+  background-image: radial-gradient(circle at 12px 0, var(--hdr-d, #142F27) 12px, transparent 12.6px);
   background-size: 24px 14px;
   background-repeat: repeat-x;
   background-color: #fff;
