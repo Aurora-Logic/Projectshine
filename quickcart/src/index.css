@@ -5090,3 +5090,110 @@ button.lg-link {
   background: #fff;
   border-top: 1px solid var(--gray-4);
 }
+
+/* ---------- B8/B9 · Find a Pro ---------- */
+.prospage {
+  position: fixed;
+  inset: 0;
+  margin: 0 auto;
+  max-width: 480px;
+  background: var(--gray-2);
+  z-index: 74;
+  display: flex;
+  flex-direction: column;
+  animation: pagein .26s cubic-bezier(.32, .72, .25, 1);
+}
+.prospage .pdp-head { flex: none; }
+.util-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.util-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--gray-4);
+  background: #fff;
+  border-radius: 16px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pro-card {
+  background: #fff;
+  border: 1px solid var(--gray-4);
+  border-radius: 18px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.pro-av {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  letter-spacing: .5px;
+}
+.pro-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--green-3);
+  color: var(--green-11);
+  font-size: 10.5px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 2px 7px;
+  flex: none;
+}
+.pro-meta {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.pro-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--gray-3);
+  color: var(--gray-11);
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 4px 9px;
+}
+.pro-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.pro-actions a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.pro-call {
+  border: 1.5px solid var(--green-7);
+  color: var(--green-11);
+  background: #fff;
+}
+.pro-wa {
+  background: var(--green-9);
+  color: #fff;
+}
+.pro-wa svg { width: 15px; height: 15px; }

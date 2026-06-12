@@ -14,7 +14,7 @@ import {
 } from '@radix-ui/react-icons'
 import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
-  FEED_POOL, CATEGORIES, BANNERS, COMBOS, QUIZ, KITS,
+  FEED_POOL, CATEGORIES, BANNERS, COMBOS, QUIZ, KITS, PROS,
   SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
   BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES, REORDER, PAST_ORDERS, DASH, CREDIT, CAT_SCHEMES,
 } from './data.js'
@@ -1375,6 +1375,136 @@ function ComboDeals({ onChange }) {
         {COMBOS.map(c => <ComboCard key={c.id} c={c} onChange={onChange} />)}
       </div>
     </Box>
+  )
+}
+
+/* ---------------- B8/B9 · Find a Pro (the Utilities tab) ---------------- */
+
+function ProCard({ pro, i }) {
+  const initials = pro.name.replace(/^(Ar\.|Er\.)\s*/, '').split(' ').slice(0, 2).map(w => w[0]).join('')
+  return (
+    <div className="pro-card cardin" style={{ animationDelay: `${i * 45}ms` }}>
+      <Flex gap="3" align="center">
+        <div className="pro-av" style={{ background: pro.c }}>{initials}</div>
+        <Box flexGrow="1" style={{ minWidth: 0 }}>
+          <Flex align="center" gap="2">
+            <Text size="2" weight="bold" truncate>{pro.name}</Text>
+            <span className="pro-rate"><StarFilledIcon width={10} height={10} /> {pro.rating}</span>
+          </Flex>
+          <Text size="1" color="gray" as="div" truncate>{pro.firm} · {pro.skills}</Text>
+        </Box>
+      </Flex>
+      <div className="pro-meta">
+        <span><SewingPinIcon width={11} height={11} /> {pro.area}</span>
+        <span>{pro.jobs} jobs</span>
+        <span>{pro.yrs} yrs</span>
+      </div>
+      <div className="pro-actions">
+        <a className="pro-call" href={`tel:+91${pro.phone}`}>
+          <MobileIcon width={13} height={13} /> Call
+        </a>
+        <a className="pro-wa" href={`https://wa.me/91${pro.phone}`} target="_blank" rel="noreferrer">
+          <WaMark /> WhatsApp
+        </a>
+      </div>
+    </div>
+  )
+}
+
+function ProsPage({ onClose, onGoCalc, onGoVisit }) {
+  useSheetA11y(onClose)
+  const [tab, setTab] = useState('carpenter')
+  const [refs, setRefs] = usePersisted('qc-refs', [])
+  const [rName, setRName] = useState('')
+  const [rPhone, setRPhone] = useState('')
+  const [rType, setRType] = useState('Carpenter')
+  const [sent, setSent] = useState(false)
+  const pros = PROS[tab]
+  const refer = (e) => {
+    sparkle(e)
+    setRefs([{ name: rName.trim(), phone: rPhone, type: rType, ts: Date.now() }, ...refs])
+    setSent(true)
+    setRName('')
+    setRPhone('')
+  }
+  return (
+    <div className="prospage" role="dialog" aria-modal="true" aria-label="Find a Pro" tabIndex={-1}>
+      <div className="pdp-head">
+        <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Find a Pro</Heading>
+          <Text size="1" color="gray" as="div">Dealer-verified installers & designers</Text>
+        </Box>
+      </div>
+      <div className="cp-body">
+        <div className="util-row">
+          <button className="util-tile" onClick={onGoCalc}>
+            <span className="mrow-ic"><RulerSquareIcon width={15} height={15} /></span>
+            <span>
+              <Text size="2" weight="bold" as="div">Calculators</Text>
+              <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>Slides · hinges · closers</Text>
+            </span>
+          </button>
+          <button className="util-tile" onClick={onGoVisit}>
+            <span className="mrow-ic"><CalendarIcon width={15} height={15} /></span>
+            <span>
+              <Text size="2" weight="bold" as="div">Site visit</Text>
+              <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>Book a measurement</Text>
+            </span>
+          </button>
+        </div>
+        <div className="sub-hero green-line" style={{ marginTop: 12 }}>
+          <span className="oc-pulse" />
+          <Text size="1" weight="bold">Every pro is verified on real installed jobs</Text>
+          <Text size="1" color="gray" style={{ marginLeft: 'auto', flex: 'none' }}>avg reply ~2 hrs</Text>
+        </div>
+        <div className="seg" style={{ marginTop: 0, marginBottom: 12 }}>
+          <button className={`seg-b ${tab === 'carpenter' ? 'on' : ''}`} onClick={() => setTab('carpenter')}>Carpenters</button>
+          <button className={`seg-b ${tab === 'designer' ? 'on' : ''}`} onClick={() => setTab('designer')}>Architects & designers</button>
+        </div>
+        {pros.map((pro, i) => <ProCard key={pro.id} pro={pro} i={i} />)}
+
+        <div className="cp-card" style={{ marginTop: 16 }}>
+          <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+            REFER A PRO
+          </Text>
+          <Text size="1" color="gray" as="div" mt="1">
+            Know a good {rType === 'Carpenter' ? 'carpenter' : 'designer'}? Referrals count toward your partner standing.
+          </Text>
+          {sent ? (
+            <Flex align="center" gap="2" mt="3">
+              <CheckIcon width={14} height={14} color="var(--green-11)" />
+              <Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>
+                Referral received — we'll verify and onboard them
+              </Text>
+            </Flex>
+          ) : (
+            <>
+              <div className="seg" style={{ margin: '10px 0 0' }}>
+                {['Carpenter', 'Designer'].map(t => (
+                  <button key={t} className={`seg-b ${rType === t ? 'on' : ''}`} onClick={() => setRType(t)}>{t}</button>
+                ))}
+              </div>
+              <input
+                className="cp-input" style={{ marginTop: 8 }} placeholder="Their name / firm"
+                value={rName} onChange={(e) => setRName(e.target.value)}
+              />
+              <input
+                className="cp-input" style={{ marginTop: 8 }} type="tel" autoComplete="off" inputMode="numeric"
+                maxLength={10} placeholder="Their phone"
+                value={rPhone} onChange={(e) => setRPhone(e.target.value.replace(/\D/g, ''))}
+              />
+              <Button
+                mt="3" size="2" color="green" style={{ fontWeight: 800, width: '100%' }}
+                disabled={!rName.trim() || rPhone.length !== 10} onClick={refer}
+              >
+                Send referral
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -4641,6 +4771,38 @@ function AcctEstPdf() {
         <Text size="1" color="gray" as="div" mt="2">
           Classic — hairlines, logos on top. Bold — colour bands, logos below. Studio — editorial caps, amount in words.
         </Text>
+        <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          FONT
+        </Text>
+        <Flex gap="2" mt="2" wrap="wrap">
+          {Object.entries(EST_FONTS).map(([k, [, , label]]) => (
+            <Button
+              key={k} size="1" radius="full"
+              variant={(brand.font || 'pjs') === k ? 'solid' : 'soft'}
+              color={(brand.font || 'pjs') === k ? 'green' : 'gray'}
+              style={{ fontWeight: 800 }}
+              onClick={() => set('font', k)}
+            >
+              {label}
+            </Button>
+          ))}
+        </Flex>
+        <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          BRAND LOGOS (CLASSIC)
+        </Text>
+        <Flex gap="2" mt="2">
+          {[['top', 'Top'], ['bottom', 'Bottom']].map(([k, l]) => (
+            <Button
+              key={k} size="1" radius="full"
+              variant={(brand.logosPos || 'top') === k ? 'solid' : 'soft'}
+              color={(brand.logosPos || 'top') === k ? 'green' : 'gray'}
+              style={{ fontWeight: 800 }}
+              onClick={() => set('logosPos', k)}
+            >
+              {l}
+            </Button>
+          ))}
+        </Flex>
       </div>
 
       <div className="cp-card">
@@ -5484,6 +5646,8 @@ const EST_BRAND_DEFAULT = {
   validDays: 7,
   template: 'classic', // classic | bold | studio
   accent: '#CDE76D', // colour-block bands in the Bold template
+  font: 'pjs', // pjs | inter | opensans | robotomono | helvetica
+  logosPos: 'top', // Classic template: brand strip on top or above the footer
   preparedBy: 'Virag Bora',
   note: 'This Bill of Materials is only for reference. **Prices are subject to change.**',
 }
@@ -5512,7 +5676,7 @@ const drawRich = (doc, text, x, y, width, opts = {}) => {
   doc.setFontSize(size).setTextColor(...color)
   let cx = x, cy = y
   String(text).split('**').forEach((seg, i) => {
-    doc.setFont('PJS', i % 2 ? 'bold' : 'normal')
+    doc.setFont('DOC', i % 2 ? 'bold' : 'normal')
     seg.split(/(\n)/).forEach(chunk => {
       if (chunk === '\n') { cx = x; cy += lh; return }
       chunk.split(/(\s+)/).forEach(tok => {
@@ -5526,22 +5690,31 @@ const drawRich = (doc, text, x, y, width, opts = {}) => {
   return cy
 }
 
+const EST_FONTS = {
+  pjs: ['PJS-Regular.ttf', 'PJS-Bold.ttf', 'Plus Jakarta Sans'],
+  inter: ['Inter-Regular.ttf', 'Inter-Bold.ttf', 'Inter'],
+  opensans: ['OpenSans-Regular.ttf', 'OpenSans-Bold.ttf', 'Open Sans'],
+  robotomono: ['RobotoMono-Regular.ttf', 'RobotoMono-Bold.ttf', 'Roboto Mono'],
+  helvetica: ['Arimo-Regular.ttf', 'Arimo-Bold.ttf', 'Helvetica'],
+}
+
 async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }) {
   const showImg = brand.photos !== false
   const thumb = (ph) => fetchB64(`https://images.unsplash.com/photo-${ph}?fit=crop&w=160&h=160&q=70&fm=jpg`)
     .then(b => 'data:image/jpeg;base64,' + b).catch(() => null)
+  const [fontRegFile, fontBoldFile] = EST_FONTS[brand.font] || EST_FONTS.pjs
   const [{ jsPDF }, { default: autoTable }, fontN, fontB, mark, thumbs, ...brands] = await Promise.all([
     import('jspdf'), import('jspdf-autotable'),
-    fetchB64('/fonts/PJS-Regular.ttf'), fetchB64('/fonts/PJS-Bold.ttf'),
+    fetchB64(`/fonts/${fontRegFile}`), fetchB64(`/fonts/${fontBoldFile}`),
     imgData(brand.logo || '/brand-logo.png'),
     showImg ? Promise.all(items.map(({ p }) => thumb(p.ph))) : Promise.resolve([]),
     ...Object.values(BRAND_LOGOS).map(imgData),
   ])
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true })
-  doc.addFileToVFS('PJS-Regular.ttf', fontN)
-  doc.addFont('PJS-Regular.ttf', 'PJS', 'normal')
-  doc.addFileToVFS('PJS-Bold.ttf', fontB)
-  doc.addFont('PJS-Bold.ttf', 'PJS', 'bold')
+  doc.addFileToVFS(fontRegFile, fontN)
+  doc.addFont(fontRegFile, 'DOC', 'normal')
+  doc.addFileToVFS(fontBoldFile, fontB)
+  doc.addFont(fontBoldFile, 'DOC', 'bold')
 
   const W = 210, H = 297, M = 14 // 14mm sides, ~6mm top
   const INK = [26, 28, 31], GRAY = [105, 110, 116]
@@ -5588,10 +5761,10 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
         return cells
       }),
       theme: 'plain',
-      styles: { font: 'PJS', fontSize: 8.5, textColor: INK, cellPadding: { top: 2.2, bottom: 2.2, left: headFill ? 1.5 : 0, right: 2 }, valign: 'middle' },
+      styles: { font: 'DOC', fontSize: 8.5, textColor: INK, cellPadding: { top: 2.2, bottom: 2.2, left: headFill ? 1.5 : 0, right: 2 }, valign: 'middle' },
       headStyles: headFill
-        ? { font: 'PJS', fontStyle: 'bold', fontSize: 8, textColor: headText, fillColor: headFill, lineWidth: 0 }
-        : { font: 'PJS', fontStyle: 'bold', fontSize: 8.5, textColor: headText, lineWidth: { bottom: 0.35 }, lineColor: INK },
+        ? { font: 'DOC', fontStyle: 'bold', fontSize: 8, textColor: headText, fillColor: headFill, lineWidth: 0 }
+        : { font: 'DOC', fontStyle: 'bold', fontSize: 8.5, textColor: headText, lineWidth: { bottom: 0.35 }, lineColor: INK },
       bodyStyles: { lineWidth: { bottom: 0.18 }, lineColor: HAIR },
       columnStyles: showImg
         ? {
@@ -5631,7 +5804,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
     if (y + blockH > bottomGuard) { doc.addPage(); paper(); y = 30 }
     const tx = 118
     const row = (label, val) => {
-      doc.setFont('PJS', 'normal').setFontSize(8.5).setTextColor(...GRAY)
+      doc.setFont('DOC', 'normal').setFontSize(8.5).setTextColor(...GRAY)
       doc.text(label, tx, y)
       doc.setTextColor(...INK).text(val, W - M, y, { align: 'right' })
       doc.setDrawColor(...HAIR).setLineWidth(0.18).line(tx, y + 2.6, W - M, y + 2.6)
@@ -5639,7 +5812,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
     }
     row('Items', `${items.length} · ${totalPcs} pcs`)
     for (const [l, v] of billRows) row(l, v)
-    doc.setFont('PJS', 'bold').setFontSize(10).setTextColor(...INK)
+    doc.setFont('DOC', 'bold').setFontSize(10).setTextColor(...INK)
     doc.text('Total', tx, y)
     doc.text(inr(bill.toPay), W - M, y, { align: 'right' })
     doc.setDrawColor(...INK).setLineWidth(0.35).line(tx, y + 3, W - M, y + 3)
@@ -5648,45 +5821,51 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
 
   /* ============ template: CLASSIC (Swiss hairlines, logos on top) ============ */
   const renderClassic = () => {
-    doc.setFont('PJS', 'bold').setFontSize(brand.name.length > 14 ? 20 : 25).setTextColor(...WORD).text(brand.name, M, 13.5)
+    const logosTop = brand.logosPos !== 'bottom'
+    doc.setFont('DOC', 'bold').setFontSize(brand.name.length > 14 ? 20 : 25).setTextColor(...WORD).text(brand.name, M, 13.5)
     const mw = Math.min(40, (mark.w / mark.h) * 16)
     doc.addImage(mark.data, 'PNG', W - M - mw, 6, mw, 16)
 
-    doc.setFont('PJS', 'bold').setFontSize(6.5).setTextColor(...GRAY).setCharSpace(0.5)
-    doc.text('AUTHORIZED DEALER FOR', M, 25)
-    doc.setCharSpace(0)
-    let bx = M
-    for (const b of brands) {
-      const dw = (b.w / b.h) * 9
-      doc.addImage(b.data, 'PNG', bx, 27.5, dw, 9)
-      bx += dw + 10
+    const logoStrip = (ly) => {
+      doc.setFont('DOC', 'bold').setFontSize(6.5).setTextColor(...GRAY).setCharSpace(0.5)
+      doc.text('AUTHORIZED DEALER FOR', M, ly)
+      doc.setCharSpace(0)
+      let bx = M
+      for (const b of brands) {
+        const dw = (b.w / b.h) * 9
+        doc.addImage(b.data, 'PNG', bx, ly + 2.5, dw, 9)
+        bx += dw + 10
+      }
     }
+    if (logosTop) logoStrip(25)
 
-    doc.setFont('PJS', 'bold').setFontSize(9).setTextColor(...INK)
-    doc.text('Customer Information', M, 45).text('Dealer Information', 112, 45)
-    doc.setFont('PJS', 'normal').setFontSize(8.5).setTextColor(...GRAY)
-    doc.text(custLines, M, 51)
-    doc.text(dealerLines, 112, 51)
+    const infoY = logosTop ? 45 : 31
+    doc.setFont('DOC', 'bold').setFontSize(9).setTextColor(...INK)
+    doc.text('Customer Information', M, infoY).text('Dealer Information', 112, infoY)
+    doc.setFont('DOC', 'normal').setFontSize(8.5).setTextColor(...GRAY)
+    doc.text(custLines, M, infoY + 6)
+    doc.text(dealerLines, 112, infoY + 6)
 
-    const tTop = 51 + Math.max(custLines.length, 3) * 4.3 + 5
+    const tTop = infoY + 6 + Math.max(custLines.length, 3) * 4.3 + 5
     doc.setDrawColor(...HAIR).setLineWidth(0.3).line(M, tTop, W - M, tTop)
-    doc.setFont('PJS', 'bold').setFontSize(17).setTextColor(...INK).text('Bill of Materials', M, tTop + 9.5)
-    doc.setFont('PJS', 'normal').setFontSize(10).setTextColor(...GRAY)
+    doc.setFont('DOC', 'bold').setFontSize(17).setTextColor(...INK).text('Bill of Materials', M, tTop + 9.5)
+    doc.setFont('DOC', 'normal').setFontSize(10).setTextColor(...GRAY)
     doc.text(no, 132, tTop + 9.5, { align: 'center' })
     doc.text(today, W - M, tTop + 9.5, { align: 'right' })
     doc.line(M, tTop + 14, W - M, tTop + 14)
 
-    const fin = itemsTable({ startY: tTop + 19, bottom: 24 })
-    let y = totalsBlock(fin + 8, H - 24)
+    const fin = itemsTable({ startY: tTop + 19, bottom: logosTop ? 24 : 40 })
+    let y = totalsBlock(fin + 8, H - (logosTop ? 24 : 42))
+    if (!logosTop) logoStrip(H - 38)
     y = drawRich(doc, note, 118, y + 9.5, W - M - 118, { size: 8 })
-    doc.setFont('PJS', 'normal').setFontSize(7.5).setTextColor(...GRAY)
+    doc.setFont('DOC', 'normal').setFontSize(7.5).setTextColor(...GRAY)
       .text(`Valid ${validDays} days from the date above. Prepared by ${preparedBy}.`, 118, y + 4.5)
 
     const pages = doc.getNumberOfPages()
     for (let i = 1; i <= pages; i++) {
       doc.setPage(i)
       doc.setDrawColor(...INK).setLineWidth(0.4).line(M, H - 21, W - M, H - 21)
-      doc.setFont('PJS', 'normal').setFontSize(7.5).setTextColor(...FOOT)
+      doc.setFont('DOC', 'normal').setFontSize(7.5).setTextColor(...FOOT)
       doc.text(['estimates@quickcart.in', 'quickcart-nine-iota.vercel.app'], M, H - 15.5)
       doc.text(['304 Maple Heights, HSR Layout', 'Bengaluru 560102'], 72, H - 15.5)
       doc.text(['Trade prices · GST billing', '90-min site delivery'], 128, H - 15.5)
@@ -5700,16 +5879,16 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   const renderBold = () => {
     const onAccent = [20, 22, 24]
     doc.setFillColor(...ACCENT).rect(0, 0, W, 52, 'F')
-    doc.setFont('PJS', 'bold').setFontSize(34).setTextColor(...onAccent).text('BOM', M, 20)
+    doc.setFont('DOC', 'bold').setFontSize(34).setTextColor(...WORD).text('BOM', M, 20)
     const mw = Math.min(36, (mark.w / mark.h) * 14)
     doc.addImage(mark.data, 'PNG', W - M - mw, 7, mw, 14)
     const cap = (t, x, yy) => {
-      doc.setFont('PJS', 'bold').setFontSize(6.5).setTextColor(...onAccent).setCharSpace(0.4)
+      doc.setFont('DOC', 'bold').setFontSize(6.5).setTextColor(...onAccent).setCharSpace(0.4)
       doc.text(t, x, yy)
       doc.setCharSpace(0)
     }
     cap('(DATE)', M, 30); cap('(VALID FOR)', M, 41); cap('(BILLED TO)', 74, 30); cap('(FROM)', 74, 41)
-    doc.setFont('PJS', 'normal').setFontSize(8).setTextColor(...onAccent)
+    doc.setFont('DOC', 'normal').setFontSize(8).setTextColor(...onAccent)
     doc.text(today, M, 34.5).text(`${validDays} days`, M, 45.5)
     doc.text(`${cust.name}${cust.phone ? ' · ' + cust.phone : ''}`, 74, 34.5)
     if (cust.refBy) doc.setFontSize(7).text(`Ref. by — ${cust.refBy}`, 74, 37.8).setFontSize(8)
@@ -5723,15 +5902,15 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
     for (let i = 1; i <= pages; i++) {
       doc.setPage(i)
       doc.setFillColor(60, 64, 67).rect(0, H - 40, W, 26, 'F')
-      doc.setFont('PJS', 'bold').setFontSize(6.5).setTextColor(255, 255, 255).setCharSpace(0.4)
+      doc.setFont('DOC', 'bold').setFontSize(6.5).setTextColor(255, 255, 255).setCharSpace(0.4)
       doc.text('(DEALER)', M, H - 33).text('(TERMS)', 96, H - 33).text('(PREPARED BY)', 162, H - 33)
       doc.setCharSpace(0)
-      doc.setFont('PJS', 'normal').setFontSize(7.5)
+      doc.setFont('DOC', 'normal').setFontSize(7.5)
       doc.text([dealerLines[1] + ', ' + dealerLines[2].split(' · ')[0], 'GSTIN 29AAACQ1234L1ZQ'], M, H - 28)
       doc.text([`Confirm within ${validDays} days · GST as applicable`, 'Trade prices · 90-min site delivery'], 96, H - 28)
       doc.text(preparedBy, 162, H - 28)
       doc.setFillColor(...ACCENT).rect(0, H - 14, W, 14, 'F')
-      doc.setFont('PJS', 'bold').setFontSize(9).setTextColor(...onAccent).text(brand.name, M, H - 5.5)
+      doc.setFont('DOC', 'bold').setFontSize(9).setTextColor(...onAccent).text(brand.name, M, H - 5.5)
       let lx = W - M
       for (const b of [...brands].reverse()) {
         const dw = (b.w / b.h) * 7
@@ -5747,7 +5926,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   const renderStudio = () => {
     const mw = Math.min(30, (mark.w / mark.h) * 13)
     doc.addImage(mark.data, 'PNG', M, 8, mw, 13)
-    doc.setFont('PJS', 'bold').setFontSize(7).setTextColor(...INK).setCharSpace(1)
+    doc.setFont('DOC', 'bold').setFontSize(7).setTextColor(...INK).setCharSpace(1)
     doc.text(doc.splitTextToSize('THANK YOU FOR YOUR ENQUIRY. THIS DOCUMENT IS A BILL OF MATERIALS.', 60), M + mw + 8, 12)
     doc.setCharSpace(0)
 
@@ -5762,25 +5941,25 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
     doc.setDrawColor(...HAIR).setLineWidth(0.25)
     for (const [l, v] of metaRows) {
       doc.line(118, my, W - M, my)
-      doc.setFont('PJS', 'bold').setFontSize(7).setTextColor(...GRAY).setCharSpace(0.8).text(l, 118, my + 5)
+      doc.setFont('DOC', 'bold').setFontSize(7).setTextColor(...GRAY).setCharSpace(0.8).text(l, 118, my + 5)
       doc.setCharSpace(0)
-      doc.setFont('PJS', 'normal').setFontSize(8).setTextColor(...INK).text(v, W - M, my + 5, { align: 'right' })
+      doc.setFont('DOC', 'normal').setFontSize(8).setTextColor(...INK).text(v, W - M, my + 5, { align: 'right' })
       my += 8
     }
     doc.line(118, my, W - M, my)
 
-    doc.setFont('PJS', 'bold').setFontSize(11).setTextColor(...WORD).setCharSpace(1.5)
+    doc.setFont('DOC', 'bold').setFontSize(11).setTextColor(...WORD).setCharSpace(1.5)
     doc.text(brand.name.toUpperCase(), M, 36)
     doc.setCharSpace(0.6).setFontSize(7).setTextColor(...GRAY)
     doc.text([dealerLines[1].toUpperCase(), dealerLines[2].toUpperCase()], M, 41.5)
     doc.setCharSpace(0)
-    doc.setFont('PJS', 'bold').setFontSize(7.5).setTextColor(...INK).setCharSpace(0.8)
+    doc.setFont('DOC', 'bold').setFontSize(7.5).setTextColor(...INK).setCharSpace(0.8)
     doc.text('PRODUCTS', M, my + 12)
     doc.setCharSpace(0)
 
     const fin = itemsTable({ startY: my + 16, bottom: 50, big: true })
     let y = totalsBlock(fin + 8, H - 56)
-    doc.setFont('PJS', 'normal').setFontSize(7).setTextColor(...GRAY)
+    doc.setFont('DOC', 'normal').setFontSize(7).setTextColor(...GRAY)
     const words = doc.splitTextToSize(`${inrWords(bill.toPay).toUpperCase()} RUPEES ONLY`, 78)
     doc.text(words, W - M, y + 7, { align: 'right' })
     drawRich(doc, note, 118, y + 7 + words.length * 3.6 + 4, W - M - 118, { size: 7.5, lh: 3.9, color: GRAY })
@@ -5794,7 +5973,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
         doc.addImage(b.data, 'PNG', lx, H - 38, dw, 6)
         lx += dw + 7
       }
-      doc.setFont('PJS', 'normal').setFontSize(6.5).setTextColor(...FOOT).setCharSpace(0.6)
+      doc.setFont('DOC', 'normal').setFontSize(6.5).setTextColor(...FOOT).setCharSpace(0.6)
       doc.text(['REGISTERED OFFICE:', dealerLines[1].toUpperCase(), dealerLines[2].toUpperCase()], M, H - 26)
       doc.text(`${i} / ${pages}`, M, H - 8)
       doc.setCharSpace(0)
@@ -6638,6 +6817,7 @@ export default function App() {
     setCartOpen(true)
   }
   const [kitOpen, setKitOpen] = useState(window.location.hash === '#kit')
+  const [prosOpen, setProsOpen] = useState(window.location.hash === '#pros')
   const [plp, setPlp] = useState(() => {
     if (window.location.hash.startsWith('#fsheet')) return 'Hinges'
     if (window.location.hash === '#strip') return 'All'
@@ -6653,7 +6833,7 @@ export default function App() {
   const openCategory = (label) => setPlp(label)
 
   // Any overlay up -> the page behind must not scroll
-  const overlayUp = !!(sheet || pdp || qsheet || cartOpen || reorderOpen || acctOpen || plp || kitOpen)
+  const overlayUp = !!(sheet || pdp || qsheet || cartOpen || reorderOpen || acctOpen || plp || kitOpen || prosOpen)
   useEffect(() => {
     document.body.classList.toggle('no-scroll', overlayUp)
     return () => document.body.classList.remove('no-scroll')
@@ -6748,6 +6928,19 @@ export default function App() {
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [reorderOpen])
+  const closePros = () => {
+    if (window.history.state?.qcPros) window.history.back()
+    else setProsOpen(false)
+  }
+  useEffect(() => {
+    if (!prosOpen) return
+    if (!window.history.state?.qcPros) window.history.pushState({ qcPros: true }, '')
+    const onPop = () => {
+      if (!pdpRef.current && !qtyRef.current && !cartRef.current) setProsOpen(false)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [prosOpen])
   const closeKit = () => {
     if (window.history.state?.qcKit) window.history.back()
     else setKitOpen(false)
@@ -7085,6 +7278,16 @@ export default function App() {
           {kitOpen && <KitPage onClose={closeKit} onChange={changeCart} onGoCart={() => setCartOpen(true)} />}
         </PageExit>
 
+        <PageExit open={prosOpen}>
+          {prosOpen && (
+            <ProsPage
+              onClose={closePros}
+              onGoCalc={() => { setProsOpen(false); acctInitSub.current = 'calc'; setAcctOpen(true) }}
+              onGoVisit={() => { setProsOpen(false); acctInitSub.current = 'site'; setAcctOpen(true) }}
+            />
+          )}
+        </PageExit>
+
         <PageExit open={pdp !== null}>
           {pdp && <ProductPage key={pdp.id} p={pdp} onClose={closePdp} onChange={changeCart} cart={cart} />}
         </PageExit>
@@ -7152,7 +7355,7 @@ export default function App() {
           <div className="navrow">
             <NavBar
               onCategories={() => setPlp('All')}
-              onUtilities={() => { /* Utilities page comes later */ }}
+              onUtilities={() => setProsOpen(true)}
               onReorder={() => setReorderOpen(true)}
               onAccount={() => { acctInitSub.current = null; setAcctOpen(true) }}
               active={acctOpen ? 'account' : reorderOpen ? 'reorder' : plp ? 'categories' : 'home'}

@@ -75,6 +75,23 @@ export const DOOR_CLOSERS = [
   { id: 'dc3', mat: 'Steel', load: 120, size: 1250, stock: 35, brand: 'ebco', ph: '1558002038-1055907df827', name: 'Ebco Heavy Door Closer DC-120', qty: 'Doors ≤120 kg · ≤1250 mm', price: 2450, mrp: 2790 },
 ]
 
+/* B8/B9 · Find a Pro — dealer-verified installer & designer network */
+export const PROS = {
+  carpenter: [
+    { id: 'pc1', name: 'Ramesh Jadhav', firm: 'RJ Interiors', area: 'HSR · Koramangala', skills: 'Modular kitchens · Wardrobes', jobs: 142, rating: 4.8, yrs: 12, phone: '9876543210', c: '#0B7569' },
+    { id: 'pc2', name: 'Suresh Patil', firm: 'Patil Woodworks', area: 'BTM · JP Nagar', skills: 'Sliding systems · Office fit-outs', jobs: 98, rating: 4.7, yrs: 9, phone: '9876501234', c: '#7C4DBE' },
+    { id: 'pc3', name: 'Mohd. Irfan', firm: 'Irfan & Sons', area: 'Indiranagar · Domlur', skills: 'Kitchens · Drawer systems', jobs: 87, rating: 4.6, yrs: 8, phone: '9812345670', c: '#B54708' },
+    { id: 'pc4', name: 'Kiran Kumar', firm: 'KK Furniture Works', area: 'Whitefield · Marathahalli', skills: 'Wardrobes · Locks & security', jobs: 64, rating: 4.5, yrs: 6, phone: '9870011223', c: '#1A6FB8' },
+    { id: 'pc5', name: 'Babu Rao', firm: 'Sri Sai Carpentry', area: 'Electronic City', skills: 'Office workstations · Repairs', jobs: 51, rating: 4.4, yrs: 11, phone: '9844556677', c: '#B42318' },
+  ],
+  designer: [
+    { id: 'pd1', name: 'Studio Anvaya', firm: 'Interior design studio', area: 'Koramangala', skills: 'Residential · Modular kitchens', jobs: 38, rating: 4.9, yrs: 7, phone: '9900112233', c: '#0B7569' },
+    { id: 'pd2', name: 'Ar. Meera Nair', firm: 'MN Architects', area: 'Indiranagar', skills: 'Architecture · Turnkey homes', jobs: 45, rating: 4.8, yrs: 14, phone: '9911223344', c: '#7C4DBE' },
+    { id: 'pd3', name: 'DesignKraft', firm: 'Design-build firm', area: 'HSR Layout', skills: 'Commercial · Office interiors', jobs: 29, rating: 4.7, yrs: 5, phone: '9922334455', c: '#B54708' },
+    { id: 'pd4', name: 'Ar. Vivek Shetty', firm: 'Shetty Associates', area: 'Jayanagar', skills: 'Residences · Retail spaces', jobs: 52, rating: 4.6, yrs: 16, phone: '9933445566', c: '#1A6FB8' },
+  ],
+}
+
 /* B1 · Project Kit Builder — per-unit recipes; qty = ceil(count × per) or fixed */
 export const KITS = [
   {
