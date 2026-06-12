@@ -9,7 +9,7 @@ import {
   MixerHorizontalIcon, GearIcon, FileTextIcon, DiscIcon, CheckIcon,
   BarChartIcon, BellIcon, LockClosedIcon, ExitIcon, RulerSquareIcon, SewingPinIcon,
   EyeOpenIcon, ChatBubbleIcon, MobileIcon, EnvelopeClosedIcon, CalendarIcon,
-  IdCardIcon, BookmarkIcon,
+  IdCardIcon, BookmarkIcon, ChevronLeftIcon,
 } from '@radix-ui/react-icons'
 import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
@@ -2295,6 +2295,8 @@ function AcctCredit() {
   const outstanding = bills.reduce((s, b) => s + b.amt, 0)
   const avail = CREDIT.limit - outstanding
   const overdue = bills.filter(b => b.days < 0)
+  // bar reflects status: overdue -> red, running low -> amber, healthy -> green
+  const barColor = overdue.length > 0 ? 'var(--red-9)' : avail / CREDIT.limit < .35 ? 'var(--amber-9)' : 'var(--green-9)'
   const payAmt = pay ? pay.reduce((s, b) => s + b.amt, 0) : 0
   const confirm = (e) => {
     sparkle(e)
@@ -2305,14 +2307,14 @@ function AcctCredit() {
   return (
     <>
       <div className="cr-hero">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--blue-11)', fontSize: 10, letterSpacing: '.6px' }}>
+        <Text size="1" weight="bold" as="div" style={{ color: 'rgba(255,255,255,.6)', fontSize: 10, letterSpacing: '.6px' }}>
           CREDIT AVAILABLE
         </Text>
         <Flex align="baseline" gap="2" mt="1">
-          <Text weight="bold" style={{ fontSize: 30, letterSpacing: '-0.8px' }}>{fmtL(avail)}</Text>
-          <Text size="1" color="gray">of {fmtL(CREDIT.limit)} limit</Text>
+          <Text weight="bold" style={{ fontSize: 30, color: '#fff', letterSpacing: '-0.8px' }}>{fmtL(avail)}</Text>
+          <Text size="1" style={{ color: 'rgba(255,255,255,.6)' }}>of {fmtL(CREDIT.limit)} limit</Text>
         </Flex>
-        <div className="cr-bar"><div style={{ width: `${Math.round((avail / CREDIT.limit) * 100)}%` }} /></div>
+        <div className="cr-bar"><div style={{ width: `${Math.round((avail / CREDIT.limit) * 100)}%`, background: barColor }} /></div>
         <Flex gap="2" mt="3" wrap="wrap">
           <span className="cr-chip">Outstanding {fmtL(outstanding)}</span>
           {overdue.length > 0 && <span className="cr-chip bad">{overdue.length} overdue</span>}
@@ -3105,6 +3107,95 @@ function AcctCalc() {
   )
 }
 
+/* shadcn-style date picker: field button + month-grid calendar */
+function CalPicker({ value, onChange }) {
+  const today = new Date()
+  const [vm, setVm] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
+  const [open, setOpen] = useState(false)
+  const dow = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+  const startPad = new Date(vm.getFullYear(), vm.getMonth(), 1).getDay()
+  const dim = new Date(vm.getFullYear(), vm.getMonth() + 1, 0).getDate()
+  const cells = [...Array(startPad).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)]
+  const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const isPast = (d) => new Date(vm.getFullYear(), vm.getMonth(), d) < t0
+  const isSel = (d) => value && value.getDate() === d && value.getMonth() === vm.getMonth() && value.getFullYear() === vm.getFullYear()
+  const isToday = (d) => d === today.getDate() && vm.getMonth() === today.getMonth() && vm.getFullYear() === today.getFullYear()
+  return (
+    <>
+      <button className={`cal-field ${value ? 'has' : ''}`} onClick={() => setOpen(o => !o)}>
+        <CalendarIcon width={15} height={15} />
+        <span>{value ? value.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Pick a date'}</span>
+        <ChevronDownIcon width={14} height={14} style={{ marginLeft: 'auto', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+      </button>
+      {open && (
+        <div className="cal-pop">
+          <div className="cal-head">
+            <button onClick={() => setVm(new Date(vm.getFullYear(), vm.getMonth() - 1, 1))} aria-label="Previous month">
+              <ChevronLeftIcon width={14} height={14} />
+            </button>
+            <Text size="2" weight="bold">{vm.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</Text>
+            <button onClick={() => setVm(new Date(vm.getFullYear(), vm.getMonth() + 1, 1))} aria-label="Next month">
+              <ChevronRightIcon width={14} height={14} />
+            </button>
+          </div>
+          <div className="cal-grid">
+            {dow.map(d => <span key={d} className="cal-dow">{d}</span>)}
+            {cells.map((d, i) => d === null ? <span key={`e${i}`} /> : (
+              <button
+                key={d} disabled={isPast(d)}
+                className={`cal-day ${isSel(d) ? 'sel' : ''} ${isToday(d) ? 'today' : ''}`}
+                onClick={() => { onChange(new Date(vm.getFullYear(), vm.getMonth(), d)); setOpen(false) }}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+const TIME_SLOTS = ['10 AM', '11 AM', '12 PM', '2 PM', '3 PM', '4 PM', '5 PM', '6 PM']
+const VISIT_STAGES = {
+  site: ['Received', 'Team assigned', 'Visit scheduled'],
+  display: ['Received', 'Slot confirmed', 'Visited'],
+}
+const visitStage = (r, now) => {
+  const el = (now - r.ts) / 1000
+  return el < 90 ? 0 : el < 240 ? 1 : 2
+}
+
+function VisitRow({ r, now, kind }) {
+  const STAGES = VISIT_STAGES[kind]
+  const si = visitStage(r, now)
+  const dl = r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''
+  const place = r.addr ? r.addr.split(',').slice(-1)[0].trim() : ''
+  return (
+    <div className="vr-row">
+      <div className="vr-av">{(r.cName || 'C').slice(0, 1).toUpperCase()}</div>
+      <Box flexGrow="1" style={{ minWidth: 0 }}>
+        <Flex align="center" gap="2">
+          <Text size="2" weight="bold" className="clamp1">{r.cName}</Text>
+          <span className="st-chip" style={{ fontSize: 8.5 }}>{kind === 'site' ? 'SITE' : 'SHOWROOM'}</span>
+        </Flex>
+        <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>
+          {[r.type, dl && `${dl} · ${r.slot}`, place].filter(Boolean).join(' · ')} · #{r.id}
+        </Text>
+        <Flex gap="1" mt="1" align="center">
+          {STAGES.map((s, i) => <span key={s} className={`vr-dot ${i <= si ? 'on' : ''}`} />)}
+          <Text weight="bold" style={{ marginLeft: 6, color: si === 2 ? 'var(--green-11)' : 'var(--amber-11)', fontSize: 10 }}>
+            {STAGES[si]}
+          </Text>
+        </Flex>
+      </Box>
+      <a className="vr-call" href={`tel:+91${r.cPh}`} aria-label="Call customer">
+        <MobileIcon width={14} height={14} />
+      </a>
+    </div>
+  )
+}
+
 function VisitForm({ kind }) {
   const storeKey = kind === 'site' ? 'qc-visits-site' : 'qc-visits-display'
   const [reqs, setReqs] = usePersisted(storeKey, [])
@@ -3115,27 +3206,29 @@ function VisitForm({ kind }) {
   }, [])
   const [cName, setCName] = useState('')
   const [cPh, setCPh] = useState('')
-  const [type, setType] = useState(kind === 'site' ? 'New site' : 'Today')
-  const [slot, setSlot] = useState('11 AM')
-  const [city, setCity] = useState('')
+  const [type, setType] = useState('New site')
+  const [date, setDate] = useState(null)
+  const [slot, setSlot] = useState(null)
+  const [l1, setL1] = useState('')
+  const [l2, setL2] = useState('')
+  const [lm, setLm] = useState('')
+  const [ct, setCt] = useState('')
+  const [pin, setPin] = useState('')
   const [notes, setNotes] = useState('')
-  const opts = kind === 'site' ? ['New site', 'Renovation', 'Project bid'] : ['Today', 'Tomorrow', 'Saturday']
-  const valid = cName.trim() && cPh.length === 10 && (kind === 'display' || city.trim())
+  const valid = cName.trim() && cPh.length === 10 && date && slot
+    && (kind === 'display' || (l1.trim() && ct.trim() && pin.length === 6))
   const submit = (e) => {
     sparkle(e)
+    const addr = kind === 'site'
+      ? [l1.trim(), l2.trim(), lm.trim() && `Near ${lm.trim()}`, `${ct.trim()} ${pin}`].filter(Boolean).join(', ')
+      : ''
     setReqs([{
-      id: `V${String(Date.now()).slice(-5)}`, cName: cName.trim(), cPh, type, slot,
-      city: city.trim(), notes: notes.trim(), ts: Date.now(),
+      id: `V${String(Date.now()).slice(-5)}`, cName: cName.trim(), cPh,
+      type: kind === 'site' ? type : 'Showroom visit',
+      date: date.getTime(), slot, addr, notes: notes.trim(), ts: Date.now(),
     }, ...reqs])
-    setCName('')
-    setCPh('')
-    setCity('')
-    setNotes('')
-  }
-  const STAGES = kind === 'site' ? ['Received', 'Team assigned', 'Visit scheduled'] : ['Received', 'Slot confirmed', 'Visited']
-  const stageOf = (r) => {
-    const el = (now - r.ts) / 1000
-    return el < 90 ? 0 : el < 240 ? 1 : 2
+    setCName(''); setCPh(''); setDate(null); setSlot(null)
+    setL1(''); setL2(''); setLm(''); setCt(''); setPin(''); setNotes('')
   }
   const hero = kind === 'display' ? (
     <div className="sub-photo">
@@ -3156,40 +3249,55 @@ function VisitForm({ kind }) {
       {hero}
       <div className="cp-card">
         <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
-          {kind === 'site' ? 'BOOK A SITE VISIT' : 'BOOK A SHOWROOM SLOT'}
-        </Text>
-        <Text size="1" color="gray" as="div" mt="1">
-          Visiting for a customer? Add their details — we'll prep accordingly.
+          CUSTOMER DETAILS
         </Text>
         <input
-          className="cp-input" style={{ marginTop: 10 }} placeholder="Customer / firm name"
+          className="cp-input" style={{ marginTop: 8 }} placeholder="Customer / firm name"
           value={cName} onChange={(e) => setCName(e.target.value)}
         />
         <input
           className="cp-input" placeholder="Customer phone (10 digits)" inputMode="numeric" maxLength={10}
           value={cPh} onChange={(e) => setCPh(e.target.value.replace(/\D/g, ''))}
         />
-        <Text size="1" color="gray" as="div">{kind === 'site' ? 'Visit type' : 'Day'}</Text>
-        <Flex gap="2" mt="1" mb="2">
-          {opts.map(o => (
-            <button key={o} className={`seg-b ${type === o ? 'on' : ''}`} style={{ flex: 1 }} onClick={() => setType(o)}>{o}</button>
-          ))}
-        </Flex>
-        {kind === 'display' ? (
+        {kind === 'site' && (
           <>
-            <Text size="1" color="gray" as="div">Slot</Text>
+            <Text size="1" color="gray" as="div">Visit type</Text>
             <Flex gap="2" mt="1" mb="2">
-              {['11 AM', '2 PM', '5 PM'].map(o => (
-                <button key={o} className={`seg-b ${slot === o ? 'on' : ''}`} style={{ flex: 1 }} onClick={() => setSlot(o)}>{o}</button>
+              {['New site', 'Renovation', 'Project bid'].map(o => (
+                <button key={o} className={`seg-b ${type === o ? 'on' : ''}`} style={{ flex: 1 }} onClick={() => setType(o)}>{o}</button>
               ))}
             </Flex>
           </>
-        ) : (
-          <input
-            className="cp-input" placeholder="Site location — area / city"
-            value={city} onChange={(e) => setCity(e.target.value)}
-          />
         )}
+
+        <Text size="1" weight="bold" as="div" mt="2" mb="1" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          DATE & TIME
+        </Text>
+        <CalPicker value={date} onChange={setDate} />
+        <div className="slot-grid">
+          {TIME_SLOTS.map(s => (
+            <button key={s} className={`slot ${slot === s ? 'on' : ''}`} onClick={() => setSlot(s)}>{s}</button>
+          ))}
+        </div>
+
+        {kind === 'site' && (
+          <>
+            <Text size="1" weight="bold" as="div" mt="2" mb="1" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              SITE ADDRESS
+            </Text>
+            <input className="cp-input" placeholder="Line 1 — building / site no." value={l1} onChange={(e) => setL1(e.target.value)} />
+            <input className="cp-input" placeholder="Line 2 — street / area (optional)" value={l2} onChange={(e) => setL2(e.target.value)} />
+            <input className="cp-input" placeholder="Landmark (optional)" value={lm} onChange={(e) => setLm(e.target.value)} />
+            <Flex gap="2">
+              <input className="cp-input" style={{ flex: 1.4 }} placeholder="City" value={ct} onChange={(e) => setCt(e.target.value)} />
+              <input
+                className="cp-input" style={{ flex: 1 }} placeholder="Pincode" inputMode="numeric" maxLength={6}
+                value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+              />
+            </Flex>
+          </>
+        )}
+
         <textarea
           className="cp-note" rows={2}
           placeholder={kind === 'site' ? 'What should the team bring?' : 'Anything specific the customer wants to see?'}
@@ -3201,34 +3309,57 @@ function VisitForm({ kind }) {
       </div>
       {reqs.length > 0 && (
         <div className="cp-card">
-          <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
-            YOUR REQUESTS
-          </Text>
-          {reqs.map(r => {
-            const si = stageOf(r)
-            return (
-              <div className="vr-row" key={r.id}>
-                <div className="vr-av">{(r.cName || 'C').slice(0, 1).toUpperCase()}</div>
-                <Box flexGrow="1" style={{ minWidth: 0 }}>
-                  <Text size="2" weight="bold" as="div" className="clamp1">{r.cName}</Text>
-                  <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>
-                    {r.type}{kind === 'display' ? ` · ${r.slot}` : r.city ? ` · ${r.city}` : ''} · #{r.id}
-                  </Text>
-                  <Flex gap="1" mt="1" align="center">
-                    {STAGES.map((s, i) => <span key={s} className={`vr-dot ${i <= si ? 'on' : ''}`} />)}
-                    <Text weight="bold" style={{ marginLeft: 6, color: si === 2 ? 'var(--green-11)' : 'var(--amber-11)', fontSize: 10 }}>
-                      {STAGES[si]}
-                    </Text>
-                  </Flex>
-                </Box>
-                <a className="vr-call" href={`tel:+91${r.cPh}`} aria-label="Call customer">
-                  <MobileIcon width={14} height={14} />
-                </a>
-              </div>
-            )
-          })}
+          <Flex align="center" justify="between">
+            <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              YOUR REQUESTS
+            </Text>
+            <Text style={{ fontSize: 9.5, color: 'var(--gray-9)' }}>also in Account · My visit requests</Text>
+          </Flex>
+          {reqs.map(r => <VisitRow key={r.id} r={r} now={now} kind={kind} />)}
         </div>
       )}
+    </>
+  )
+}
+
+/* All visit requests in one place — the dealer's tracking hub */
+function AcctRequests() {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 5000)
+    return () => clearInterval(t)
+  }, [])
+  const load = (k) => {
+    try { return JSON.parse(localStorage.getItem(k) || '[]') } catch { return [] }
+  }
+  const all = [
+    ...load('qc-visits-site').map(r => ({ ...r, kind: 'site' })),
+    ...load('qc-visits-display').map(r => ({ ...r, kind: 'display' })),
+  ].sort((a, b) => b.ts - a.ts)
+  const [tab, setTab] = useState('all')
+  const shown = all.filter(r => tab === 'all' || r.kind === tab)
+  const live = all.filter(r => visitStage(r, now) < 2).length
+  return (
+    <>
+      <div className="sub-hero green-line">
+        <CalendarIcon width={15} height={15} color="var(--green-11)" style={{ flex: 'none' }} />
+        <Text size="2" weight="bold">{all.length} request{all.length === 1 ? '' : 's'}</Text>
+        <Text size="1" color="gray" style={{ marginLeft: 'auto' }}>{live} in progress</Text>
+      </div>
+      <div className="seg" style={{ marginTop: 0 }}>
+        {[['all', 'All'], ['site', 'Site visits'], ['display', 'Showroom']].map(([k, l]) => (
+          <button key={k} className={`seg-b ${tab === k ? 'on' : ''}`} onClick={() => setTab(k)}>{l}</button>
+        ))}
+      </div>
+      <div className="cp-card">
+        {shown.length === 0 ? (
+          <Text size="1" color="gray" as="div">
+            No requests yet — book a site visit or a showroom slot and track it here.
+          </Text>
+        ) : (
+          shown.map(r => <VisitRow key={`${r.kind}-${r.id}`} r={r} now={now} kind={r.kind} />)
+        )}
+      </div>
     </>
   )
 }
@@ -3353,6 +3484,7 @@ const ACCT_FLAT = [
   ['calc', RulerSquareIcon, 'Calculators'],
   ['site', SewingPinIcon, 'Submit site visit'],
   ['display', EyeOpenIcon, 'Display centre visit'],
+  ['requests', CalendarIcon, 'My visit requests'],
   ['support', ChatBubbleIcon, 'Support'],
   ['notif', BellIcon, 'Notification preferences'],
   ['privacy', LockClosedIcon, 'Account privacy'],
@@ -3362,7 +3494,7 @@ const ACCT_TITLES = {
   dash: 'Performance dashboard', orders: 'Order history', credit: 'Credit ledger',
   lists: 'Project lists', schemes: 'Schemes & discounts',
   gst: 'GST details', calc: 'Calculators', site: 'Submit site visit',
-  display: 'Display centre visit', support: 'Support', addr: 'Address book',
+  display: 'Display centre visit', requests: 'My visit requests', support: 'Support', addr: 'Address book',
   notif: 'Notification preferences', privacy: 'Account privacy',
 }
 
@@ -3374,6 +3506,7 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, o
     if (h === '#lists') return 'lists'
     if (h === '#orders') return 'orders'
     if (h === '#site') return 'site'
+    if (h === '#requests') return 'requests'
     return initialSub || null
   })
   const [lo, setLo] = useState(null) // null | 'confirm' | 'out'
@@ -3400,6 +3533,7 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, o
       case 'calc': return <AcctCalc />
       case 'site': return <VisitForm kind="site" />
       case 'display': return <VisitForm kind="display" />
+      case 'requests': return <AcctRequests />
       case 'support': return <AcctSupport />
       case 'addr': return <AcctAddr />
       case 'notif': return <AcctNotif />
@@ -3466,7 +3600,7 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, o
           return (
             <button className="credit-snap" onClick={() => setSub('credit')}>
               <Flex align="center" justify="between">
-                <Text size="1" weight="bold" style={{ color: 'var(--blue-11)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
                   CREDIT AVAILABLE
                 </Text>
                 {od > 0 ? <span className="st-chip bad">{od} overdue</span> : <span className="st-chip ok">On track</span>}
@@ -3476,7 +3610,12 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, o
                 <Text size="1" color="gray">of {fmtL(CREDIT.limit)}{out > 0 ? ` · ${fmtL(out)} due` : ''}</Text>
                 <ChevronRightIcon width={15} height={15} color="var(--gray-8)" style={{ marginLeft: 'auto' }} />
               </Flex>
-              <div className="mem-bar"><div style={{ width: `${Math.round((avail / CREDIT.limit) * 100)}%` }} /></div>
+              <div className="mem-bar">
+                <div style={{
+                  width: `${Math.round((avail / CREDIT.limit) * 100)}%`,
+                  background: od > 0 ? 'var(--red-9)' : avail / CREDIT.limit < .35 ? 'var(--amber-9)' : 'var(--green-9)',
+                }} />
+              </div>
             </button>
           )
         })()}
@@ -4708,7 +4847,7 @@ export default function App() {
   const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
   const [cartOpen, setCartOpen] = useState(window.location.hash === '#cart')
   const [reorderOpen, setReorderOpen] = useState(['#reorder', '#pastorder'].includes(window.location.hash))
-  const [acctOpen, setAcctOpen] = useState(['#account', '#dash', '#credit', '#lists', '#orders', '#site'].includes(window.location.hash))
+  const [acctOpen, setAcctOpen] = useState(['#account', '#dash', '#credit', '#lists', '#orders', '#site', '#requests'].includes(window.location.hash))
   const acctSubRef = useRef(false)
   const acctInitSub = useRef(null)
   const [authed, setAuthed] = useState(() => {

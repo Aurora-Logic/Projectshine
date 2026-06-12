@@ -3381,8 +3381,7 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 
 /* ---------- Credit ledger ---------- */
 .cr-hero {
-  background: var(--blue-2);
-  border: 1px solid var(--blue-4);
+  background: linear-gradient(165deg, #2C3038 0%, #1B1E23 100%);
   border-radius: 18px;
   padding: 16px;
   margin-bottom: 12px;
@@ -3390,7 +3389,7 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 .cr-bar {
   height: 7px;
   border-radius: 99px;
-  background: var(--gray-4);
+  background: rgba(255, 255, 255, .16);
   margin-top: 12px;
   overflow: hidden;
 }
@@ -3401,14 +3400,15 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   transition: width .7s cubic-bezier(.22, 1, .36, 1);
 }
 .cr-chip {
-  background: var(--blue-3);
-  color: var(--blue-11);
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .18);
+  color: #fff;
   font-size: 10.5px;
   font-weight: 800;
   border-radius: 99px;
   padding: 4px 10px;
 }
-.cr-chip.bad { background: var(--red-3); color: var(--red-11); }
+.cr-chip.bad { background: rgba(229, 72, 77, .92); border-color: transparent; }
 .bill-row {
   display: flex;
   align-items: center;
@@ -3900,3 +3900,99 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 }
 .insight.act:active { transform: scale(.985); }
 .bar.best span { background: var(--amber-6); }
+
+/* ---------- shadcn-style date + slot pickers ---------- */
+.cal-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  border: 1px solid var(--gray-6);
+  background: var(--gray-1);
+  border-radius: 12px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gray-9);
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+.cal-field.has { color: var(--gray-12); border-color: var(--green-8); }
+.cal-pop {
+  border: 1px solid var(--gray-4);
+  border-radius: 14px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .1);
+  animation: stepin .18s cubic-bezier(.22, 1, .36, 1);
+}
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 8px;
+}
+.cal-head button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: var(--gray-3);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--gray-11);
+}
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-dow {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--gray-9);
+  text-align: center;
+  padding: 4px 0;
+}
+.cal-day {
+  aspect-ratio: 1;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--gray-12);
+  cursor: pointer;
+}
+.cal-day:disabled { color: var(--gray-7); cursor: default; }
+.cal-day.today { box-shadow: inset 0 0 0 1.5px var(--green-8); }
+.cal-day.sel { background: var(--green-9); color: #fff; }
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.slot {
+  border: 1px solid var(--gray-5);
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 2px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--gray-12);
+  transition: background .15s, border-color .15s, transform .12s;
+}
+.slot:active { transform: scale(.95); }
+.slot.on { background: var(--green-9); border-color: var(--green-9); color: #fff; }
+
+/* selected chips must never merge into white cards: green pill everywhere */
+.seg { background: var(--gray-4); }
+.seg-b.on {
+  background: var(--green-3);
+  color: var(--green-11);
+  box-shadow: inset 0 0 0 1.5px var(--green-8);
+}
