@@ -2919,3 +2919,35 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   border-bottom: 1px solid var(--gray-3);
 }
 .ro-past:last-child { border-bottom: none; }
+
+/* ---------- Swipe-to-remove rows ---------- */
+.swipe-wrap { position: relative; overflow: hidden; }
+.swipe-del {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  right: 0;
+  width: 78px;
+  border: none;
+  border-radius: 14px;
+  background: var(--red-9);
+  color: #fff;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.swipe-inner { position: relative; background: #fff; }
+
+/* richer reorder rows */
+.ro-row { align-items: flex-start; cursor: pointer; }
+.ro-row img { width: 60px; height: 60px; }
+.ro-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+.ro-chip.plain { cursor: default; background: var(--gray-2); }

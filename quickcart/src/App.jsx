@@ -2074,28 +2074,104 @@ function QtySheet({ q, onClose, onConfirm }) {
   )
 }
 
+/* Swipe-left to reveal a Remove action (cart lines, reorder rows) */
+function SwipeRow({ onRemove, children }) {
+  const ref = useRef(null)
+  const t = useRef(null)
+  const open = useRef(false)
+  const set = (x, anim) => {
+    const el = ref.current
+    if (!el) return
+    el.style.transition = anim ? 'transform .25s cubic-bezier(.22, 1, .36, 1)' : 'none'
+    el.style.transform = `translateX(${x}px)`
+  }
+  const start = (e) => {
+    t.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, axis: null, base: open.current ? -84 : 0 }
+  }
+  const move = (e) => {
+    const s = t.current
+    if (!s) return
+    const dx = e.touches[0].clientX - s.x
+    const dy = e.touches[0].clientY - s.y
+    if (!s.axis) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return
+      s.axis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
+    }
+    if (s.axis !== 'h') return
+    set(Math.min(0, Math.max(-110, s.base + dx)), false)
+  }
+  const end = (e) => {
+    const s = t.current
+    t.current = null
+    if (!s || s.axis !== 'h') return
+    const pos = s.base + (e.changedTouches[0].clientX - s.x)
+    if (pos < -55) { open.current = true; set(-84, true) }
+    else { open.current = false; set(0, true) }
+  }
+  return (
+    <div className="swipe-wrap">
+      <button className="swipe-del" onClick={onRemove}>Remove</button>
+      <div className="swipe-inner" ref={ref} onTouchStart={start} onTouchMove={move} onTouchEnd={end} onTouchCancel={end}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 /* ---------------- Reorder page — regulars, one tap away ---------------- */
 
-function RoRow({ m, added, onAdd, onStep }) {
+function RoRow({ m, added, onAdd, onStep, onCustom }) {
+  const openPdp = useContext(PdpCtx)
   const qty = added[m.id] || 0
+  const p = m.p
+  const off = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0
+  const oos = p.stock === 0
   return (
-    <div className="ro-row">
-      <Img src={img(m.p.ph, 120)} alt="" />
+    <div className="ro-row" onClick={openPdp ? () => openPdp(p) : undefined}>
+      <Img src={img(p.ph, 140)} alt="" />
       <Box flexGrow="1" style={{ minWidth: 0 }}>
-        <Text size="1" weight="bold" as="div" className="clamp1">{m.p.name}</Text>
-        <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>
-          ₹{m.p.price.toLocaleString('en-IN')} · {m.every} · last {m.last}d ago
-        </Text>
-        <span className={`ro-chip ${m.due ? 'due' : ''}`}>{m.due ? `Due · usually ${m.usual} pcs` : `Usually ${m.usual} pcs`}</span>
+        <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{p.name}</Text>
+        <Flex align="center" gap="2" mt="1">
+          <Text size="1" weight="bold">₹{p.price.toLocaleString('en-IN')}</Text>
+          {p.mrp && (
+            <Text style={{ fontSize: 10, textDecoration: 'line-through', color: 'var(--gray-9)' }}>
+              ₹{p.mrp.toLocaleString('en-IN')}
+            </Text>
+          )}
+          {off > 0 && <span className="off-pill" style={{ fontSize: 9, padding: '1px 5px' }}>{off}% OFF</span>}
+        </Flex>
+        {p.bulk && (
+          <Text as="div" weight="bold" style={{ fontSize: 9.5, color: 'var(--blue-11)' }}>Bulk: {p.bulk}</Text>
+        )}
+        {p.stock != null && (
+          <Text as="div" weight="bold" style={{
+            fontSize: 9.5,
+            color: oos ? 'var(--red-10)' : p.stock <= 10 ? 'var(--amber-11)' : 'var(--green-10)',
+          }}>
+            {oos ? `Out of stock · ships in ${p.lead} days` : p.stock <= 10 ? `Only ${p.stock} left` : `In stock · ${p.stock}+ pcs`}
+          </Text>
+        )}
+        <Flex gap="1" mt="1" wrap="wrap">
+          <button className={`ro-chip ${m.due ? 'due' : ''}`} onClick={(e) => { e.stopPropagation(); onCustom(m) }}>
+            {m.due ? 'Due · ' : ''}usually {m.usual} pcs <ChevronDownIcon width={9} height={9} />
+          </button>
+          <span className="ro-chip plain">{m.every} · last {m.last}d</span>
+        </Flex>
       </Box>
       {qty === 0 ? (
-        <button className="ro-add" onClick={(e) => onAdd(m, e)}>
+        <button className="ro-add" onClick={(e) => { e.stopPropagation(); onAdd(m, e) }}>
           ADD {m.usual}
         </button>
       ) : (
-        <div className="ro-step">
+        <div className="ro-step" onClick={(e) => e.stopPropagation()}>
           <button onClick={() => onStep(m, -1)} aria-label="Less"><MinusIcon width={12} height={12} /></button>
-          <Text key={qty} className="numpop" size="1" weight="bold" style={{ width: 28, textAlign: 'center', color: '#fff' }}>{qty}</Text>
+          <Text
+            key={qty} className="numpop" size="1" weight="bold"
+            style={{ width: 28, textAlign: 'center', color: '#fff', cursor: 'pointer' }}
+            onClick={() => onCustom(m)}
+          >
+            {qty}
+          </Text>
           <button onClick={() => onStep(m, 1)} aria-label="More"><PlusIcon width={12} height={12} /></button>
         </div>
       )}
@@ -2109,9 +2185,22 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
     () => REORDER.map(m => ({ ...m, p: FEED_POOL.find(p => p.id === m.id) })).filter(x => x.p),
     [],
   )
-  const due = meta.filter(m => m.due)
-  const regular = meta.filter(m => !m.due)
+  const [hidden, setHidden] = useState({})
+  const due = meta.filter(m => m.due && !hidden[m.id])
+  const regular = meta.filter(m => !m.due && !hidden[m.id])
   const [added, setAdded] = useState({})
+  const openQty = useContext(QtyCtx)
+  const custom = (m) => {
+    if (openQty) openQty(m.p, (n) => setAdded(a => ({ ...a, [m.id]: (a[m.id] || 0) + n })), { noReco: true })
+  }
+  const removeRow = (m) => {
+    const q = added[m.id] || 0
+    if (q > 0) {
+      onChange(-q, m.p)
+      setAdded(a => ({ ...a, [m.id]: 0 }))
+    }
+    setHidden(h => ({ ...h, [m.id]: true }))
+  }
   const addUsual = (m, e) => {
     onChange(m.usual, m.p, { noReco: true })
     setAdded(a => ({ ...a, [m.id]: (a[m.id] || 0) + m.usual }))
@@ -2180,7 +2269,11 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
                 <Text size="1" weight="bold" as="div" style={{ color: 'var(--amber-11)', letterSpacing: '.5px', fontSize: 10.5 }}>
                   DUE NOW
                 </Text>
-                {due.map(m => <RoRow key={m.id} m={m} added={added} onAdd={addUsual} onStep={step} />)}
+                {due.map(m => (
+                  <SwipeRow key={m.id} onRemove={() => removeRow(m)}>
+                    <RoRow m={m} added={added} onAdd={addUsual} onStep={step} onCustom={custom} />
+                  </SwipeRow>
+                ))}
               </div>
             )}
 
@@ -2188,7 +2281,11 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
               <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
                 YOUR REGULARS
               </Text>
-              {regular.map(m => <RoRow key={m.id} m={m} added={added} onAdd={addUsual} onStep={step} />)}
+              {regular.map(m => (
+                <SwipeRow key={m.id} onRemove={() => removeRow(m)}>
+                  <RoRow m={m} added={added} onAdd={addUsual} onStep={step} onCustom={custom} />
+                </SwipeRow>
+              ))}
             </div>
 
             <div className="cp-card">
@@ -2436,6 +2533,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
                 const bulkOn = t && n >= t.thr
                 return (
                   <div key={p.id}>
+                    <SwipeRow onRemove={() => onChange(-n, p)}>
                     <div className="cs-row">
                       <Img src={img(p.ph, 120)} alt="" />
                       <Box flexGrow="1" style={{ minWidth: 0 }}>
@@ -2451,6 +2549,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
                       </div>
                       <Text size="1" weight="bold" style={{ minWidth: 60, textAlign: 'right', flex: 'none', whiteSpace: 'nowrap' }}>₹{(n * p.price).toLocaleString('en-IN')}</Text>
                     </div>
+                    </SwipeRow>
                     {t && !bulkOn && (
                       <button className="cs-nudge" onClick={() => onChange(t.thr - n, p, { noReco: true })}>
                         Add {t.thr - n} more → {t.pct}% off this item
