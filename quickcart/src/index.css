@@ -794,26 +794,24 @@ body {
 .timer-chip {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  background: #fff;
-  color: #1C46A8;
+  gap: 6px;
+  background: rgba(255, 255, 255, .14);
+  border: 1px solid rgba(255, 255, 255, .35);
+  color: #fff;
   white-space: nowrap;
   flex: none;
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 700;
   border-radius: 999px;
-  padding: 7px 14px;
+  padding: 4px 11px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: .2px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, .25);
-  animation: timer-pulse 1.4s ease-in-out infinite;
+  letter-spacing: .3px;
 }
 .timer-dot {
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: #E5484D;
-  animation: dot-blink 1s steps(2, start) infinite;
+  background: #FFD43B;
 }
 @keyframes timer-pulse {
   0%, 100% { transform: scale(1); box-shadow: 0 4px 14px rgba(0, 0, 0, .25); }
@@ -2709,4 +2707,27 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   background-image: linear-gradient(160deg, #2D6FE8 0%, #2049B8 60%, #142F85 100%);
   border-color: transparent;
   color: #fff;
+}
+
+/* quiet highlight on the express option */
+.dlv-row.express {
+  background: var(--amber-2);
+  border: 1px solid var(--amber-4);
+  border-top: 1px solid var(--amber-4);
+  border-radius: 14px;
+  padding: 10px;
+  margin-top: 8px;
+}
+.dlv-row.express.sel { background: var(--amber-3); border-color: var(--amber-7); }
+.fast-tag {
+  background: var(--amber-4);
+  color: var(--amber-11);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: .4px;
+  padding: 2px 6px;
+  border-radius: 99px;
+  margin-left: 5px;
+  vertical-align: 2px;
+  white-space: nowrap;
 }

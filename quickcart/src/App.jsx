@@ -438,7 +438,7 @@ function DealTimer() {
   const ss = String(secs % 60).padStart(2, '0')
   return (
     <span className="timer-chip">
-      <span className="timer-dot" /> ENDS IN {mm}:{ss}
+      <span className="timer-dot" /> Ends in {mm}:{ss}
     </span>
   )
 }
@@ -2282,10 +2282,12 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
                   {baseFee === 0 ? 'FREE' : `₹${baseFee}`}
                 </Text>
               </button>
-              <button className="dlv-row" onClick={() => setExpress(true)}>
+              <button className={`dlv-row express ${express ? 'sel' : ''}`} onClick={() => setExpress(true)}>
                 <span className={`radio ${express ? 'on' : ''}`} />
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <Text size="2" weight="bold" as="div">Express · at your shop in 1 hour</Text>
+                  <Text size="2" weight="bold" as="div">
+                    Express · at your shop in 1 hour <span className="fast-tag">FASTEST</span>
+                  </Text>
                   <Text size="1" color="gray" as="div">Rush dispatch from the nearest depot</Text>
                 </span>
                 <Text size="1" weight="bold">+₹200</Text>
