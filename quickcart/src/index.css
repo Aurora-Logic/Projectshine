@@ -2951,3 +2951,7 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   cursor: pointer;
 }
 .ro-chip.plain { cursor: default; background: var(--gray-2); }
+
+/* past order detail: removed lines dim until added back */
+.cs-off img, .cs-off > div:first-of-type { opacity: .5; }
+.ro-past { cursor: pointer; }

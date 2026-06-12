@@ -2179,7 +2179,82 @@ function RoRow({ m, added, onAdd, onStep, onCustom }) {
   )
 }
 
+/* Past order detail: every line editable before re-adding */
+function PastOrderSheet({ order, onClose, onChange }) {
+  const [draft, setDraft] = useState(() => Object.fromEntries(order.items.map(({ p, n }) => [p.id, n])))
+  const lines = order.items.filter(({ p }) => (draft[p.id] || 0) > 0)
+  const total = lines.reduce((s, { p }) => s + p.price * draft[p.id], 0)
+  const count = lines.reduce((s, { p }) => s + draft[p.id], 0)
+  const step = (p, d) => setDraft(dr => ({ ...dr, [p.id]: Math.max(0, (dr[p.id] || 0) + d) }))
+  const addAll = (e) => {
+    lines.forEach(({ p }) => onChange(draft[p.id], p, { noReco: true }))
+    sparkle(e)
+    onClose()
+  }
+  return (
+    <div className="qsheet-overlay" onClick={onClose}>
+      <div className="qsheet cart-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="qsheet-grab" />
+        <Flex align="center" justify="between">
+          <Box>
+            <Heading size="4" style={{ letterSpacing: '-0.3px' }}>{order.date}</Heading>
+            <Text size="1" color="gray" as="div">PO {order.id} · adjust quantities, then add</Text>
+          </Box>
+          <Text size="1" weight="bold" color="gray" style={{ flex: 'none' }}>{count} pcs</Text>
+        </Flex>
+        <div className="cs-list">
+          {order.items.map(({ p, n }) => {
+            const q = draft[p.id] || 0
+            return (
+              <div className={`cs-row ${q === 0 ? 'cs-off' : ''}`} key={`po-${p.id}`}>
+                <Img src={img(p.ph, 120)} alt="" />
+                <Box flexGrow="1" style={{ minWidth: 0 }}>
+                  <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{p.name}</Text>
+                  <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>
+                    ₹{p.price.toLocaleString('en-IN')} · last time {n} pcs
+                  </Text>
+                </Box>
+                {q === 0 ? (
+                  <Button
+                    size="1" variant="soft" color="green" radius="full"
+                    style={{ fontWeight: 800, flex: 'none' }} onClick={() => step(p, n)}
+                  >
+                    Add back
+                  </Button>
+                ) : (
+                  <>
+                    <div className="cs-step">
+                      <button onClick={() => step(p, -1)} aria-label="Less"><MinusIcon width={12} height={12} /></button>
+                      <Text key={q} className="numpop" size="1" weight="bold" style={{ width: 26, textAlign: 'center', color: '#fff' }}>{q}</Text>
+                      <button onClick={() => step(p, 1)} aria-label="More"><PlusIcon width={12} height={12} /></button>
+                    </div>
+                    <Text size="1" weight="bold" style={{ minWidth: 56, textAlign: 'right', flex: 'none', whiteSpace: 'nowrap' }}>
+                      ₹{(q * p.price).toLocaleString('en-IN')}
+                    </Text>
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        <button className="qs-cta" onClick={addAll} disabled={count === 0} style={count === 0 ? { opacity: .5 } : undefined}>
+          <span>Add {count} pieces to cart</span>
+          <span>₹{total.toLocaleString('en-IN')}</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ReorderPage({ onClose, onChange, cart, lastOrder }) {
+  const [view, setView] = useState(null)
+  // #pastorder: open the first receipt for design review
+  useEffect(() => {
+    if (window.location.hash === '#pastorder') {
+      const o = PAST_ORDERS[0]
+      setView({ ...o, items: o.items.map(([id, n]) => ({ p: FEED_POOL.find(p => p.id === id), n })).filter(x => x.p) })
+    }
+  }, [])
   const ready = useNextFrame()
   const meta = useMemo(
     () => REORDER.map(m => ({ ...m, p: FEED_POOL.find(p => p.id === m.id) })).filter(x => x.p),
@@ -2293,7 +2368,7 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
                 PAST ORDERS
               </Text>
               {past.map(o => (
-                <div className="ro-past" key={o.id}>
+                <div className="ro-past" key={o.id} onClick={() => setView(o)}>
                   <Flex>
                     {o.items.slice(0, 3).map(({ p }) => (
                       <Img key={`rp-${o.id}-${p.id}`} className="thumb" src={img(p.ph, 80)} alt="" />
@@ -2305,9 +2380,13 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
                       ₹{o.items.reduce((s, { p, n }) => s + p.price * n, 0).toLocaleString('en-IN')} · PO {o.id}
                     </Text>
                   </Box>
-                  <Button size="1" variant="soft" color="green" radius="full" style={{ fontWeight: 800, flex: 'none' }} onClick={(e) => repeat(o, e)}>
+                  <Button
+                    size="1" variant="soft" color="green" radius="full" style={{ fontWeight: 800, flex: 'none' }}
+                    onClick={(e) => { e.stopPropagation(); repeat(o, e) }}
+                  >
                     Repeat
                   </Button>
+                  <ChevronRightIcon width={14} height={14} color="var(--gray-8)" style={{ flex: 'none' }} />
                 </div>
               ))}
             </div>
@@ -2315,6 +2394,9 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
         )}
       </div>
       <div className="plp-cartwrap"><CartBar cart={cart} /></div>
+      {view && (
+        <PastOrderSheet key={view.id} order={view} onClose={() => setView(null)} onChange={onChange} />
+      )}
     </div>
   )
 }
@@ -3091,7 +3173,7 @@ export default function App() {
   const [pdp, setPdp] = useState(() => (window.location.hash === '#pdp' ? FEED_POOL[0] : null))
   const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
   const [cartOpen, setCartOpen] = useState(window.location.hash === '#cart')
-  const [reorderOpen, setReorderOpen] = useState(window.location.hash === '#reorder')
+  const [reorderOpen, setReorderOpen] = useState(['#reorder', '#pastorder'].includes(window.location.hash))
   const [order, setOrder] = useState(() => {
     if (window.location.hash === '#order') {
       return {
