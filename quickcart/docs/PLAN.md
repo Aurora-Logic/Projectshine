@@ -1,6 +1,6 @@
 # QuickCart — Master Plan (single working doc)
 
-**Updated:** 13 Jun 2026 (Sprints 0–1 landed: A0 complete, A1 complete) · Consolidates the full audit (142 verified findings), its fix roadmap, and the client's 12-feature brief. Work from this file only; tick items as they land.
+**Updated:** 13 Jun 2026 — overnight run: Sprints 0–6 landed (A5.1 split + A6.5 code-split deferred to a coordinated window; A4 full sweep rides the split) · Consolidates the full audit (142 verified findings), its fix roadmap, and the client's 12-feature brief. Work from this file only; tick items as they land.
 
 **Effort tags:** S ≤ 1h · M = half-day · L = multi-day
 
@@ -94,11 +94,11 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 - [x] **A6.2 S** OG/meta tags (reuse manifest copy + 1200×630 image).
 - [x] **A6.3 S** `vercel.json` → `npm ci`; `engines` field; security headers/CSP.
 - [x] *(vitest: 24 tests on money math + seed integrity; Actions: lint+test+build)* **A6.4 M** Tests + CI after lint green: vitest on cart/bulk/scheme math + render-smoke per hash; GitHub Actions.
-- [ ] **A6.5 M** Code-split after A5.1 (lazy wheel/quiz/account/orders/login).
+- [ ] **A6.5 M** Code-split after A5.1 (lazy wheel/quiz/account/orders/login). *(blocked by A5.1 — components must live in modules before React.lazy can split them)*
 - [x] *(variable woff2, latin subset, preloaded, immutable cache header)* **A6.6 S** Self-host Plus Jakarta Sans.
 - [x] *(qc-geo opt-in flag; no permission prompt on first paint)* **A6.7 S** Geolocation behind explicit affordance (time-theme default).
-- [ ] **A6.8 S** PWA: `start_url` → home hash (skip gate), separate maskable icon, SW only if offline matters.
-- [ ] **A6.9 S** Repo hygiene: rm duplicate root PNGs, stray root `node_modules`, template leftovers; first-screen "Demo — no SMS"; confirm/undo Delete-list; GSTIN strict regex + "Valid format"; `jsconfig` checkJs.
+- [x] *(start_url done earlier; icon-512 QC mark verified inside the mask safe zone, `purpose: any maskable` declared; SW skipped — offline not a goal)* **A6.8 S** PWA: `start_url` → home hash (skip gate), separate maskable icon, SW only if offline matters.
+- [x] *(stray root node_modules removed; login shows "Demo build — no SMS"; Delete-list is two-tap; GSTIN strict 15-char pattern. Root logo PNGs kept — user source files, not ours to delete. jsconfig/checkJs deferred: floods a JS codebase with noise.)* **A6.9 S** Repo hygiene.
 
 ---
 
@@ -136,11 +136,11 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 |---|---|---|
 | **0 (today)** | A0.1–A0.7 | Nothing broken, lint green, no self-sabotage |
 | **1** | A1.1–A1.4 then A1.5–A1.10 | Survives a skeptical dealer with a calculator |
-| **2** | B3 + B2 + B4 + B6 + B7-display *(Phase-1 features; all mock-data demoable)* | Client sees their brief landing |
-| **3** | A2 + A3 | Feels native on phones; keyboard + AA pass |
-| **4** | B1 + B8/B9 (closes A0.4) + B10/B11 viewer | All client surfaces demoable |
-| **5** | A4 then A5 (tokens before split; no features mid-split) | Stable system, modular codebase |
-| **6** | A6 + `docs/BACKEND_CONTRACT.md` (APIs incl. B12 engine, POD upload, claims settlement, CMS, events) | Ship-ready + backend handoff |
+| **2** | B3 + B2 + B4 + B6 + B7-display *(Phase-1 features; all mock-data demoable)* | ✅ 13 Jun — Client sees their brief landing |
+| **3** | A2 + A3 | ✅ 13 Jun — Feels native on phones; keyboard + AA pass |
+| **4** | B1 + B8/B9 (closes A0.4) + B10/B11 viewer | ✅ 13 Jun — All client surfaces demoable |
+| **5** | A4 then A5 (tokens before split; no features mid-split) | ✅ 13 Jun (safe subset; A5.1 split deferred — see A5 note) — Stable system, modular codebase |
+| **6** | A6 + `docs/BACKEND_CONTRACT.md` (APIs incl. B12 engine, POD upload, claims settlement, CMS, events) | ✅ 13 Jun (A6.5 awaits A5.1) — Ship-ready + backend handoff |
 
 **Quick wins (<2h combined):** invoice restore · cart popstate guard · dead-tap band · error boundary · title-hook removal · 16px inputs · `en-IN` CartBar · credit-seed fix · header-padding removal · contrast swaps · OG tags · README.
 

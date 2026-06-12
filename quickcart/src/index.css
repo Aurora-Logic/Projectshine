@@ -5091,3 +5091,8 @@ button.lg-link {
   background: var(--green-9);
   color: #fff;
 }
+
+.pl-del.arm {
+  background: var(--red-3);
+  animation: stepin .18s cubic-bezier(.22, 1, .36, 1);
+}

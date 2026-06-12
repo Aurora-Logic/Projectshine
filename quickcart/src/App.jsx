@@ -2744,6 +2744,7 @@ function ListSheet({ p, onClose }) {
 function AcctLists({ onChange, onGoKit }) {
   const [lists, setLists] = useState(loadLists)
   const [openId, setOpenId] = useState(null)
+  const [delArm, setDelArm] = useState(false)
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const save = (next) => { setLists(next); saveLists(next) }
@@ -2758,7 +2759,7 @@ function AcctLists({ onChange, onGoKit }) {
     }))
     return (
       <>
-        <button className="pl-back" onClick={() => setOpenId(null)}>
+        <button className="pl-back" onClick={() => { setOpenId(null); setDelArm(false) }}>
           <ArrowLeftIcon width={13} height={13} /> All lists
         </button>
         <div className="cp-card">
@@ -2795,8 +2796,16 @@ function AcctLists({ onChange, onGoKit }) {
             <span>₹{total.toLocaleString('en-IN')}</span>
           </button>
         )}
-        <button className="pl-del" onClick={() => { save(lists.filter(l => l.id !== cur.id)); setOpenId(null) }}>
-          Delete list
+        <button
+          className={`pl-del ${delArm ? 'arm' : ''}`}
+          onClick={() => {
+            if (!delArm) { setDelArm(true); return }
+            save(lists.filter(l => l.id !== cur.id))
+            setOpenId(null)
+            setDelArm(false)
+          }}
+        >
+          {delArm ? 'Tap again to delete' : 'Delete list'}
         </button>
       </>
     )
@@ -3140,6 +3149,9 @@ function LoginGate({ onDone }) {
             <span className="lg-link">Dealer Terms</span> & <span className="lg-link">Privacy Policy</span>.
           </Text>
           <button className="lg-cta" disabled={!ready} onClick={() => setStage('otp')}>Continue</button>
+          <Text size="1" color="gray" as="div" mt="2" style={{ textAlign: 'center' }}>
+            Demo build — no SMS goes out
+          </Text>
           <div className="lg-or"><span>or</span></div>
           <button className="lg-soc wa" onClick={onDone}><WaMark /> Continue with WhatsApp</button>
           <Text size="2" as="div" mt="4" style={{ textAlign: 'center' }}>
@@ -3824,7 +3836,7 @@ function AcctSchemes({ onCategory }) {
 
 function AcctGst() {
   const [gst, setGst] = usePersisted('qc-gst', { gstin: '29ABCDE1234F1Z5', name: 'Bora Hardware & Plywood' })
-  const valid = /^[0-9]{2}[A-Z0-9]{13}$/.test(gst.gstin.toUpperCase())
+  const valid = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gst.gstin.toUpperCase())
   return (
     <div className="cp-card">
       <Flex align="center" justify="between">
