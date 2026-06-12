@@ -3235,3 +3235,107 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 
 /* account menu groups read softer than data cards */
 .acctpage > .cp-body > .cp-card { border-radius: 20px; }
+
+/* ---------- Dashboard engagement layer ---------- */
+.mrow-ic { border-radius: 50%; width: 34px; height: 34px; }
+.dash-hero {
+  background:
+    radial-gradient(120% 150% at 100% 0%, rgba(255, 255, 255, .12) 0%, transparent 45%),
+    linear-gradient(160deg, #14633F 0%, var(--green-9) 55%, #0E4A2F 100%);
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.up-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, .18);
+  border: 1px solid rgba(255, 255, 255, .25);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 99px;
+  padding: 3px 9px;
+}
+.dash-spark {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  height: 54px;
+  margin-top: 14px;
+}
+.ds-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+}
+.ds-col span {
+  width: 100%;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .35);
+  transition: height .6s cubic-bezier(.22, 1, .36, 1);
+}
+.ds-col:last-child span { background: #FFD43B; }
+.ds-col em {
+  font-style: normal;
+  font-size: 8px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, .65);
+}
+.badge-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 12px;
+}
+.badge-row::-webkit-scrollbar { display: none; }
+.bdg {
+  flex: 1;
+  min-width: 86px;
+  background: #fff;
+  border: 1px solid var(--gray-3);
+  border-radius: 14px;
+  padding: 10px 8px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+}
+.bdg.locked { opacity: .55; }
+.bdg-ic {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.insight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--gray-3);
+  border-radius: 14px;
+  padding: 11px 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+}
+.pct-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--blue-3);
+  margin-top: 6px;
+  overflow: hidden;
+}
+.pct-bar > div {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--blue-9);
+  transition: width .7s cubic-bezier(.22, 1, .36, 1);
+}

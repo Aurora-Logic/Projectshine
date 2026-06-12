@@ -2091,13 +2091,94 @@ function AcctDash() {
   const [per, setPer] = useState(12)
   const ready = useNextFrame()
   const k = DASH.kpis
+  const big = useCountUp(k.month, true, 1100)
+  const last6 = DASH.months.slice(-6)
+  const mx = Math.max(...last6.map(d => d[1]))
+  const best = DASH.months.reduce((a, b) => (b[1] > a[1] ? b : a))
+  const pctile = Math.round(((MY_RANK.of - MY_RANK.rank) / MY_RANK.of) * 100)
+  const badges = [
+    [StarFilledIcon, 'Top 25%', 'in HSR Layout', 'amber', false],
+    [RocketIcon, '3 months', 'growth streak', 'violet', false],
+    [CheckIcon, '₹10L+', 'lifetime volume', 'green', false],
+    [LockClosedIcon, 'Gold tier', `${fmtL(200000 - k.month)} to go`, 'gray', true],
+  ]
   return (
     <>
+      <div className="dash-hero">
+        <Text size="1" weight="bold" as="div" style={{ color: 'rgba(255,255,255,.7)', letterSpacing: '.6px', fontSize: 10 }}>
+          PURCHASES THIS MONTH
+        </Text>
+        <Flex align="center" gap="2" mt="1">
+          <Text weight="bold" style={{ fontSize: 34, color: '#fff', letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums' }}>
+            {fmtL(big)}
+          </Text>
+          <span className="up-chip"><ChevronUpIcon width={12} height={12} /> {k.growth}% YoY</span>
+        </Flex>
+        <Text size="1" as="div" mt="1" style={{ color: 'rgba(255,255,255,.75)' }}>
+          {fmtL(TARGETS.monthly.target - k.month)} more unlocks the +2% monthly rebate
+        </Text>
+        <div className="dash-spark">
+          {last6.map(([m, v]) => (
+            <div key={m} className="ds-col">
+              <span style={{ height: ready ? `${(v / mx) * 100}%` : '0%' }} />
+              <em>{m}</em>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="badge-row">
+        {badges.map(([Icon, t, s, c, locked]) => (
+          <div key={t} className={`bdg ${locked ? 'locked' : ''}`}>
+            <span className="bdg-ic" style={{ background: `var(--${c}-3)`, color: `var(--${c}-11)` }}>
+              <Icon width={14} height={14} />
+            </span>
+            <Text size="1" weight="bold" as="div" style={{ fontSize: 10.5 }}>{t}</Text>
+            <Text as="div" style={{ fontSize: 8.5, color: 'var(--gray-10)' }}>{s}</Text>
+          </div>
+        ))}
+      </div>
+
       <div className="kpi-grid">
-        <div className="kpi"><Text size="1" color="gray">This month</Text><Text size="4" weight="bold" as="div">{fmtL(k.month)}</Text><Text size="1" as="div" style={{ color: 'var(--green-10)', fontWeight: 700 }}>+{k.growth}% YoY</Text></div>
-        <div className="kpi"><Text size="1" color="gray">Orders</Text><Text size="4" weight="bold" as="div">{k.orders}</Text><Text size="1" color="gray" as="div">this month</Text></div>
-        <div className="kpi"><Text size="1" color="gray">Avg order</Text><Text size="4" weight="bold" as="div">₹{(k.aov / 1000).toFixed(1)}k</Text><Text size="1" color="gray" as="div">last 90 days</Text></div>
-        <div className="kpi"><Text size="1" color="gray">Saved</Text><Text size="4" weight="bold" as="div">₹{(k.saved / 1000).toFixed(1)}k</Text><Text size="1" as="div" style={{ color: 'var(--green-10)', fontWeight: 700 }}>bulk + schemes</Text></div>
+        <div className="kpi" style={{ background: 'var(--blue-2)', borderColor: 'var(--blue-4)' }}>
+          <Text size="1" style={{ color: 'var(--blue-11)', fontWeight: 700 }}>Orders</Text>
+          <Text size="4" weight="bold" as="div">{k.orders}</Text>
+          <Text size="1" color="gray" as="div">this month</Text>
+        </div>
+        <div className="kpi" style={{ background: 'var(--violet-2)', borderColor: 'var(--violet-4)' }}>
+          <Text size="1" style={{ color: 'var(--violet-11)', fontWeight: 700 }}>Avg order</Text>
+          <Text size="4" weight="bold" as="div">₹{(k.aov / 1000).toFixed(1)}k</Text>
+          <Text size="1" color="gray" as="div">last 90 days</Text>
+        </div>
+        <div className="kpi" style={{ background: 'var(--green-2)', borderColor: 'var(--green-4)' }}>
+          <Text size="1" style={{ color: 'var(--green-11)', fontWeight: 700 }}>Saved</Text>
+          <Text size="4" weight="bold" as="div">₹{(k.saved / 1000).toFixed(1)}k</Text>
+          <Text size="1" color="gray" as="div">bulk + schemes</Text>
+        </div>
+        <div className="kpi" style={{ background: 'var(--amber-2)', borderColor: 'var(--amber-4)' }}>
+          <Text size="1" style={{ color: 'var(--amber-11)', fontWeight: 700 }}>Best month</Text>
+          <Text size="4" weight="bold" as="div">{fmtL(best[1] * 1000)}</Text>
+          <Text size="1" color="gray" as="div">{best[0]} — your record</Text>
+        </div>
+      </div>
+
+      <div className="insight">
+        <span className="bdg-ic" style={{ background: 'var(--amber-3)', color: 'var(--amber-11)', flex: 'none' }}>
+          <RocketIcon width={14} height={14} />
+        </span>
+        <Text size="1" style={{ lineHeight: 1.45 }}>
+          <b>{fmtL(best[1] * 1000 - k.month)}</b> away from beating your best month ever ({best[0]} · {fmtL(best[1] * 1000)}).
+          One Quadro order does it.
+        </Text>
+      </div>
+      <div className="insight">
+        <span className="bdg-ic" style={{ background: 'var(--blue-3)', color: 'var(--blue-11)', flex: 'none' }}>
+          <BarChartIcon width={14} height={14} />
+        </span>
+        <Box flexGrow="1">
+          <Text size="1" style={{ lineHeight: 1.45 }}>Ahead of <b>{pctile}%</b> of dealers in your region</Text>
+          <div className="pct-bar"><div style={{ width: ready ? `${pctile}%` : '0%' }} /></div>
+        </Box>
       </div>
       <div className="cp-card">
         <Flex align="center" justify="between">
@@ -2594,21 +2675,21 @@ function AcctPrivacy() {
 
 const ACCT_GROUPS = [
   ['BUSINESS', [
-    ['dash', BarChartIcon, 'Performance dashboard', 'Purchases, growth, category mix'],
-    ['orders', CounterClockwiseClockIcon, 'Order history', 'Receipts, repeat, invoices'],
-    ['schemes', StarFilledIcon, 'Schemes & discounts', 'Volume slabs, tier perks'],
-    ['gst', FileTextIcon, 'GST details', 'GSTIN, billing name'],
+    ['dash', BarChartIcon, 'Performance dashboard', 'Purchases, growth, category mix', 'violet'],
+    ['orders', CounterClockwiseClockIcon, 'Order history', 'Receipts, repeat, invoices', 'blue'],
+    ['schemes', StarFilledIcon, 'Schemes & discounts', 'Volume slabs, tier perks', 'amber'],
+    ['gst', FileTextIcon, 'GST details', 'GSTIN, billing name', 'green'],
   ]],
   ['TOOLS & SERVICES', [
-    ['calc', RulerSquareIcon, 'Calculators', 'Slide load, hinges per door'],
-    ['site', SewingPinIcon, 'Submit site visit', 'Get our team to your site'],
-    ['display', EyeOpenIcon, 'Display centre visit', 'Book a showroom slot'],
-    ['support', ChatBubbleIcon, 'Support', 'Call, WhatsApp, FAQs'],
+    ['calc', RulerSquareIcon, 'Calculators', 'Slide load, hinges per door', 'cyan'],
+    ['site', SewingPinIcon, 'Submit site visit', 'Get our team to your site', 'orange'],
+    ['display', EyeOpenIcon, 'Display centre visit', 'Book a showroom slot', 'pink'],
+    ['support', ChatBubbleIcon, 'Support', 'Call, WhatsApp, FAQs', 'indigo'],
   ]],
   ['SETTINGS', [
-    ['addr', HomeIcon, 'Address book', 'Delivery locations'],
-    ['notif', BellIcon, 'Notification preferences', 'Orders, offers, price drops'],
-    ['privacy', LockClosedIcon, 'Account privacy', 'Data and permissions'],
+    ['addr', HomeIcon, 'Address book', 'Delivery locations', 'teal'],
+    ['notif', BellIcon, 'Notification preferences', 'Orders, offers, price drops', 'tomato'],
+    ['privacy', LockClosedIcon, 'Account privacy', 'Data and permissions', 'brown'],
   ]],
 ]
 
@@ -2688,9 +2769,11 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef }) {
         {ACCT_GROUPS.map(([g, items]) => (
           <div className="cp-card" key={g} style={{ padding: '10px 6px' }}>
             <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-9)', letterSpacing: '.5px', fontSize: 10, padding: '4px 12px 6px' }}>{g}</Text>
-            {items.map(([key, Icon, t, s]) => (
+            {items.map(([key, Icon, t, s, c]) => (
               <button key={key} className="mrow" onClick={() => setSub(key)}>
-                <span className="mrow-ic"><Icon width={16} height={16} /></span>
+                <span className="mrow-ic" style={{ background: `var(--${c}-3)`, color: `var(--${c}-11)` }}>
+                  <Icon width={16} height={16} />
+                </span>
                 <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                   <Text size="2" weight="bold" as="div">{t}</Text>
                   <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>{s}</Text>
