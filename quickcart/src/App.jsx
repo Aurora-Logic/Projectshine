@@ -473,7 +473,7 @@ function AddControl({ qty, onAdd, onRemove, onBulk }) {
   if (qty === 0) {
     return (
       <Button
-        className="padd" variant="outline" color="teal" size="2"
+        className="padd stepin" variant="outline" color="teal" size="2"
         onClick={onAdd} style={{ fontWeight: 800, margin: 0 }}
       >
         ADD
@@ -481,11 +481,12 @@ function AddControl({ qty, onAdd, onRemove, onBulk }) {
     )
   }
   return (
-    <Flex className="padd" align="center" justify="between" style={{ background: 'var(--teal-9)' }}>
+    <Flex className="padd stepin" align="center" justify="between" style={{ background: 'var(--teal-9)' }}>
       <IconButton size="1" onClick={onRemove} style={{ background: 'transparent', color: '#fff' }}>
         <MinusIcon />
       </IconButton>
       <Text
+        key={qty} className="numpop"
         size="2" weight="bold" style={{ color: '#fff' }}
         onClick={onBulk ? (e) => { e.stopPropagation(); onBulk() } : undefined}
       >
@@ -1951,7 +1952,7 @@ function CartBar({ cart }) {
         ))}
       </Flex>
       <Box flexGrow="1">
-        <Text size="2" weight="bold" as="div">
+        <Text key={cart.count} className="linepop" size="2" weight="bold" as="div">
           {cart.count} item{cart.count === 1 ? '' : 's'} · ₹{cart.total}
         </Text>
         <Text size="1" weight="medium" as="div" style={{ color: 'var(--teal-4)' }}>{note}</Text>
@@ -2055,6 +2056,8 @@ function QtySheet({ q, onClose, onConfirm }) {
 
 /* ---------------- Product details page ---------------- */
 
+let PDP_DIR = 0 // swipe direction handoff to the next ProductPage mount (slide-in side)
+
 function ProductPage({ p, onClose, onChange }) {
   const openQty = useContext(QtyCtx)
   const openPdp = useContext(PdpCtx)
@@ -2074,24 +2077,64 @@ function ProductPage({ p, onClose, onChange }) {
     const list = FEED_POOL.filter(x => catOf(x) === c)
     return list.length > 1 ? list : FEED_POOL
   }, [p])
-  const goSib = (dir) => {
+  const sibNext = (dir) => {
     const i = sibs.findIndex(x => x.id === p.id)
     const next = sibs[(i + dir + sibs.length) % sibs.length]
-    if (next && next.id !== p.id && openPdp) openPdp(next)
+    return next && next.id !== p.id ? next : null
   }
+  const rootRef = useRef(null)
+  const [enter] = useState(() => { const d = PDP_DIR; PDP_DIR = 0; return d })
   const touch = useRef(null)
-  const onTouchStart = (e) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY } }
+  const onTouchStart = (e) => {
+    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, axis: null }
+  }
+  // the page follows the finger (damped) during a horizontal drag, so the
+  // commit / settle-back continues the motion instead of jump-cutting
+  const onTouchMove = (e) => {
+    const t = touch.current
+    if (!t) return
+    const dx = e.touches[0].clientX - t.x
+    const dy = e.touches[0].clientY - t.y
+    if (!t.axis) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
+      t.axis = Math.abs(dx) > 1.2 * Math.abs(dy) ? 'h' : 'v'
+    }
+    if (t.axis !== 'h') return
+    const el = rootRef.current
+    if (el) {
+      el.style.transition = 'none'
+      el.style.transform = `translateX(${dx * 0.4}px)`
+      el.style.opacity = String(Math.max(0.65, 1 - Math.abs(dx) / 700))
+    }
+  }
+  const settleBack = () => {
+    const el = rootRef.current
+    if (!el) return
+    el.style.transition = 'transform .3s cubic-bezier(.22, 1, .36, 1), opacity .3s ease'
+    el.style.transform = 'translateX(0)'
+    el.style.opacity = '1'
+  }
   const onTouchEnd = (e) => {
     const t = touch.current
     touch.current = null
     if (!t) return
     const dx = e.changedTouches[0].clientX - t.x
-    const dy = e.changedTouches[0].clientY - t.y
-    if (Math.abs(dx) > 70 && Math.abs(dx) > 2 * Math.abs(dy)) goSib(dx < 0 ? 1 : -1)
+    const next = t.axis === 'h' && Math.abs(dx) > 70 ? sibNext(dx < 0 ? 1 : -1) : null
+    if (next && openPdp) {
+      const dir = dx < 0 ? 1 : -1
+      const el = rootRef.current
+      if (el) {
+        el.style.transition = 'transform .16s ease-in, opacity .16s ease-in'
+        el.style.transform = `translateX(${dir === 1 ? '-64px' : '64px'})`
+        el.style.opacity = '0'
+        setTimeout(() => { PDP_DIR = dir; openPdp(next) }, 140)
+      } else { PDP_DIR = dir; openPdp(next) }
+    } else settleBack()
   }
+  const onTouchCancel = settleBack
   const onHeroEnd = (e) => {
     const t = touch.current
-    if (!t) return
+    if (!t || t.axis === 'h') return
     const dx = e.changedTouches[0].clientX - t.x
     const dy = e.changedTouches[0].clientY - t.y
     if (Math.abs(dy) > 45 && Math.abs(dy) > 1.5 * Math.abs(dx)) {
@@ -2125,15 +2168,17 @@ function ProductPage({ p, onClose, onChange }) {
     [oos ? 'Lead time' : 'Availability', oos ? `Ships in ${p.lead} days` : `In stock · ${p.stock}+ pcs`],
   ].filter(Boolean)
   return (
-    <div className="pdp">
+    <div ref={rootRef} className={`pdp ${enter === 1 ? 'pdp-in-r' : enter === -1 ? 'pdp-in-l' : ''}`}>
       <div className="pdp-head">
         <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
         <Text size="2" weight="bold" style={{ flex: 1, minWidth: 0 }} truncate>Product details</Text>
         {BRAND_LOGOS[p.brand] && <img src={BRAND_LOGOS[p.brand]} alt={p.brand} style={{ height: 16, flex: 'none' }} />}
       </div>
-      <div className="pdp-body" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className="pdp-body" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchCancel}>
         <div className="pdp-hero" onTouchEnd={onHeroEnd} onClick={() => setShot(s => (s + 1) % shots.length)}>
-          <Img key={shot} src={shots[shot]} alt={p.name} />
+          {shots.map((s, i) => (
+            <Img key={i} src={s} alt={p.name} className={`pdp-shot ${i === shot ? 'cur' : ''}`} />
+          ))}
           {(p.tag || off > 0) && <span className="pbadge" style={{ top: 14, left: 14 }}>{p.tag || `${off}% OFF`}</span>}
           <div className="pdp-dots">
             {shots.map((_, i) => <span key={i} className={i === shot ? 'on' : ''} />)}

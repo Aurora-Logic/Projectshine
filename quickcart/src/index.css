@@ -2392,3 +2392,48 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   padding: 3px 8px;
   border-radius: 99px;
 }
+
+/* ---------- Fluid micro-motion layer (sub-200ms, transform/opacity only) ---------- */
+.pdp-in-r { animation: pdpr .32s cubic-bezier(.22, 1, .36, 1); }
+.pdp-in-l { animation: pdpl .32s cubic-bezier(.22, 1, .36, 1); }
+@keyframes pdpr { from { transform: translateX(72px); opacity: .25; } }
+@keyframes pdpl { from { transform: translateX(-72px); opacity: .25; } }
+
+/* photo shots stay stacked and crossfade — no gray flash between crops */
+.pdp-hero { height: 300px; overflow: hidden; }
+.pdp-hero .pdp-shot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.05);
+  transition: opacity .4s ease, transform .55s cubic-bezier(.22, 1, .36, 1);
+}
+.pdp-hero .pdp-shot.cur { opacity: 1; transform: scale(1); }
+
+.stepin { animation: stepin .18s cubic-bezier(.22, 1, .36, 1); }
+@keyframes stepin { from { transform: scale(.86); opacity: .4; } }
+.numpop { animation: numpop .22s cubic-bezier(.22, 1, .36, 1); }
+@keyframes numpop { from { transform: scale(1.3); } }
+.linepop { animation: linepop .26s cubic-bezier(.22, 1, .36, 1); }
+@keyframes linepop { from { transform: translateY(5px); opacity: .4; } }
+
+/* press feedback — felt, not seen */
+.pcard, .flash-card, .rmini, .club { transition: transform .18s cubic-bezier(.22, 1, .36, 1); }
+.pcard:active, .flash-card:active, .rmini:active { transform: scale(.975); }
+.combo-card { transition: transform .18s cubic-bezier(.22, 1, .36, 1); }
+.combo-card:active { transform: scale(.985); }
+.nav-icw { transition: transform .15s ease; }
+.nav-item:active .nav-icw { transform: scale(.85); }
+.qs-chip:active { transform: scale(.96); }
+.qs-sbtn { transition: transform .12s ease; }
+.qs-sbtn:active { transform: scale(.88); }
+.seg-b, .plp-chips button { transition: background .2s ease, color .2s ease, transform .15s ease; }
+.seg-b:active, .plp-chips button:active { transform: scale(.95); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pdp-in-r, .pdp-in-l, .stepin, .numpop, .linepop { animation: none !important; }
+  .pdp-hero .pdp-shot { transition: opacity .15s ease; transform: none; }
+}
