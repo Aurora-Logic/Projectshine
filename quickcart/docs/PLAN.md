@@ -42,25 +42,25 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 ### A2 · Mobile & native-feel polish
 
 - [x] **A2.1 S** 16px inputs (`.cp-input/.cp-note/.nav-search input`) — kills iOS focus-zoom.
-- [ ] **A2.2 M** Lock background scroll under sheets; implement or remove grab-handle drag-to-dismiss.
-- [ ] **A2.3 S** `overscroll-behavior: contain` on `.plp-main`/`.plp-rail`.
-- [ ] **A2.4 S** `safe-area-inset-top` on fixed headers; bottom inset on `.plp-cartwrap`.
-- [ ] **A2.5 M** Hit-target pass: steppers ≥32px (reuse `.qs-sbtn`), whole-row address select + confirmed delete, ≥40px dialog closes, reco-toast spacing, preserve `.mini` navbar hit areas.
-- [ ] **A2.6 S** Drop `touch-action: pan-x` on PDP hero (tap-to-cycle suffices; vertical scroll must scroll).
-- [ ] **A2.7 S** SwipeRow pointer-events fallback (or visible ✕) for desktop + one-time hint.
-- [ ] **A2.8 M** Desktop rails: drag-to-scroll or hover scrollbars.
-- [ ] **A2.9 S** Tap-highlight + `user-select` guards on cards/nav/steppers.
-- [ ] **A2.10 S** Qty sheet: numeric input + per-SKU presets derived from the bulk tier (not global 10/50/100).
-- [ ] **A2.11 S** Autofill semantics: `type="tel"`, `autoComplete="tel"`/`"one-time-code"`, address tokens, `enterKeyHint="search"`.
+- [x] **A2.2 M** Lock background scroll under sheets; implement or remove grab-handle drag-to-dismiss.
+- [x] **A2.3 S** `overscroll-behavior: contain` on `.plp-main`/`.plp-rail`.
+- [x] **A2.4 S** `safe-area-inset-top` on fixed headers; bottom inset on `.plp-cartwrap`.
+- [x] **A2.5 M** Hit-target pass: steppers ≥32px (reuse `.qs-sbtn`), whole-row address select + confirmed delete, ≥40px dialog closes, reco-toast spacing, preserve `.mini` navbar hit areas.
+- [x] **A2.6 S** Drop `touch-action: pan-x` on PDP hero (tap-to-cycle suffices; vertical scroll must scroll).
+- [x] **A2.7 S** SwipeRow pointer-events fallback (or visible ✕) for desktop + one-time hint.
+- [x] **A2.8 M** Desktop rails: drag-to-scroll or hover scrollbars.
+- [x] **A2.9 S** Tap-highlight + `user-select` guards on cards/nav/steppers.
+- [x] **A2.10 S** Qty sheet: numeric input + per-SKU presets derived from the bulk tier (not global 10/50/100).
+- [x] **A2.11 S** Autofill semantics: `type="tel"`, `autoComplete="tel"`/`"one-time-code"`, address tokens, `enterKeyHint="search"`.
 
 ### A3 · Accessibility (mechanical, high leverage)
 
-- [ ] **A3.1 M** Button-ify the 37 clickable divs/spans (or role+tabIndex+keys); nav as `<nav>` of buttons. Purchase loop becomes keyboard-operable.
-- [ ] **A3.2 M** Wrap the 10 hand-rolled sheets in Radix `Dialog` (focus trap, Escape, aria-modal free; keep CSS).
-- [ ] **A3.3 S** Label every input; `aria-valuetext` on the load slider; label the two AddControl IconButtons.
+- [x] **A3.1 M** Button-ify the 37 clickable divs/spans (or role+tabIndex+keys); nav as `<nav>` of buttons. Purchase loop becomes keyboard-operable.
+- [x] **A3.2 M** *(as focus-trap+Escape hook — substance over package)* Wrap the 10 hand-rolled sheets in Radix `Dialog` (focus trap, Escape, aria-modal free; keep CSS).
+- [x] **A3.3 S** Label every input; `aria-valuetext` on the load slider; label the two AddControl IconButtons.
 - [x] **A3.4 S** Contrast tokens: text-bearing green-9 → green-11; `#FFD43B` header text → white/dark chip; sub-12px gray-9/10 → gray-11.
-- [ ] **A3.5 S** One polite `aria-live` for cart mutations/toasts; `aria-hidden` ticking timers.
-- [ ] **A3.6 S×5** Heading levels (`as=`), search field as real button, `<s>` + hidden "MRP", reduced-motion for wheel spin + shimmer, `:focus-within` on `.nav-search`.
+- [x] **A3.5 S** One polite `aria-live` for cart mutations/toasts; `aria-hidden` ticking timers.
+- [x] **A3.6 S×5** Heading levels (`as=`), search field as real button, `<s>` + hidden "MRP", reduced-motion for wheel spin + shimmer, `:focus-within` on `.nav-search`.
 
 ### A4 · Design-system consolidation (before more visual iteration)
 

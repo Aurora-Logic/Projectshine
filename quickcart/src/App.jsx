@@ -381,7 +381,7 @@ function TopBar({ compact, dp, cond, brand, onBrand, onSearch, cartCount, plain,
         </TextField.Slot>
       </TextField.Root>
 
-      <div className="rewards-strip" onClick={() => scrollToId('leaderboard')}>
+      <div className="rewards-strip" {...btnish(() => scrollToId('leaderboard'))}>
         <StarFilledIcon width={14} height={14} color="var(--amber-9)" style={{ flex: 'none' }} />
         <span className="tier-mini" style={{ background: '#98A2B3' }} />
         <Text size="1" weight="bold" truncate style={{ flex: 1, minWidth: 0 }}>
@@ -457,7 +457,7 @@ function BannerCarousel({ quizSkin, onGlow }) {
           <div className="banner-slide" key={b.key}>
             <div className="banner-inner" style={{ background: b.key === 'quiz' ? quizSkin.bg : b.bg }}>
               <Box flexGrow="1">
-                <Heading size="6" style={{ color: b.dark ? '#2b2200' : '#fff', letterSpacing: '-0.4px', lineHeight: 1.15 }}>
+                <Heading as="h2" size="6" style={{ color: b.dark ? '#2b2200' : '#fff', letterSpacing: '-0.4px', lineHeight: 1.15 }}>
                   {b.title}
                 </Heading>
                 <Text size="2" weight="medium" as="div" mt="1" style={{ color: b.dark ? '#5c4a00' : 'rgba(255,255,255,.9)' }}>
@@ -500,7 +500,7 @@ function DealTimer() {
   const mm = String(Math.floor(secs / 60)).padStart(2, '0')
   const ss = String(secs % 60).padStart(2, '0')
   return (
-    <span className="timer-chip">
+    <span className="timer-chip" aria-hidden="true">
       <span className="timer-dot" /> Ends in {mm}:{ss}
     </span>
   )
@@ -511,7 +511,7 @@ function SectionHead({ title, extra, light, sub, onSeeAll }) {
     <Box px="4" mb="3">
       <Flex align="center" justify="between">
         <Flex align="center" gap="3" style={{ minWidth: 0 }}>
-          <Heading size="4" style={{ letterSpacing: '-0.2px', ...(light ? { color: '#fff' } : {}) }}>
+          <Heading as="h2" size="4" style={{ letterSpacing: '-0.2px', ...(light ? { color: '#fff' } : {}) }}>
             {title}
           </Heading>
           {extra}
@@ -532,6 +532,55 @@ function SectionHead({ title, extra, light, sub, onSeeAll }) {
       )}
     </Box>
   )
+}
+
+/* keyboard-operable div: role+tabIndex+Enter/Space, one spread */
+const btnish = (fn) => ({
+  role: 'button',
+  tabIndex: 0,
+  onClick: fn,
+  onKeyDown: (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e) }
+  },
+})
+
+/* Escape + focus trap + focus restore for hand-rolled sheets.
+   A module stack keeps Escape on the TOPMOST layer only. */
+const sheetStack = []
+function useSheetA11y(onClose, active = true) {
+  const ref = useRef(null)
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+  useEffect(() => {
+    if (!active) return undefined
+    const token = {}
+    sheetStack.push(token)
+    const el = ref.current
+    const prev = document.activeElement
+    el?.focus({ preventScroll: true })
+    const onKey = (e) => {
+      if (sheetStack[sheetStack.length - 1] !== token) return
+      if (e.key === 'Escape') closeRef.current?.()
+      if (e.key === 'Tab' && el) {
+        const f = el.querySelectorAll(
+          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        )
+        if (!f.length) return
+        const first = f[0]
+        const last = f[f.length - 1]
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      const i = sheetStack.indexOf(token)
+      if (i >= 0) sheetStack.splice(i, 1)
+      document.removeEventListener('keydown', onKey)
+      if (prev?.focus) prev.focus({ preventScroll: true })
+    }
+  }, [active])
+  return ref
 }
 
 function AddControl({ qty, onAdd, onRemove, onBulk }) {
@@ -584,7 +633,7 @@ const ProductCard = memo(function ProductCard({ p, grid, onChange }) {
 
   const oos = p.stock === 0
   return (
-    <div className={`pcard ${grid ? 'grid' : ''}`} onClick={openPdp ? () => openPdp(p) : undefined}>
+    <div className={`pcard ${grid ? 'grid' : ''}`} {...(openPdp ? btnish(() => openPdp(p)) : {})}>
       <div className="pimg-wrap">
         <Img className={`pimg ${oos ? 'oos' : ''}`} src={img(p.ph, 360)} alt={p.name} loading="lazy" />
         {(p.tag || (p.mrp && p.mrp > p.price)) && (
@@ -624,7 +673,7 @@ const ProductCard = memo(function ProductCard({ p, grid, onChange }) {
         <Flex align="center" gap="2">
           <Text size="2" weight="bold">₹{p.price.toLocaleString('en-IN')}</Text>
           {p.mrp && (
-            <Text size="1" color="gray" style={{ textDecoration: 'line-through' }}>₹{p.mrp.toLocaleString('en-IN')}</Text>
+            <Text size="1" color="gray" style={{ textDecoration: 'line-through' }}><span className="sr-only">M.R.P. </span>₹{p.mrp.toLocaleString('en-IN')}</Text>
           )}
         </Flex>
         {p.bulk && (
@@ -849,6 +898,7 @@ const fSummary = (f, b) => [
 ].filter(Boolean)
 
 function FilterSheet({ group, onGroup, cat = 'All', b, setB, f, setF, count }) {
+  const a11y = useSheetA11y(() => onGroup(null), !!group)
   if (!group) return null
   const set = (patch) => setF(cur => ({ ...cur, ...patch }))
   const badges = fBadges(f, b)
@@ -860,9 +910,12 @@ function FilterSheet({ group, onGroup, cat = 'All', b, setB, f, setF, count }) {
   ]
   return (
     <div className="bsheet-overlay" onClick={() => onGroup(null)}>
-      <div className="bsheet fsheet" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="bsheet fsheet" role="dialog" aria-modal="true" aria-label="Filters and sorting" tabIndex={-1}
+        ref={a11y} onClick={(e) => e.stopPropagation()}
+      >
         <Flex align="center" justify="between" px="4" pt="4" pb="3">
-          <Heading size="4">Filters & sorting</Heading>
+          <Heading as="h2" size="4">Filters & sorting</Heading>
           <Text size="2" weight="bold" color="red" style={{ cursor: 'pointer' }}
             onClick={() => { setB('ALL'); setF(DEFAULT_F) }}>
             Clear all
@@ -940,6 +993,8 @@ function FilterSheet({ group, onGroup, cat = 'All', b, setB, f, setF, count }) {
                 </Flex>
                 <input
                   type="range" className="ldr" min="0" max="60" step="5" value={f.load}
+                  aria-label="Minimum load rating"
+                  aria-valuetext={f.load ? `${f.load} kg or more` : 'Any load'}
                   onChange={(e) => set({ load: +e.target.value })}
                 />
                 <Flex align="center" justify="between">
@@ -1067,7 +1122,7 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
           <ArrowLeftIcon width={18} height={18} />
         </button>
         <Box style={{ flex: 1, textAlign: 'center' }}>
-          <Heading size="4" style={{ letterSpacing: '-0.2px' }}>
+          <Heading as="h2" size="4" style={{ letterSpacing: '-0.2px' }}>
             {cat === 'All' ? 'All fittings' : cat}
           </Heading>
           {b !== 'ALL' && (
@@ -1083,7 +1138,7 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
       <div className="plp-body">
         <div className="plp-rail">
           {PLP_RAIL.map(([ph, label]) => (
-            <div key={label} className={`rail-item ${label === cat ? 'on' : ''}`} onClick={() => onPick(label)}>
+            <div key={label} className={`rail-item ${label === cat ? 'on' : ''}`} {...btnish(() => onPick(label))}>
               <Img src={img(ph, 140)} alt={label} loading="lazy" />
               <span className="rl">{label}</span>
             </div>
@@ -1198,6 +1253,7 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
 
 /* Full-screen search / listing sheet — live filtering with category rail + brand chips */
 function SearchSheet({ sheet, onClose, onChange, recoStrip, onRecoClose }) {
+  const a11y = useSheetA11y(onClose)
   const [q, setQ] = useState(sheet?.query || '')
   const [b, setB] = useState('ALL')
   const [cat, setCat] = useState('All')
@@ -1227,13 +1283,13 @@ function SearchSheet({ sheet, onClose, onChange, recoStrip, onRecoClose }) {
   const shown = fallback ? base : hits
 
   return (
-    <div className="sheet">
+    <div className="sheet" role="dialog" aria-modal="true" aria-label="Search" tabIndex={-1} ref={a11y}>
       <div className="sheet-head">
         <button className="sheet-back" onClick={onClose} aria-label="Back">
           <ArrowLeftIcon width={18} height={18} />
         </button>
         <TextField.Root
-          size="3" radius="full" autoFocus value={q} placeholder="Search fittings, brands, sizes…"
+          size="3" radius="full" autoFocus enterKeyHint="search" value={q} placeholder="Search fittings, brands, sizes…"
           onChange={(e) => setQ(e.target.value)} style={{ flex: 1 }}
         >
           <TextField.Slot>
@@ -1894,7 +1950,7 @@ function FlashCard({ p, onChange }) {
   const pct = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0
   const sold = Math.max(15, Math.min(95, 100 - (p.stock ?? 50)))
   return (
-    <div className="flash-card" onClick={openPdp ? () => openPdp(p) : undefined}>
+    <div className="flash-card" {...(openPdp ? btnish(() => openPdp(p)) : {})}>
       <div className="pimg-wrap" style={{ aspectRatio: 'auto', height: 104 }}>
         <Img className="pimg" src={img(p.ph, 320)} alt={p.name} />
         {pct > 0 && <span className="flash-off">-{pct}%</span>}
@@ -1904,7 +1960,7 @@ function FlashCard({ p, onChange }) {
         <Text as="div" weight="bold" className="clamp1" style={{ fontSize: 12.5 }}>{p.name}</Text>
         <Flex align="center" gap="2" mt="1">
           <Text size="2" weight="bold">₹{p.price.toLocaleString('en-IN')}</Text>
-          {p.mrp && <Text size="1" color="gray" style={{ textDecoration: 'line-through' }}>₹{p.mrp.toLocaleString('en-IN')}</Text>}
+          {p.mrp && <Text size="1" color="gray" style={{ textDecoration: 'line-through' }}><span className="sr-only">M.R.P. </span>₹{p.mrp.toLocaleString('en-IN')}</Text>}
         </Flex>
         <div className="flash-bar"><div style={{ width: `${sold}%` }} /></div>
         <Text as="div" weight="bold" style={{ fontSize: 10, color: p.stock === 0 ? 'var(--red-10)' : 'var(--amber-11)' }}>
@@ -1929,7 +1985,7 @@ function FlashSale({ items, onChange, onSeeAll }) {
     <div className="band-flash cv" id="deals">
       <Flex align="center" justify="between" px="4">
         <Flex align="center" gap="3" style={{ minWidth: 0 }}>
-          <Heading size="4" style={{ color: '#fff', letterSpacing: '-0.2px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Heading as="h2" size="4" style={{ color: '#fff', letterSpacing: '-0.2px', display: 'flex', alignItems: 'center', gap: 6 }}>
           <LightningBoltIcon width={17} height={17} color="#FFD43B" /> Flash sale
         </Heading>
           <DealTimer />
@@ -1959,7 +2015,7 @@ function TargetsCard() {
     <Box px="4" pt="5">
       <div className="tgt">
         <Flex align="center" justify="between">
-          <Heading size="4" style={{ letterSpacing: '-0.2px' }}>Your targets</Heading>
+          <Heading as="h2" size="4" style={{ letterSpacing: '-0.2px' }}>Your targets</Heading>
           <span className="save-pill">FY 2026–27</span>
         </Flex>
         <div className="seg">
@@ -2020,7 +2076,7 @@ function CategoryGrid({ onPick, onSeeAll }) {
       <SectionHead title="Shop by category" onSeeAll={onSeeAll} />
       <Grid columns="3" gapX="3" gapY="4" px="4">
         {CATEGORIES.map(([ph, label, count]) => (
-          <div className="cat-tile" key={label} onClick={() => onPick(label)}>
+          <div className="cat-tile" key={label} {...btnish(() => onPick(label))}>
             <Img className="cat-img" src={img(ph, 280)} alt={label} loading="lazy" />
             <Text size="1" weight="bold" as="div" align="center" mt="2" truncate>
               {label}
@@ -2175,13 +2231,13 @@ function AddrFields({ onSave, cta = 'Save address' }) {
   return (
     <div className="addr-form">
       <input className="cp-input" placeholder="Label — e.g. Site 2, New godown" value={label} onChange={(e) => setLabel(e.target.value)} />
-      <input className="cp-input" placeholder="Line 1 — shop / building no." value={l1} onChange={(e) => setL1(e.target.value)} />
-      <input className="cp-input" placeholder="Line 2 — street / area (optional)" value={l2} onChange={(e) => setL2(e.target.value)} />
+      <input className="cp-input" autoComplete="address-line1" placeholder="Line 1 — shop / building no." value={l1} onChange={(e) => setL1(e.target.value)} />
+      <input className="cp-input" autoComplete="address-line2" placeholder="Line 2 — street / area (optional)" value={l2} onChange={(e) => setL2(e.target.value)} />
       <input className="cp-input" placeholder="Landmark (optional)" value={lm} onChange={(e) => setLm(e.target.value)} />
       <Flex gap="2">
-        <input className="cp-input" style={{ flex: 1.4 }} placeholder="City" value={ct} onChange={(e) => setCt(e.target.value)} />
+        <input className="cp-input" style={{ flex: 1.4 }} autoComplete="address-level2" placeholder="City" value={ct} onChange={(e) => setCt(e.target.value)} />
         <input
-          className="cp-input" style={{ flex: 1 }} placeholder="Pincode" inputMode="numeric" maxLength={6}
+          className="cp-input" style={{ flex: 1 }} autoComplete="postal-code" placeholder="Pincode" inputMode="numeric" maxLength={6}
           value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
         />
       </Flex>
@@ -2219,7 +2275,7 @@ function ListSheet({ p, onClose }) {
     <div className="qsheet-overlay" onClick={onClose}>
       <div className="qsheet" onClick={(e) => e.stopPropagation()}>
         <div className="qsheet-grab" />
-        <Heading size="4" style={{ letterSpacing: '-0.3px' }}>Save to project list</Heading>
+        <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Save to project list</Heading>
         <Text size="1" color="gray" as="div" mt="1" className="clamp1">{p.name}</Text>
         {savedTo ? (
           <div className="calc-out" style={{ marginTop: 14 }}>
@@ -2288,7 +2344,7 @@ function AcctLists({ onChange }) {
         </button>
         <div className="cp-card">
           <Flex align="center" justify="between">
-            <Heading size="4" style={{ letterSpacing: '-0.3px' }}>{cur.name}</Heading>
+            <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>{cur.name}</Heading>
             <Text size="1" weight="bold" color="gray">{rows.length} items</Text>
           </Flex>
           {rows.map(r => (
@@ -2565,7 +2621,7 @@ function AcctCredit() {
         <div className="qsheet-overlay" onClick={() => setPay(null)}>
           <div className="qsheet" onClick={(e) => e.stopPropagation()}>
             <div className="qsheet-grab" />
-            <Heading size="4" style={{ letterSpacing: '-0.3px' }}>Pay ₹{payAmt.toLocaleString('en-IN')}</Heading>
+            <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Pay ₹{payAmt.toLocaleString('en-IN')}</Heading>
             <Text size="1" color="gray" as="div" mt="1">
               {pay.length} bill{pay.length === 1 ? '' : 's'} · settles to QuickCart Trading Pvt Ltd
             </Text>
@@ -2588,7 +2644,7 @@ function AcctCredit() {
         <div className="order-done" onClick={() => setDone(null)}>
           <div className="od-card" onClick={(e) => e.stopPropagation()}>
             <div className="od-tick">✓</div>
-            <Heading size="5" mt="3" style={{ letterSpacing: '-0.3px' }}>Payment received</Heading>
+            <Heading as="h2" size="5" mt="3" style={{ letterSpacing: '-0.3px' }}>Payment received</Heading>
             <Text size="2" color="gray" as="div" mt="1">₹{done.toLocaleString('en-IN')} · credit limit freed up instantly</Text>
             <Button mt="4" size="3" color="green" radius="full" style={{ fontWeight: 800, width: '100%' }} onClick={() => setDone(null)}>
               Done
@@ -2626,7 +2682,7 @@ function LoginGate({ onDone }) {
       <Text size="1" weight="bold" as="div" style={{ color: 'var(--green-10)', letterSpacing: '.9px', fontSize: 11, marginTop: 36 }}>
         {stage === 'otp' ? 'ALMOST THERE' : greet}
       </Text>
-      <Heading style={{ fontSize: 31, letterSpacing: '-1px', marginTop: 4 }}>
+      <Heading as="h2" style={{ fontSize: 31, letterSpacing: '-1px', marginTop: 4 }}>
         {stage === 'otp' ? 'One last step' : 'Welcome back, partner'}
       </Heading>
       {stage === 'cred' && (
@@ -2644,7 +2700,7 @@ function LoginGate({ onDone }) {
             <div className="lg-group">
               <span>+91</span>
               <input
-                inputMode="numeric" maxLength={10} placeholder="Phone number"
+                type="tel" autoComplete="tel" inputMode="numeric" maxLength={10} placeholder="Phone number" aria-label="Phone number"
                 value={ph} onChange={(e) => setPh(e.target.value.replace(/\D/g, ''))}
               />
             </div>
@@ -2661,7 +2717,7 @@ function LoginGate({ onDone }) {
           <div className="lg-or"><span>or</span></div>
           <button className="lg-soc wa" onClick={onDone}><WaMark /> Continue with WhatsApp</button>
           <Text size="2" as="div" mt="4" style={{ textAlign: 'center' }}>
-            or <span className="lg-link" onClick={onDone}>continue as guest</span>
+            or <button type="button" className="lg-link" onClick={onDone}>continue as guest</button>
           </Text>
           <div className="lg-new">
             <Text size="2" weight="bold" as="div">New to QuickCart?</Text>
@@ -2688,12 +2744,12 @@ function LoginGate({ onDone }) {
             Sent to {tab === 'phone' ? `+91 ${ph}` : em} · any 4 digits work in this demo
           </Text>
           <input
-            className="lg-otp" inputMode="numeric" maxLength={4} placeholder="••••"
+            className="lg-otp" autoComplete="one-time-code" inputMode="numeric" maxLength={4} placeholder="••••" aria-label="One-time code"
             value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
           />
           <button className="lg-cta" disabled={otp.length !== 4} onClick={onDone}>Verify & continue</button>
           <Text size="2" as="div" mt="4" style={{ textAlign: 'center' }}>
-            <span className="lg-link" onClick={() => setStage('cred')}>Change number</span>
+            <button type="button" className="lg-link" onClick={() => setStage('cred')}>Change number</button>
           </Text>
         </>
       )}
@@ -2994,6 +3050,7 @@ const ordPgRef = { current: false }
 const POD_SHOTS = ['1586528116311-ad8dd3c8310d', '1566576721346-d4a3b4eaeb55']
 
 function OrderDetailPage({ order, onClose, onChange }) {
+  useSheetA11y(onClose) // Escape-to-close
   const pieces = order.items.reduce((s, { n }) => s + n, 0)
   const bill = order.bill || null
   // snapshotted bill wins; legacy seeds fall back to effective pricing
@@ -3036,7 +3093,7 @@ function OrderDetailPage({ order, onClose, onChange }) {
     <div className="ordpage">
       <div className="pdp-head">
         <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
-        <Heading size="4" style={{ flex: 1, letterSpacing: '-0.3px' }}>PO {order.id}</Heading>
+        <Heading as="h2" size="4" style={{ flex: 1, letterSpacing: '-0.3px' }}>PO {order.id}</Heading>
         <span className={`st-chip ${live ? '' : 'ok'}`}>{live ? ORDER_STAGES[si][0] : 'Delivered'}</span>
       </div>
       <div className="cp-body">
@@ -3362,6 +3419,7 @@ function AcctGst() {
 function AcctAddr() {
   const [addrs, setAddrs] = useState(loadAddrs)
   const [sel, setSel] = usePersisted('qc-addr-sel', loadAddrs()[0].id)
+  const [armed, setArmed] = useState(null) // two-tap delete
   const [adding, setAdding] = useState(false)
   const addNew = (a) => {
     const next = [...addrs, a]
@@ -3386,7 +3444,11 @@ function AcctAddr() {
             <Text size="1" color="gray" as="div" style={{ lineHeight: 1.35 }}>{a.addr}</Text>
           </span>
           {addrs.length > 1 && (
-            <button className="reco-x" onClick={() => remove(a.id)} aria-label="Delete"><Cross2Icon width={12} height={12} /></button>
+            armed === a.id ? (
+              <button className="addr-delc" onClick={() => { remove(a.id); setArmed(null) }}>Delete?</button>
+            ) : (
+              <button className="reco-x" onClick={() => setArmed(a.id)} aria-label="Delete"><Cross2Icon width={12} height={12} /></button>
+            )
           )}
         </div>
       ))}
@@ -3771,9 +3833,9 @@ function VisitForm({ kind }) {
             <input className="cp-input" placeholder="Line 2 — street / area (optional)" value={l2} onChange={(e) => setL2(e.target.value)} />
             <input className="cp-input" placeholder="Landmark (optional)" value={lm} onChange={(e) => setLm(e.target.value)} />
             <Flex gap="2">
-              <input className="cp-input" style={{ flex: 1.4 }} placeholder="City" value={ct} onChange={(e) => setCt(e.target.value)} />
+              <input className="cp-input" style={{ flex: 1.4 }} autoComplete="address-level2" placeholder="City" value={ct} onChange={(e) => setCt(e.target.value)} />
               <input
-                className="cp-input" style={{ flex: 1 }} placeholder="Pincode" inputMode="numeric" maxLength={6}
+                className="cp-input" style={{ flex: 1 }} autoComplete="postal-code" placeholder="Pincode" inputMode="numeric" maxLength={6}
                 value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
               />
             </Flex>
@@ -4255,7 +4317,7 @@ const ACCT_FLAT = [
   ['site', SewingPinIcon, 'Submit site visit'],
   ['display', EyeOpenIcon, 'Display centre visit'],
   ['brand', SpeakerLoudIcon, 'Brand support'],
-  ['estpdf', FileTextIcon, 'Estimate PDF settings'],
+  ['estpdf', FileTextIcon, 'BOM PDF settings'],
   ['support', ChatBubbleIcon, 'Support'],
   ['notif', BellIcon, 'Notification preferences'],
   ['privacy', LockClosedIcon, 'Account privacy'],
@@ -4267,7 +4329,7 @@ const ACCT_TITLES = {
   gst: 'GST details', calc: 'Calculators', site: 'Submit site visit',
   display: 'Display centre visit', support: 'Support', claims: 'Claims & returns', brand: 'Brand support', addr: 'Address book',
   notif: 'Notification preferences', privacy: 'Account privacy',
-  estpdf: 'Estimate PDF settings',
+  estpdf: 'BOM PDF settings',
 }
 
 /* Estimate PDF branding: company name, logo upload, text colours */
@@ -4326,6 +4388,7 @@ function AcctEstPdf() {
         </Text>
         <Flex direction="column" gap="2" mt="2">
           <input className="cp-input" style={{ fontSize: 16 }} placeholder="Company name" value={brand.name} onChange={(e) => set('name', e.target.value)} />
+          <input className="cp-input" style={{ fontSize: 16 }} placeholder="Prepared by (your name)" value={brand.preparedBy || ''} onChange={(e) => set('preparedBy', e.target.value)} />
         </Flex>
         <Flex align="center" gap="3" mt="3">
           <img className="est-logo-prev" src={brand.logo || '/brand-logo.png'} alt="Company logo preview" />
@@ -4348,9 +4411,32 @@ function AcctEstPdf() {
 
       <div className="cp-card">
         <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          TEMPLATE
+        </Text>
+        <Flex gap="2" mt="2">
+          {[['classic', 'Classic'], ['bold', 'Bold'], ['studio', 'Studio']].map(([k, l]) => (
+            <Button
+              key={k} size="1" radius="full"
+              variant={(brand.template || 'classic') === k ? 'solid' : 'soft'}
+              color={(brand.template || 'classic') === k ? 'green' : 'gray'}
+              style={{ fontWeight: 800 }}
+              onClick={() => set('template', k)}
+            >
+              {l}
+            </Button>
+          ))}
+        </Flex>
+        <Text size="1" color="gray" as="div" mt="2">
+          Classic — hairlines, logos on top. Bold — colour-block bands, logos below. Studio — editorial caps with amount in words.
+        </Text>
+      </div>
+
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
           PDF COLOURS
         </Text>
         <ColorRow label="PAPER BACKGROUND" value={brand.paper} onChange={(v) => set('paper', v)} swatches={EST_PAPERS} />
+        <ColorRow label="ACCENT (BOLD TEMPLATE)" value={brand.accent || '#CDE76D'} onChange={(v) => set('accent', v)} swatches={['#CDE76D', '#FFD43B', '#9BE3C0', '#F2B8A0', '#BFD3F2', '#E8C7F2']} />
         <ColorRow label="COMPANY NAME" value={brand.wordmark} onChange={(v) => set('wordmark', v)} />
         <ColorRow label="FOOTER TEXT" value={brand.footer} onChange={(v) => set('footer', v)} />
         <ColorRow label="SIDE VERTICAL TEXT" value={brand.side} onChange={(v) => set('side', v)} />
@@ -4384,6 +4470,15 @@ function AcctEstPdf() {
             </Button>
           ))}
         </Flex>
+        <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          NOTE ON EVERY BOM
+        </Text>
+        <textarea
+          className="cp-note" style={{ fontSize: 16 }} rows={3}
+          value={brand.note ?? EST_BRAND_DEFAULT.note}
+          onChange={(e) => set('note', e.target.value)}
+        />
+        <Text size="1" color="gray" as="div" mt="1">Wrap words in **double asterisks** to make them bold on the PDF.</Text>
       </div>
     </>
   )
@@ -4444,7 +4539,7 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
           </button>
           <button className="help-pill" onClick={() => setSub('support')}>Help</button>
         </Flex>
-        <Heading mt="4" style={{ fontSize: 27, letterSpacing: '-0.8px' }}>Virag Bora</Heading>
+        <Heading as="h2" mt="4" style={{ fontSize: 27, letterSpacing: '-0.8px' }}>Virag Bora</Heading>
         <Text size="2" color="gray" as="div" mt="1">+91 98860 12345 · Bora Hardware & Plywood</Text>
         <Text size="2" color="gray" as="div">virag@borahardware.in</Text>
         <div className="joy-chip">
@@ -4536,7 +4631,7 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
         <div className={`acct-sub ${sub === 'dash' ? 'sub-dark' : ''}`}>
           <div className="pdp-head">
             <button className="sheet-back" onClick={backSub} aria-label="Back"><ArrowLeftIcon /></button>
-            <Heading size="4" style={{ flex: 1, letterSpacing: '-0.3px' }}>{ACCT_TITLES[sub]}</Heading>
+            <Heading as="h2" size="4" style={{ flex: 1, letterSpacing: '-0.3px' }}>{ACCT_TITLES[sub]}</Heading>
           </div>
           <div className="cp-body">{renderSub()}</div>
         </div>
@@ -4548,7 +4643,7 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
           <div className="od-card" onClick={(e) => e.stopPropagation()}>
             {lo === 'confirm' ? (
               <>
-                <Heading size="5" style={{ letterSpacing: '-0.3px' }}>Log out?</Heading>
+                <Heading as="h2" size="5" style={{ letterSpacing: '-0.3px' }}>Log out?</Heading>
                 <Text size="2" color="gray" as="div" mt="1">Your cart and preferences stay saved on this device.</Text>
                 <Flex gap="2" mt="4">
                   <Button size="3" variant="soft" color="gray" radius="full" style={{ fontWeight: 800, flex: 1 }} onClick={() => setLo(null)}>Cancel</Button>
@@ -4558,7 +4653,7 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
             ) : (
               <>
                 <div className="od-tick">✓</div>
-                <Heading size="5" mt="3" style={{ letterSpacing: '-0.3px' }}>Logged out</Heading>
+                <Heading as="h2" size="5" mt="3" style={{ letterSpacing: '-0.3px' }}>Logged out</Heading>
                 <Text size="2" color="gray" as="div" mt="1">See you soon — your targets are waiting.</Text>
                 <Button mt="4" size="3" color="green" radius="full" style={{ fontWeight: 800, width: '100%' }} onClick={() => { setLo(null); onClose() }}>
                   Log back in
@@ -4574,19 +4669,57 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
 
 /* ---------------- Bulk qty sheet — every ADD opens dealer-scale options ---------------- */
 
-const QTY_PACKS = [10, 50, 100]
+/* qty presets follow the SKU's bulk tier: ease-in, unlock point, stock-up */
+const packsFor = (p, maxN) => {
+  const t = bulkTier(p)
+  const base = t ? [...new Set([Math.max(1, Math.ceil(t.thr / 2)), t.thr, t.thr * 5])] : [10, 50, 100]
+  return base.filter(k => k <= maxN).slice(0, 3)
+}
 
 function QtySheet({ q, onClose, onConfirm }) {
   const p = q.p
   const maxN = p.stock != null && p.stock > 0 ? p.stock : 999
-  const [n, setN] = useState(() => Math.min(10, maxN))
+  const packs = packsFor(p, maxN)
+  const [n, setN] = useState(() => Math.min(packs[0] ?? 10, maxN))
+  const nv = n === '' ? 1 : n
   const tier = bulkTier(p)
-  const unlocked = tier && n >= tier.thr
-  const saved = unlocked ? (p.price - tier.bp) * n : 0
+  const unlocked = tier && nv >= tier.thr
+  const saved = unlocked ? (p.price - tier.bp) * nv : 0
+  const shRef = useRef(null)
+  const a11yRef = useSheetA11y(onClose)
+  const drag = useRef(null)
+  const dStart = (e) => { drag.current = { y: e.touches[0].clientY, dy: 0 } }
+  const dMove = (e) => {
+    const d = drag.current
+    const el = shRef.current
+    if (!d || !el) return
+    d.dy = Math.max(0, e.touches[0].clientY - d.y)
+    el.style.transition = 'none'
+    el.style.transform = `translateY(${d.dy}px)`
+  }
+  const dEnd = () => {
+    const d = drag.current
+    const el = shRef.current
+    drag.current = null
+    if (!el) return
+    el.style.transition = 'transform .22s cubic-bezier(.22, 1, .36, 1)'
+    if ((d?.dy || 0) > 90) {
+      el.style.transform = 'translateY(105%)'
+      setTimeout(onClose, 170)
+    } else {
+      el.style.transform = 'translateY(0)'
+    }
+  }
   return (
     <div className="qsheet-overlay" onClick={onClose}>
-      <div className="qsheet" onClick={(e) => e.stopPropagation()}>
-        <div className="qsheet-grab" />
+      <div
+        className="qsheet" role="dialog" aria-modal="true" aria-label={`Select quantity — ${p.name}`} tabIndex={-1}
+        ref={(el) => { shRef.current = el; a11yRef.current = el }} onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          className="qsheet-grab drag" onTouchStart={dStart} onTouchMove={dMove}
+          onTouchEnd={dEnd} onTouchCancel={dEnd}
+        />
         <div className="qs-prod">
           <Img src={img(p.ph, 140)} alt="" />
           <Box flexGrow="1" style={{ minWidth: 0 }}>
@@ -4594,7 +4727,7 @@ function QtySheet({ q, onClose, onConfirm }) {
             {p.qty && <Text size="1" color="gray" as="div" truncate>{p.qty}</Text>}
             <Flex align="center" gap="2" mt="1">
               <Text size="2" weight="bold">₹{p.price.toLocaleString('en-IN')}</Text>
-              {p.mrp && <Text size="1" color="gray" style={{ textDecoration: 'line-through' }}>₹{p.mrp.toLocaleString('en-IN')}</Text>}
+              {p.mrp && <Text size="1" color="gray" style={{ textDecoration: 'line-through' }}><span className="sr-only">M.R.P. </span>₹{p.mrp.toLocaleString('en-IN')}</Text>}
               {tier && <span className="qs-bulkpill">{tier.thr}+ @ ₹{tier.bp.toLocaleString('en-IN')}</span>}
             </Flex>
           </Box>
@@ -4603,8 +4736,8 @@ function QtySheet({ q, onClose, onConfirm }) {
           SELECT QUANTITY
         </Text>
         <div className="qs-chips">
-          {QTY_PACKS.map(k => (
-            <button key={k} className={`qs-chip ${n === k ? 'on' : ''}`} disabled={k > maxN} onClick={() => setN(k)}>
+          {packs.map(k => (
+            <button key={k} className={`qs-chip ${nv === k ? 'on' : ''}`} disabled={k > maxN} onClick={() => setN(k)}>
               {tier && k >= tier.thr && <span className="qs-off">{tier.pct}% OFF</span>}
               <span className="qn">{k}</span>
               <span className="qp">₹{(k * (tier && k >= tier.thr ? tier.bp : p.price)).toLocaleString('en-IN')}</span>
@@ -4612,10 +4745,18 @@ function QtySheet({ q, onClose, onConfirm }) {
           ))}
         </div>
         <div className="qs-step">
-          <button className="qs-sbtn" onClick={() => setN(v => Math.max(1, v - 1))} aria-label="Less"><MinusIcon /></button>
-          <Text size="3" weight="bold" style={{ width: 44, textAlign: 'center' }}>{n}</Text>
-          <button className="qs-sbtn" onClick={() => setN(v => Math.min(maxN, v + 1))} aria-label="More"><PlusIcon /></button>
-          <Text size="1" color="gray" style={{ marginLeft: 'auto' }}>or set a custom quantity</Text>
+          <button className="qs-sbtn" onClick={() => setN(v => Math.max(1, (v === '' ? 2 : v) - 1))} aria-label="Less"><MinusIcon /></button>
+          <input
+            className="qs-qin" type="number" inputMode="numeric" min={1} max={maxN} value={n} aria-label="Quantity"
+            onChange={(e) => {
+              if (e.target.value === '') return setN('')
+              const v = parseInt(e.target.value, 10)
+              if (!Number.isNaN(v)) setN(Math.min(maxN, Math.max(1, v)))
+            }}
+            onBlur={() => { if (n === '') setN(1) }}
+          />
+          <button className="qs-sbtn" onClick={() => setN(v => Math.min(maxN, (v === '' ? 0 : v) + 1))} aria-label="More"><PlusIcon /></button>
+          <Text size="1" color="gray" style={{ marginLeft: 'auto' }}>tap the number to type</Text>
         </div>
         {tier && (
           <div className={`qs-meter ${unlocked ? 'done' : ''}`}>
@@ -4623,18 +4764,18 @@ function QtySheet({ q, onClose, onConfirm }) {
               {unlocked && <CheckIcon width={12} height={12} style={{ flex: 'none' }} />}
               {unlocked
                 ? `${tier.pct}% bulk price applied — you save ₹${saved.toLocaleString('en-IN')}`
-                : `Add ${tier.thr - n} more to unlock ₹${tier.bp.toLocaleString('en-IN')}/pc (${tier.pct}% off)`}
+                : `Add ${tier.thr - nv} more to unlock ₹${tier.bp.toLocaleString('en-IN')}/pc (${tier.pct}% off)`}
             </Text>
-            <div className="qs-mbar"><div style={{ width: `${Math.min(100, (n / tier.thr) * 100)}%` }} /></div>
+            <div className="qs-mbar"><div style={{ width: `${Math.min(100, (nv / tier.thr) * 100)}%` }} /></div>
           </div>
         )}
-        <button className="qs-cta" onClick={(e) => onConfirm(n, e)}>
-          <span>Add {n} {n === 1 ? 'piece' : 'pieces'}</span>
+        <button className="qs-cta" onClick={(e) => onConfirm(nv, e)}>
+          <span>Add {nv} {nv === 1 ? 'piece' : 'pieces'}</span>
           <span>
-            ₹{lineTotal(p, n).toLocaleString('en-IN')}
+            ₹{lineTotal(p, nv).toLocaleString('en-IN')}
             {unlocked && (
               <s style={{ opacity: .65, fontWeight: 600, marginLeft: 7, fontSize: 12 }}>
-                ₹{(n * p.price).toLocaleString('en-IN')}
+                ₹{(nv * p.price).toLocaleString('en-IN')}
               </s>
             )}
           </span>
@@ -4681,6 +4822,9 @@ function SwipeRow({ onRemove, children }) {
   return (
     <div className="swipe-wrap">
       <button className="swipe-del" onClick={onRemove}>Remove</button>
+      <button className="swipe-x" onClick={onRemove} aria-label="Remove">
+        <Cross2Icon width={11} height={11} />
+      </button>
       <div className="swipe-inner" ref={ref} onTouchStart={start} onTouchMove={move} onTouchEnd={end} onTouchCancel={end}>
         {children}
       </div>
@@ -4697,7 +4841,7 @@ function RoRow({ m, onAdd, onStep, onCustom }) {
   const off = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0
   const oos = p.stock === 0
   return (
-    <div className="ro-row" onClick={openPdp ? () => openPdp(p) : undefined}>
+    <div className="ro-row" {...(openPdp ? btnish(() => openPdp(p)) : {})}>
       <Img src={img(p.ph, 140)} alt="" />
       <Box flexGrow="1" style={{ minWidth: 0 }}>
         <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{p.name}</Text>
@@ -4756,7 +4900,7 @@ function PastOrderSheet({ order, onClose, onChange }) {
         <div className="qsheet-grab" />
         <Flex align="center" justify="between">
           <Box>
-            <Heading size="4" style={{ letterSpacing: '-0.3px' }}>{order.date}</Heading>
+            <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>{order.date}</Heading>
             <Text size="1" color="gray" as="div">PO {order.id} · adjust quantities, then add</Text>
           </Box>
           <Text size="1" weight="bold" color="gray" style={{ flex: 'none' }}>{count} pcs</Text>
@@ -4864,7 +5008,7 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
       <div className="pdp-head">
         <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
         <Box style={{ flex: 1, minWidth: 0 }}>
-          <Heading size="4" style={{ letterSpacing: '-0.3px' }}>Reorder</Heading>
+          <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Reorder</Heading>
           <Text size="1" color="gray" as="div">One tap adds your usual quantity</Text>
         </Box>
         <CounterClockwiseClockIcon width={18} height={18} color="var(--gray-9)" />
@@ -5068,7 +5212,7 @@ function AddressSheet({ addrs, sel, onPick, onAdd, onClose }) {
     <div className="qsheet-overlay" onClick={onClose}>
       <div className="qsheet" onClick={(e) => e.stopPropagation()}>
         <div className="qsheet-grab" />
-        <Heading size="4" style={{ letterSpacing: '-0.3px' }}>Delivery address</Heading>
+        <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Delivery address</Heading>
         <div className="addr-list">
           {addrs.map(a => (
             <button key={a.id} className="addr-row" onClick={() => { onPick(a.id); onClose() }}>
@@ -5126,6 +5270,10 @@ const EST_BRAND_DEFAULT = {
   paper: '#F8F5ED', // hairlines are derived from this so any paper tone stays coherent
   photos: true,
   validDays: 7,
+  template: 'classic', // classic | bold | studio
+  accent: '#CDE76D', // colour-block bands in the Bold template
+  preparedBy: 'Virag Bora',
+  note: 'This Bill of Materials is only for reference. **Prices are subject to change.**',
 }
 const hexToRgb = (hex) => {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || '')
@@ -5134,9 +5282,39 @@ const hexToRgb = (hex) => {
   return [(v >> 16) & 255, (v >> 8) & 255, v & 255]
 }
 
+/* amount in words, Indian grouping (lakh / crore) */
+const NW_ONES = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen']
+const NW_TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety']
+const nwTwo = (n) => n < 20 ? NW_ONES[n] : NW_TENS[Math.floor(n / 10)] + (n % 10 ? ' ' + NW_ONES[n % 10] : '')
+const nwThree = (n) => (n >= 100 ? NW_ONES[Math.floor(n / 100)] + ' hundred' + (n % 100 ? ' and ' : '') : '') + (n % 100 ? nwTwo(n % 100) : '')
+const inrWords = (n) => {
+  if (!n) return 'zero'
+  const cr = Math.floor(n / 1e7), l = Math.floor(n / 1e5) % 100, t = Math.floor(n / 1e3) % 100, h = n % 1000
+  return [cr && nwTwo(cr) + ' crore', l && nwTwo(l) + ' lakh', t && nwTwo(t) + ' thousand', h && nwThree(h)]
+    .filter(Boolean).join(', ')
+}
+
+/* minimal rich text: **bold** spans and newlines, word-wrapped; returns last baseline */
+const drawRich = (doc, text, x, y, width, opts = {}) => {
+  const { size = 8, lh = 4.2, color = [26, 28, 31] } = opts
+  doc.setFontSize(size).setTextColor(...color)
+  let cx = x, cy = y
+  String(text).split('**').forEach((seg, i) => {
+    doc.setFont('PJS', i % 2 ? 'bold' : 'normal')
+    seg.split(/(\n)/).forEach(chunk => {
+      if (chunk === '\n') { cx = x; cy += lh; return }
+      chunk.split(/(\s+)/).forEach(tok => {
+        if (!tok) return
+        const w = doc.getTextWidth(tok)
+        if (cx + w > x + width && tok.trim()) { cx = x; cy += lh }
+        if (tok.trim() || cx > x) { doc.text(tok, cx, cy); cx += w }
+      })
+    })
+  })
+  return cy
+}
+
 async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }) {
-  // product thumbnails: square JPEGs fetched per line item; a failed fetch
-  // degrades to a neutral placeholder square rather than failing the export
   const showImg = brand.photos !== false
   const thumb = (ph) => fetchB64(`https://images.unsplash.com/photo-${ph}?fit=crop&w=160&h=160&q=70&fm=jpg`)
     .then(b => 'data:image/jpeg;base64,' + b).catch(() => null)
@@ -5154,143 +5332,276 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   doc.addFont('PJS-Bold.ttf', 'PJS', 'bold')
 
   const W = 210, H = 297, M = 14 // 14mm sides, ~6mm top
-  // monochrome ink on dealer-chosen paper; hairlines derive from the paper
-  // tone so any background stays coherent
   const INK = [26, 28, 31], GRAY = [105, 110, 116]
   const PAPER = hexToRgb(brand.paper || EST_BRAND_DEFAULT.paper)
   const HAIR = PAPER.map(c => Math.max(0, c - 42))
+  const ACCENT = hexToRgb(brand.accent || EST_BRAND_DEFAULT.accent)
+  const FOOT = hexToRgb(brand.footer), SIDE = hexToRgb(brand.side), WORD = hexToRgb(brand.wordmark || '#1A1C1F')
   const inr = (n) => '₹' + n.toLocaleString('en-IN')
-  const no = `QE-${String(Date.now()).slice(-6)}`
+  const no = `BOM-${String(Date.now()).slice(-6)}`
   const d = new Date()
   const today = [String(d.getDate()).padStart(2, '0'), String(d.getMonth() + 1).padStart(2, '0'), d.getFullYear()].join('.')
+  const validDays = brand.validDays || 7
+  const note = brand.note || EST_BRAND_DEFAULT.note
+  const totalPcs = items.reduce((s, { n }) => s + n, 0)
   const paper = () => doc.setFillColor(...PAPER).rect(0, 0, W, H, 'F')
   paper()
 
-  // ---- masthead: company wordmark left, company logo right (tight)
-  const FOOT = hexToRgb(brand.footer), SIDE = hexToRgb(brand.side), WORD = hexToRgb(brand.wordmark || '#1A1C1F')
-  doc.setFont('PJS', 'bold').setFontSize(brand.name.length > 14 ? 20 : 25).setTextColor(...WORD).text(brand.name, M, 13.5)
-  const mw = Math.min(40, (mark.w / mark.h) * 16)
-  doc.addImage(mark.data, 'PNG', W - M - mw, 6, mw, 16)
-
-  // ---- brand strip on page 1 (keeps every page's bottom free for line items)
-  doc.setFont('PJS', 'bold').setFontSize(6.5).setTextColor(...GRAY).setCharSpace(0.5)
-  doc.text('AUTHORIZED DEALER FOR', M, 25)
-  doc.setCharSpace(0)
-  const lh = 9
-  let bx = M
-  for (const b of brands) {
-    const dw = (b.w / b.h) * lh
-    doc.addImage(b.data, 'PNG', bx, 27.5, dw, lh)
-    bx += dw + 10
-  }
-
-  // ---- information columns
-  doc.setFont('PJS', 'bold').setFontSize(9).setTextColor(...INK)
-  doc.text('Customer Information', M, 45).text('Dealer Information', 112, 45)
-  doc.setFont('PJS', 'normal').setFontSize(8.5).setTextColor(...GRAY)
-  const custLines = [cust.name, cust.phone, ...(cust.site ? doc.splitTextToSize(cust.site, 80) : [])].filter(Boolean)
-  doc.text(custLines, M, 51)
-  doc.text([`Virag Bora — ${brand.name}`, '304 Maple Heights, HSR Layout', 'Bengaluru 560102 · +91 98450 00000'], 112, 51)
-
-  // ---- title row between hairlines: Estimate big, number/date body-size
-  const tTop = 51 + Math.max(custLines.length, 3) * 4.3 + 5
-  doc.setDrawColor(...HAIR).setLineWidth(0.3).line(M, tTop, W - M, tTop)
-  doc.setFont('PJS', 'bold').setFontSize(17).setTextColor(...INK).text('Estimate', M, tTop + 9.5)
-  doc.setFont('PJS', 'normal').setFontSize(10).setTextColor(...GRAY)
-  doc.text(no, W / 2, tTop + 9.5, { align: 'center' })
-  doc.text(today, W - M, tTop + 9.5, { align: 'right' })
-  doc.line(M, tTop + 14, W - M, tTop + 14)
-
-  // ---- items table: hairline rows; photo column only when enabled
-  const priceCols = showImg ? [4, 5] : [3, 4]
-  autoTable(doc, {
-    startY: tTop + 19,
-    margin: { left: M, right: M, top: 12, bottom: 24 },
-    head: [showImg
-      ? ['Qty', '', 'Item no', 'Description', 'Unit price', 'Amount']
-      : ['Qty', 'Item no', 'Description', 'Unit price', 'Amount']],
-    body: items.map(({ p, n }) => {
-      const cells = [n, p.id.toUpperCase(), `${p.name}\n${p.qty || ''}`, inr(p.price), inr(p.price * n)]
-      if (showImg) cells.splice(1, 0, '')
-      return cells
-    }),
-    theme: 'plain',
-    styles: { font: 'PJS', fontSize: 8.5, textColor: INK, cellPadding: { top: 2.2, bottom: 2.2, left: 0, right: 2 }, valign: 'middle' },
-    headStyles: { font: 'PJS', fontStyle: 'bold', fontSize: 8.5, textColor: INK, lineWidth: { bottom: 0.35 }, lineColor: INK },
-    bodyStyles: { lineWidth: { bottom: 0.18 }, lineColor: HAIR },
-    columnStyles: showImg
-      ? {
-        0: { cellWidth: 11 },
-        1: { cellWidth: 13, minCellHeight: 12.5 },
-        2: { cellWidth: 20, textColor: GRAY },
-        3: { cellWidth: 'auto' },
-        4: { cellWidth: 25, halign: 'right', textColor: GRAY },
-        5: { cellWidth: 27, halign: 'right' },
-      }
-      : {
-        0: { cellWidth: 11 },
-        1: { cellWidth: 20, textColor: GRAY },
-        2: { cellWidth: 'auto' },
-        3: { cellWidth: 25, halign: 'right', textColor: GRAY },
-        4: { cellWidth: 27, halign: 'right' },
-      },
-    willDrawPage: (data) => { if (data.pageNumber > 1) paper() },
-    didParseCell: (data) => {
-      if (data.section === 'head' && priceCols.includes(data.column.index)) data.cell.styles.halign = 'right'
-    },
-    didDrawCell: (data) => {
-      if (!showImg || data.section !== 'body' || data.column.index !== 1) return
-      const t = thumbs[data.row.index]
-      const s = 9, ix = data.cell.x, iy = data.cell.y + (data.cell.height - s) / 2
-      if (t) doc.addImage(t, 'JPEG', ix, iy, s, s)
-      else doc.setFillColor(225, 225, 221).rect(ix, iy, s, s, 'F')
-    },
-  })
-
-  // ---- totals: hairline-separated right block (same numbers as the cart bill)
-  let y = doc.lastAutoTable.finalY + 8
-  const rows = [
+  const preparedBy = brand.preparedBy || 'Virag Bora'
+  const dealerLines = [`${preparedBy} — ${brand.name}`, '304 Maple Heights, HSR Layout', 'Bengaluru 560102 · +91 98450 00000']
+  const custLines = [
+    cust.name, cust.phone,
+    ...(cust.site ? doc.splitTextToSize(cust.site, 80) : []),
+    cust.refBy ? `Ref. by — ${cust.refBy}` : null,
+  ].filter(Boolean)
+  const billRows = [
     ['Item total', inr(bill.itemTotal)],
     bill.bulkSave > 0 && ['Bulk price savings', '−' + inr(bill.bulkSave)],
     bill.schemeOff > 0 && [`Volume scheme (${bill.slabPct}%)`, '−' + inr(bill.schemeOff)],
     ['Delivery' + (bill.express ? ' (express · 1 hr)' : ''), bill.fee === 0 ? 'FREE' : inr(bill.fee)],
   ].filter(Boolean)
-  const blockH = (rows.length + 1) * 7.5 + 14
-  if (y + blockH > H - 24) { doc.addPage(); paper(); y = 30 }
-  const tx = 118
-  for (const [label, val] of rows) {
+
+  /* shared items table; layout knobs vary per template */
+  const itemsTable = ({ startY, bottom, headFill = null, headText = INK, big = false }) => {
+    const priceCols = showImg ? [4, 5] : [3, 4]
+    autoTable(doc, {
+      startY,
+      margin: { left: M, right: M, top: 14, bottom },
+      head: [showImg
+        ? ['Qty', '', 'Item no', 'Description', 'Unit price', 'Amount']
+        : ['Qty', 'Item no', 'Description', 'Unit price', 'Amount']],
+      body: items.map(({ p, n }) => {
+        const cells = [n, p.id.toUpperCase(), `${p.name}\n${p.qty || ''}`, inr(p.price), inr(p.price * n)]
+        if (showImg) cells.splice(1, 0, '')
+        return cells
+      }),
+      theme: 'plain',
+      styles: { font: 'PJS', fontSize: 8.5, textColor: INK, cellPadding: { top: 2.2, bottom: 2.2, left: headFill ? 1.5 : 0, right: 2 }, valign: 'middle' },
+      headStyles: headFill
+        ? { font: 'PJS', fontStyle: 'bold', fontSize: 8, textColor: headText, fillColor: headFill, lineWidth: 0 }
+        : { font: 'PJS', fontStyle: 'bold', fontSize: 8.5, textColor: headText, lineWidth: { bottom: 0.35 }, lineColor: INK },
+      bodyStyles: { lineWidth: { bottom: 0.18 }, lineColor: HAIR },
+      columnStyles: showImg
+        ? {
+          0: { cellWidth: 11 },
+          1: { cellWidth: big ? 17 : 13, minCellHeight: big ? 16 : 12.5 },
+          2: { cellWidth: 20, textColor: GRAY },
+          3: { cellWidth: 'auto' },
+          4: { cellWidth: 25, halign: 'right', textColor: GRAY },
+          5: { cellWidth: 27, halign: 'right' },
+        }
+        : {
+          0: { cellWidth: 11 },
+          1: { cellWidth: 20, textColor: GRAY },
+          2: { cellWidth: 'auto' },
+          3: { cellWidth: 25, halign: 'right', textColor: GRAY },
+          4: { cellWidth: 27, halign: 'right' },
+        },
+      willDrawPage: (data) => { if (data.pageNumber > 1) paper() },
+      didParseCell: (data) => {
+        if (data.section === 'head' && priceCols.includes(data.column.index)) data.cell.styles.halign = 'right'
+      },
+      didDrawCell: (data) => {
+        if (!showImg || data.section !== 'body' || data.column.index !== 1) return
+        const t = thumbs[data.row.index]
+        const s = big ? 12 : 9, ix = data.cell.x, iy = data.cell.y + (data.cell.height - s) / 2
+        if (t) doc.addImage(t, 'JPEG', ix, iy, s, s)
+        else doc.setFillColor(225, 225, 221).rect(ix, iy, s, s, 'F')
+      },
+    })
+    return doc.lastAutoTable.finalY
+  }
+
+  /* shared totals block: hairline rows + bold total; returns last y */
+  const totalsBlock = (startY, bottomGuard) => {
+    let y = startY
+    const blockH = (billRows.length + 2) * 7.5 + 14
+    if (y + blockH > bottomGuard) { doc.addPage(); paper(); y = 30 }
+    const tx = 118
+    const row = (label, val) => {
+      doc.setFont('PJS', 'normal').setFontSize(8.5).setTextColor(...GRAY)
+      doc.text(label, tx, y)
+      doc.setTextColor(...INK).text(val, W - M, y, { align: 'right' })
+      doc.setDrawColor(...HAIR).setLineWidth(0.18).line(tx, y + 2.6, W - M, y + 2.6)
+      y += 7.5
+    }
+    row('Items', `${items.length} · ${totalPcs} pcs`)
+    for (const [l, v] of billRows) row(l, v)
+    doc.setFont('PJS', 'bold').setFontSize(10).setTextColor(...INK)
+    doc.text('Total', tx, y)
+    doc.text(inr(bill.toPay), W - M, y, { align: 'right' })
+    doc.setDrawColor(...INK).setLineWidth(0.35).line(tx, y + 3, W - M, y + 3)
+    return y
+  }
+
+  /* ============ template: CLASSIC (Swiss hairlines, logos on top) ============ */
+  const renderClassic = () => {
+    doc.setFont('PJS', 'bold').setFontSize(brand.name.length > 14 ? 20 : 25).setTextColor(...WORD).text(brand.name, M, 13.5)
+    const mw = Math.min(40, (mark.w / mark.h) * 16)
+    doc.addImage(mark.data, 'PNG', W - M - mw, 6, mw, 16)
+
+    doc.setFont('PJS', 'bold').setFontSize(6.5).setTextColor(...GRAY).setCharSpace(0.5)
+    doc.text('AUTHORIZED DEALER FOR', M, 25)
+    doc.setCharSpace(0)
+    let bx = M
+    for (const b of brands) {
+      const dw = (b.w / b.h) * 9
+      doc.addImage(b.data, 'PNG', bx, 27.5, dw, 9)
+      bx += dw + 10
+    }
+
+    doc.setFont('PJS', 'bold').setFontSize(9).setTextColor(...INK)
+    doc.text('Customer Information', M, 45).text('Dealer Information', 112, 45)
     doc.setFont('PJS', 'normal').setFontSize(8.5).setTextColor(...GRAY)
-    doc.text(label, tx, y)
-    doc.setTextColor(...INK).text(val, W - M, y, { align: 'right' })
-    doc.setDrawColor(...HAIR).setLineWidth(0.18).line(tx, y + 2.6, W - M, y + 2.6)
-    y += 7.5
-  }
-  doc.setFont('PJS', 'bold').setFontSize(10).setTextColor(...INK)
-  doc.text('Total', tx, y)
-  doc.text(inr(bill.toPay), W - M, y, { align: 'right' })
-  doc.setDrawColor(...INK).setLineWidth(0.35).line(tx, y + 3, W - M, y + 3)
-  doc.setFont('PJS', 'normal').setFontSize(8).setTextColor(...INK)
-    .text(doc.splitTextToSize(`Please confirm this estimate within ${brand.validDays || 7} days — GST as applicable.`, W - M - tx), tx, y + 9.5)
+    doc.text(custLines, M, 51)
+    doc.text(dealerLines, 112, 51)
 
-  // ---- footer on every page: hairline + contact columns + side text
-  const pages = doc.getNumberOfPages()
-  for (let i = 1; i <= pages; i++) {
-    doc.setPage(i)
-    doc.setDrawColor(...INK).setLineWidth(0.4).line(M, H - 21, W - M, H - 21)
-    doc.setFont('PJS', 'normal').setFontSize(7.5).setTextColor(...FOOT)
-    doc.text(['estimates@quickcart.in', 'quickcart-nine-iota.vercel.app'], M, H - 15.5)
-    doc.text(['304 Maple Heights, HSR Layout', 'Bengaluru 560102'], 72, H - 15.5)
-    doc.text(['Trade prices · GST billing', '90-min site delivery'], 128, H - 15.5)
-    doc.text(['GSTIN', '29AAACQ1234L1ZQ'], 176, H - 15.5)
-    doc.setFontSize(6.5).setTextColor(...SIDE)
-      .text(`${brand.name} · Furniture Hardware · Registered dealer — Bengaluru`, 8, H - 10, { angle: 90 })
+    const tTop = 51 + Math.max(custLines.length, 3) * 4.3 + 5
+    doc.setDrawColor(...HAIR).setLineWidth(0.3).line(M, tTop, W - M, tTop)
+    doc.setFont('PJS', 'bold').setFontSize(17).setTextColor(...INK).text('Bill of Materials', M, tTop + 9.5)
+    doc.setFont('PJS', 'normal').setFontSize(10).setTextColor(...GRAY)
+    doc.text(no, 132, tTop + 9.5, { align: 'center' })
+    doc.text(today, W - M, tTop + 9.5, { align: 'right' })
+    doc.line(M, tTop + 14, W - M, tTop + 14)
+
+    const fin = itemsTable({ startY: tTop + 19, bottom: 24 })
+    let y = totalsBlock(fin + 8, H - 24)
+    y = drawRich(doc, note, 118, y + 9.5, W - M - 118, { size: 8 })
+    doc.setFont('PJS', 'normal').setFontSize(7.5).setTextColor(...GRAY)
+      .text(`Valid ${validDays} days from the date above. Prepared by ${preparedBy}.`, 118, y + 4.5)
+
+    const pages = doc.getNumberOfPages()
+    for (let i = 1; i <= pages; i++) {
+      doc.setPage(i)
+      doc.setDrawColor(...INK).setLineWidth(0.4).line(M, H - 21, W - M, H - 21)
+      doc.setFont('PJS', 'normal').setFontSize(7.5).setTextColor(...FOOT)
+      doc.text(['estimates@quickcart.in', 'quickcart-nine-iota.vercel.app'], M, H - 15.5)
+      doc.text(['304 Maple Heights, HSR Layout', 'Bengaluru 560102'], 72, H - 15.5)
+      doc.text(['Trade prices · GST billing', '90-min site delivery'], 128, H - 15.5)
+      doc.text(['GSTIN', '29AAACQ1234L1ZQ'], 176, H - 15.5)
+      doc.setFontSize(6.5).setTextColor(...SIDE)
+        .text(`${brand.name} · Furniture Hardware · Registered dealer — Bengaluru`, 8, H - 10, { angle: 90 })
+    }
   }
 
-  doc.save(`${no} ${cust.name.trim()} estimate.pdf`)
+  /* ============ template: BOLD (colour-block bands, logos in bottom band) ============ */
+  const renderBold = () => {
+    const onAccent = [20, 22, 24]
+    doc.setFillColor(...ACCENT).rect(0, 0, W, 52, 'F')
+    doc.setFont('PJS', 'bold').setFontSize(34).setTextColor(...onAccent).text('BOM', M, 20)
+    const mw = Math.min(36, (mark.w / mark.h) * 14)
+    doc.addImage(mark.data, 'PNG', W - M - mw, 7, mw, 14)
+    const cap = (t, x, yy) => {
+      doc.setFont('PJS', 'bold').setFontSize(6.5).setTextColor(...onAccent).setCharSpace(0.4)
+      doc.text(t, x, yy)
+      doc.setCharSpace(0)
+    }
+    cap('(DATE)', M, 30); cap('(VALID FOR)', M, 40); cap('(BILLED TO)', 74, 30); cap('(FROM)', 74, 40)
+    doc.setFont('PJS', 'normal').setFontSize(8).setTextColor(...onAccent)
+    doc.text(today, M, 34.5).text(`${validDays} days`, M, 44.5)
+    doc.text(`${cust.name}${cust.phone ? ' · ' + cust.phone : ''}`, 74, 34.5)
+    if (cust.refBy) doc.setFontSize(7).text(`Ref. by — ${cust.refBy}`, 74, 38).setFontSize(8)
+    doc.text(`${dealerLines[0]} · Bengaluru`, 74, 44.5)
+
+    const fin = itemsTable({ startY: 60, bottom: 48, headFill: PAPER.map(c => Math.max(0, c - 14)), big: false })
+    let y = totalsBlock(fin + 8, H - 52)
+    y = drawRich(doc, note, M, y + 2, 92, { size: 8 })
+    doc.setFont('PJS', 'normal').setFontSize(7.5).setTextColor(...GRAY)
+      .text(`Items: ${items.length} · ${totalPcs} pcs`, M, y + 5)
+
+    const pages = doc.getNumberOfPages()
+    for (let i = 1; i <= pages; i++) {
+      doc.setPage(i)
+      doc.setFillColor(60, 64, 67).rect(0, H - 40, W, 26, 'F')
+      doc.setFont('PJS', 'bold').setFontSize(6.5).setTextColor(255, 255, 255).setCharSpace(0.4)
+      doc.text('(DEALER)', M, H - 33).text('(TERMS)', 96, H - 33).text('(PREPARED BY)', 162, H - 33)
+      doc.setCharSpace(0)
+      doc.setFont('PJS', 'normal').setFontSize(7.5)
+      doc.text([dealerLines[1] + ', ' + dealerLines[2].split(' · ')[0], 'GSTIN 29AAACQ1234L1ZQ'], M, H - 28)
+      doc.text([`Confirm within ${validDays} days · GST as applicable`, 'Trade prices · 90-min site delivery'], 96, H - 28)
+      doc.text(preparedBy, 162, H - 28)
+      doc.setFillColor(...ACCENT).rect(0, H - 14, W, 14, 'F')
+      doc.setFont('PJS', 'bold').setFontSize(9).setTextColor(...onAccent).text(brand.name, M, H - 5.5)
+      let lx = W - M
+      for (const b of [...brands].reverse()) {
+        const dw = (b.w / b.h) * 7
+        lx -= dw
+        doc.setFillColor(255, 255, 255).roundedRect(lx - 1.5, H - 12, dw + 3, 10, 1.5, 1.5, 'F')
+        doc.addImage(b.data, 'PNG', lx, H - 10.5, dw, 7)
+        lx -= 7.5
+      }
+    }
+  }
+
+  /* ============ template: STUDIO (editorial caps, meta table, amount in words) ============ */
+  const renderStudio = () => {
+    const mw = Math.min(30, (mark.w / mark.h) * 13)
+    doc.addImage(mark.data, 'PNG', M, 8, mw, 13)
+    doc.setFont('PJS', 'bold').setFontSize(7).setTextColor(...INK).setCharSpace(1)
+    doc.text(doc.splitTextToSize('THANK YOU FOR YOUR ENQUIRY. THIS DOCUMENT IS A BILL OF MATERIALS.', 60), M + mw + 8, 12)
+    doc.setCharSpace(0)
+
+    const metaRows = [
+      ['TO', cust.name.toUpperCase()],
+      cust.refBy ? ['REF. BY', cust.refBy.toUpperCase()] : null,
+      ['DATE', today], ['BOM NO', no],
+      ['ITEMS', `${items.length} · ${totalPcs} PCS`],
+      ['PREPARED BY', preparedBy.toUpperCase()],
+    ].filter(Boolean)
+    let my = 10
+    doc.setDrawColor(...HAIR).setLineWidth(0.25)
+    for (const [l, v] of metaRows) {
+      doc.line(118, my, W - M, my)
+      doc.setFont('PJS', 'bold').setFontSize(7).setTextColor(...GRAY).setCharSpace(0.8).text(l, 118, my + 5)
+      doc.setCharSpace(0)
+      doc.setFont('PJS', 'normal').setFontSize(8).setTextColor(...INK).text(v, W - M, my + 5, { align: 'right' })
+      my += 8
+    }
+    doc.line(118, my, W - M, my)
+
+    doc.setFont('PJS', 'bold').setFontSize(11).setTextColor(...WORD).setCharSpace(1.5)
+    doc.text(brand.name.toUpperCase(), M, 36)
+    doc.setCharSpace(0.6).setFontSize(7).setTextColor(...GRAY)
+    doc.text([dealerLines[1].toUpperCase(), dealerLines[2].toUpperCase()], M, 41.5)
+    doc.setCharSpace(0)
+    doc.setFont('PJS', 'bold').setFontSize(7.5).setTextColor(...INK).setCharSpace(0.8)
+    doc.text('PRODUCTS', M, my + 12)
+    doc.setCharSpace(0)
+
+    const fin = itemsTable({ startY: my + 16, bottom: 50, big: true })
+    let y = totalsBlock(fin + 8, H - 56)
+    doc.setFont('PJS', 'normal').setFontSize(7).setTextColor(...GRAY)
+    const words = doc.splitTextToSize(`${inrWords(bill.toPay).toUpperCase()} RUPEES ONLY`, 78)
+    doc.text(words, W - M, y + 7, { align: 'right' })
+    drawRich(doc, note, 118, y + 7 + words.length * 3.6 + 4, W - M - 118, { size: 7.5, lh: 3.9, color: GRAY })
+
+    const pages = doc.getNumberOfPages()
+    for (let i = 1; i <= pages; i++) {
+      doc.setPage(i)
+      let lx = M
+      for (const b of brands) {
+        const dw = (b.w / b.h) * 6
+        doc.addImage(b.data, 'PNG', lx, H - 38, dw, 6)
+        lx += dw + 7
+      }
+      doc.setFont('PJS', 'normal').setFontSize(6.5).setTextColor(...FOOT).setCharSpace(0.6)
+      doc.text(['REGISTERED OFFICE:', dealerLines[1].toUpperCase(), dealerLines[2].toUpperCase()], M, H - 26)
+      doc.text(`${i} / ${pages}`, M, H - 8)
+      doc.setCharSpace(0)
+      doc.setFontSize(6.5).setTextColor(...SIDE)
+        .text(`${brand.name} · Furniture Hardware — Bengaluru`, 8, H - 10, { angle: 90 })
+    }
+  }
+
+  if (brand.template === 'bold') renderBold()
+  else if (brand.template === 'studio') renderStudio()
+  else renderClassic()
+
+  doc.save(`${no} ${cust.name.trim()} BOM.pdf`)
 }
 
 function EstimateSheet({ items, bill, onClose }) {
-  const [cust, setCust] = usePersisted('qc-est-cust', { name: '', phone: '', site: '' })
+  const [cust, setCust] = usePersisted('qc-est-cust', { name: '', phone: '', site: '', refBy: '' })
   const [brand] = usePersisted('qc-est-brand', EST_BRAND_DEFAULT)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
@@ -5310,19 +5621,20 @@ function EstimateSheet({ items, bill, onClose }) {
     <div className="qsheet-overlay" onClick={onClose}>
       <div className="qsheet" onClick={(e) => e.stopPropagation()}>
         <div className="qsheet-grab" />
-        <Heading size="4" style={{ letterSpacing: '-0.3px' }}>Customer estimate</Heading>
+        <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Bill of Materials</Heading>
         <Text size="1" color="gray" as="div" mt="1">
-          {items.length} item{items.length === 1 ? '' : 's'} · ₹{bill.toPay.toLocaleString('en-IN')} — exported as a branded PDF for your customer.
+          {items.length} item{items.length === 1 ? '' : 's'} · ₹{bill.toPay.toLocaleString('en-IN')} — exported as a branded BOM PDF for your customer.
         </Text>
         {/* 16px font so iOS Safari doesn't zoom the sheet on focus */}
         <Flex direction="column" gap="2" mt="3">
           <input className="cp-input" style={{ fontSize: 16 }} placeholder="Customer / site name" autoComplete="name" value={cust.name} onChange={f('name')} />
           <input className="cp-input" style={{ fontSize: 16 }} type="tel" inputMode="tel" autoComplete="tel" placeholder="Phone (optional)" value={cust.phone} onChange={f('phone')} />
           <textarea className="cp-note" style={{ fontSize: 16 }} rows={2} placeholder="Site address (optional)" value={cust.site} onChange={f('site')} />
+          <input className="cp-input" style={{ fontSize: 16 }} placeholder="Ref. by (optional) — e.g. visited earlier" value={cust.refBy || ''} onChange={f('refBy')} />
         </Flex>
         {err && <Text size="1" as="div" mt="2" style={{ color: 'var(--red-10)', fontWeight: 700 }}>{err}</Text>}
         <button className="qs-cta" style={{ justifyContent: 'center', gap: 7 }} disabled={!cust.name.trim() || busy} onClick={go}>
-          <FileTextIcon width={15} height={15} /> {busy ? 'Preparing PDF…' : 'Download estimate PDF'}
+          <FileTextIcon width={15} height={15} /> {busy ? 'Preparing PDF…' : 'Download BOM PDF'}
         </button>
       </div>
     </div>
@@ -5330,6 +5642,7 @@ function EstimateSheet({ items, bill, onClose }) {
 }
 
 function CartPage({ cart, onClose, onChange, onPlaced }) {
+  const a11y = useSheetA11y(onClose)
   const openQty = useContext(QtyCtx)
   const items = Object.values(cart.items)
   const [addrs, setAddrs] = useState(loadAddrs)
@@ -5378,14 +5691,14 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
   const tPct = Math.min(100, Math.round(((TARGETS.monthly.done + cart.total) / TARGETS.monthly.target) * 100))
 
   return (
-    <div className="cartpage">
+    <div className="cartpage" role="dialog" aria-modal="true" aria-label="Cart" tabIndex={-1} ref={a11y}>
       <div className="pdp-head">
         <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
-        <Heading size="4" style={{ flex: 1, letterSpacing: '-0.3px' }}>Your cart</Heading>
+        <Heading as="h2" size="4" style={{ flex: 1, letterSpacing: '-0.3px' }}>Your cart</Heading>
         <Text size="1" weight="bold" color="gray">{cart.count} item{cart.count === 1 ? '' : 's'}</Text>
         {items.length > 0 && (
-          <button className="est-btn" onClick={() => setEstSheet(true)} aria-label="Download estimate PDF">
-            <FileTextIcon width={13} height={13} /> Estimate
+          <button className="est-btn" onClick={() => setEstSheet(true)} aria-label="Download BOM PDF">
+            <FileTextIcon width={13} height={13} /> BOM
           </button>
         )}
       </div>
@@ -5627,7 +5940,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
               className="qs-cta ghost" style={{ marginTop: 0, justifyContent: 'center', gap: 7 }}
               onClick={() => setEstSheet(true)}
             >
-              <FileTextIcon width={14} height={14} /> Download estimate for customer
+              <FileTextIcon width={14} height={14} /> Download BOM for customer
             </button>
           </>
         )}
@@ -5682,7 +5995,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
         <div className="order-done">
           <div className="od-card">
             <div className="od-tick">✓</div>
-            <Heading size="5" mt="3" style={{ letterSpacing: '-0.3px' }}>Order placed!</Heading>
+            <Heading as="h2" size="5" mt="3" style={{ letterSpacing: '-0.3px' }}>Order placed!</Heading>
             <Text size="2" color="gray" as="div" mt="1">PO {placed.id} · ₹{placed.amt.toLocaleString('en-IN')}</Text>
             <Text size="1" weight="bold" as="div" mt="1" style={{ color: 'var(--green-11)' }}>
               On 30-day credit · due {new Date(placed.dueTs).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
@@ -5704,6 +6017,7 @@ let PDP_DIR = 0 // swipe direction handoff to the next ProductPage mount (slide-
 const PDP_SWAPF = { current: false } // product switched while the page was already open
 
 function ProductPage({ p, onClose, onChange, cart }) {
+  useSheetA11y(onClose) // Escape-to-close; page manages its own focus
   const openQty = useContext(QtyCtx)
   const openPdp = useContext(PdpCtx)
   const openCart = useContext(CartCtx)
@@ -5863,7 +6177,7 @@ function ProductPage({ p, onClose, onChange, cart }) {
           <span className="pdp-shotn">{shot + 1}/{shots.length}</span>
         </div>
         <Box px="4" pt="4">
-          <Heading size="5" style={{ letterSpacing: '-0.3px', lineHeight: 1.25 }}>{p.name}</Heading>
+          <Heading as="h2" size="5" style={{ letterSpacing: '-0.3px', lineHeight: 1.25 }}>{p.name}</Heading>
           {p.qty && <Text size="2" color="gray" as="div" mt="1">{p.qty}</Text>}
           {(p.rating || p.buys) && (
             <Flex align="center" gap="3" mt="2">
@@ -6127,6 +6441,13 @@ export default function App() {
   )
   const openCategory = (label) => setPlp(label)
 
+  // Any overlay up -> the page behind must not scroll
+  const overlayUp = !!(sheet || pdp || qsheet || cartOpen || reorderOpen || acctOpen || plp)
+  useEffect(() => {
+    document.body.classList.toggle('no-scroll', overlayUp)
+    return () => document.body.classList.remove('no-scroll')
+  }, [overlayUp])
+
   // Browser/phone back gesture closes the topmost overlay instead of leaving the app.
   // UI close buttons route THROUGH history.back() so the entry stack stays consistent.
   const sheetRef = useRef(sheet)
@@ -6300,7 +6621,9 @@ export default function App() {
 
   // stable identity so memoized ProductCards skip re-render on cart changes
   const recoSrc = useRef(null)
+  const [live, setLive] = useState('') // screen-reader announcements
   const changeCart = useCallback((delta, p, opts) => {
+    setLive(delta > 0 ? `Added ${p.name} to cart` : `Removed ${p.name} from cart`)
     setCartItems(items => {
       const n = (items[p.id]?.n || 0) + delta
       if (n <= 0) {
@@ -6537,6 +6860,7 @@ export default function App() {
         </PageExit>
 
         <PageExit open={qsheet !== null} variant="sheetv" dur={240}>
+          <div className="sr-only" role="status" aria-live="polite">{live}</div>
           {qsheet && <QtySheet q={qsheet} onClose={closeQty} onConfirm={confirmQty} />}
         </PageExit>
 

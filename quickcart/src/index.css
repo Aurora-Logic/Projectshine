@@ -2382,7 +2382,6 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 .fab:active { transform: scale(.92); }
 
 /* ---------- PDP gallery: vertical-swipe shots (Zara) ---------- */
-.pdp-hero { touch-action: pan-x; }
 .pdp-dots {
   position: absolute;
   right: 12px;
@@ -4813,4 +4812,122 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   border-radius: 12px;
   object-fit: cover;
   border: 1px solid var(--gray-4);
+}
+
+/* ---------- A2 · mobile & native feel ---------- */
+body.no-scroll { overflow: hidden; }
+.plp-main, .plp-rail { overscroll-behavior: contain; }
+
+/* notch-safe fixed headers (env() = 0 outside standalone) */
+.topbar { padding-top: calc(14px + env(safe-area-inset-top)); }
+.pdp-head { padding-top: calc(13px + env(safe-area-inset-top)); }
+.plp-head { padding-top: calc(12px + env(safe-area-inset-top)); }
+.acct-head2 { padding-top: calc(14px + env(safe-area-inset-top)); }
+
+/* hit targets */
+.cs-step button { width: 32px; height: 32px; }
+.reco-x, .sheet-back { position: relative; }
+.reco-x::after, .sheet-back::after { content: ''; position: absolute; inset: -9px; }
+.qsheet-grab.drag { position: relative; touch-action: none; }
+.qsheet-grab.drag::after { content: ''; position: absolute; inset: -14px -60px; }
+
+/* typeable qty in the sheet (16px kills iOS zoom) */
+.qs-qin {
+  width: 56px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+  color: inherit;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.qs-qin::-webkit-outer-spin-button, .qs-qin::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.qs-qin:focus { outline: none; border-bottom: 2px solid var(--green-9); }
+
+/* two-tap delete */
+.addr-delc {
+  flex: none;
+  border: none;
+  background: var(--red-3);
+  color: var(--red-11);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 7px 11px;
+  cursor: pointer;
+  animation: stepin .18s cubic-bezier(.22, 1, .36, 1);
+}
+
+/* no text-ghosting on long-press; calm tap flashes */
+.pcard, .navrow, .qs-chip, .qs-sbtn, .seg-b, .cs-step, .fs-tile, .claim-ord, .claim-check, .swipe-inner {
+  -webkit-user-select: none;
+  user-select: none;
+}
+a, [role='button'] { -webkit-tap-highlight-color: transparent; }
+
+/* desktop: SwipeRow gets a visible remove; rails reveal slim scrollbars */
+.swipe-x {
+  display: none;
+  position: absolute;
+  top: 6px;
+  right: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: none;
+  background: var(--gray-3);
+  color: var(--gray-11);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+@media (hover: hover) {
+  .swipe-wrap:hover .swipe-x { display: flex; }
+  .hscroll:hover, .rstrip-scroll:hover, .cp-deals:hover, .hl-rail:hover, .claim-orders:hover, .sheet-brands:hover { scrollbar-width: thin; }
+  .hscroll:hover::-webkit-scrollbar, .rstrip-scroll:hover::-webkit-scrollbar, .cp-deals:hover::-webkit-scrollbar,
+  .hl-rail:hover::-webkit-scrollbar, .claim-orders:hover::-webkit-scrollbar, .sheet-brands:hover::-webkit-scrollbar {
+    display: block;
+    height: 5px;
+  }
+  .hscroll::-webkit-scrollbar-thumb, .rstrip-scroll::-webkit-scrollbar-thumb, .cp-deals::-webkit-scrollbar-thumb,
+  .hl-rail::-webkit-scrollbar-thumb, .claim-orders::-webkit-scrollbar-thumb, .sheet-brands::-webkit-scrollbar-thumb {
+    background: var(--gray-7);
+    border-radius: 99px;
+  }
+}
+
+/* ---------- A3 · a11y ---------- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+}
+button.lg-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.topbar .rt-TextFieldRoot:focus-within { outline: 2px solid rgba(255, 255, 255, .9); outline-offset: 2px; }
+.pcard:focus-visible, .flash-card:focus-visible, .ro-row:focus-visible, .cat-tile:focus-visible,
+.rail-item:focus-visible, .rewards-strip:focus-visible {
+  outline: 2px solid var(--green-9);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skel { animation: none; }
+  .wheel { transition-duration: .01s; }
 }
