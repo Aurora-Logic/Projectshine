@@ -1725,7 +1725,8 @@ body {
   background: linear-gradient(170deg, #FFE158, #FFC93B);
   border: none;
   border-radius: 24px;
-  padding: 18px 14px 14px;
+  overflow: hidden;
+  padding: 18px 14px 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -4000,3 +4001,12 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 /* tap focus shouldn't paint the browser's blue ring on chips */
 .seg-b:focus { outline: none; }
 .seg-b:focus-visible { outline: 2px solid var(--green-8); outline-offset: 1px; }
+
+/* fest promo photo runs edge to edge */
+.fest-promo-img {
+  width: calc(100% + 28px);
+  margin: 8px -14px 0;
+  margin-top: auto;
+  border-radius: 0;
+  display: block;
+}

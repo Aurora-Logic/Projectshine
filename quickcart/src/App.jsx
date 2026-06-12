@@ -3439,8 +3439,6 @@ const ACCT_TILES = [
 ]
 
 const ACCT_FLAT = [
-  ['dash', BarChartIcon, 'Performance dashboard'],
-  ['gst', FileTextIcon, 'GST details'],
   ['calc', RulerSquareIcon, 'Calculators'],
   ['site', SewingPinIcon, 'Submit site visit'],
   ['display', EyeOpenIcon, 'Display centre visit'],
