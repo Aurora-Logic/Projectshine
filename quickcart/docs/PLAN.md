@@ -1,6 +1,6 @@
 # QuickCart — Master Plan (single working doc)
 
-**Updated:** 13 Jun 2026 · Consolidates the full audit (142 verified findings), its fix roadmap, and the client's 12-feature brief. Work from this file only; tick items as they land.
+**Updated:** 13 Jun 2026 (Sprint 0 + quick wins landed; A1.7/A1.10 partial — see notes) · Consolidates the full audit (142 verified findings), its fix roadmap, and the client's 12-feature brief. Work from this file only; tick items as they land.
 
 **Effort tags:** S ≤ 1h · M = half-day · L = multi-day
 
@@ -18,13 +18,13 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 
 ### A0 · Broken or actively self-sabotaging — do first (≈1 day)
 
-- [ ] **A0.1 S** Restore `downloadInvoice` (deleted in `0275feb`, two live call sites throw `ReferenceError`; recover from `12b6f4f`, share scaffold with `downloadLedger`, render from the bill snapshot once A1.4 lands).
-- [ ] **A0.2 S** Guard the cart popstate handler: `if (!qtyRef.current) setCartOpen(false)` — today, confirming a qty from the in-cart flash strip ejects the dealer from checkout.
-- [ ] **A0.3 S** Kill the dead-tap band: `.footer { pointer-events: none }` + `auto` on `.cartbar.show`/`.navrow` (mirror `.plp-cartwrap`). An invisible ~66px strip eats taps whenever the cart is empty.
+- [x] **A0.1 S** Restore `downloadInvoice` (deleted in `0275feb`, two live call sites throw `ReferenceError`; recover from `12b6f4f`, share scaffold with `downloadLedger`, render from the bill snapshot once A1.4 lands).
+- [x] **A0.2 S** Guard the cart popstate handler: `if (!qtyRef.current) setCartOpen(false)` — today, confirming a qty from the in-cart flash strip ejects the dealer from checkout.
+- [x] **A0.3 S** Kill the dead-tap band: `.footer { pointer-events: none }` + `auto` on `.cartbar.show`/`.navrow` (mirror `.plp-cartwrap`). An invisible ~66px strip eats taps whenever the cart is empty.
 - [ ] **A0.4 S–M** Utilities tab: currently a silent no-op. Resolution decided with the client brief → becomes **Find a Pro** (B8/B9). Interim if features ship later: aggregate Calculators + visit tools, or hide the tab.
-- [ ] **A0.5 S** Error boundary in `main.jsx` (branded reload card; optional `qc-*` clear). White-page → recoverable.
-- [ ] **A0.6 S** Remove/dev-gate the `window.onerror` title hook in `index.html` (visitors can currently see `ERR:…` as the tab title).
-- [ ] **A0.7 M** Lint to green: delete dead code (`ClearanceStore`, `OrderDetailSheet`, `LeaderCol`+`LEADERS`, `TimerIcon`, dead props), fix genuine hooks errors, downgrade compiler-prep rules to `warn`. Keep it green after.
+- [x] **A0.5 S** Error boundary in `main.jsx` (branded reload card; optional `qc-*` clear). White-page → recoverable.
+- [x] **A0.6 S** Remove/dev-gate the `window.onerror` title hook in `index.html` (visitors can currently see `ERR:…` as the tab title).
+- [x] **A0.7 M** Lint to green: delete dead code (`ClearanceStore`, `OrderDetailSheet`, `LeaderCol`+`LEADERS`, `TimerIcon`, dead props), fix genuine hooks errors, downgrade compiler-prep rules to `warn`. Keep it green after.
 
 ### A1 · Money & trust coherence (dealer-credibility pass)
 
@@ -34,14 +34,14 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 - [ ] **A1.4 M** Snapshot the bill on the order record (`itemTotal, bulkSave, schemeOff, deliveryFee, expressFee, toPay`); render order detail + GST invoice from the snapshot. Kills ₹5,240-paid vs ₹5,660-invoiced.
 - [ ] **A1.5 M** Close the reward loop: persist `qc-coupon` on wheel win → bill line → consume on placement; fest "₹150 OFF" becomes a real threshold mechanic or honest copy; streak derives from stored check-ins.
 - [ ] **A1.6 M** Credit at checkout: "BILLED TO CREDIT · due 12 Jul · ₹3.96L left after this order" card + GST split in bill; echo on order-placed; append PO to open bills in the ledger.
-- [ ] **A1.7 S–M** Reconcile seeds: QC-446102 bill ↔ its order; drop the `+12 / +₹10.4L` orders-header padding; delete stored `tag` (compute %); derive weekday labels from `ts`; snapshot prices into `PAST_ORDERS`.
+- [x] **A1.7 S–M** *(price-snapshotting of PAST_ORDERS rides with A1.4)* Reconcile seeds: QC-446102 bill ↔ its order; drop the `+12 / +₹10.4L` orders-header padding; delete stored `tag` (compute %); derive weekday labels from `ts`; snapshot prices into `PAST_ORDERS`.
 - [ ] **A1.8 S** One delivery-speed promise across hero/login/checkout/tracking; store on the order, echo it.
 - [ ] **A1.9 S** Search: tokenize + AND-match, normalize hyphens/plurals, include `brand`/`mat`; fallback only after token match fails.
-- [ ] **A1.10 S×5** Honest fixes: slide calculator must use selected length; visit "Visited" gated on booked datetime; clamp qty to stock (fix ba2/dl1 seeds); truthful "Add to this order" copy; `en-IN` format in CartBar.
+- [x] **A1.10 S×5** Honest fixes: slide calculator must use selected length; visit "Visited" gated on booked datetime; clamp qty to stock (fix ba2/dl1 seeds); truthful "Add to this order" copy; `en-IN` format in CartBar.
 
 ### A2 · Mobile & native-feel polish
 
-- [ ] **A2.1 S** 16px inputs (`.cp-input/.cp-note/.nav-search input`) — kills iOS focus-zoom.
+- [x] **A2.1 S** 16px inputs (`.cp-input/.cp-note/.nav-search input`) — kills iOS focus-zoom.
 - [ ] **A2.2 M** Lock background scroll under sheets; implement or remove grab-handle drag-to-dismiss.
 - [ ] **A2.3 S** `overscroll-behavior: contain` on `.plp-main`/`.plp-rail`.
 - [ ] **A2.4 S** `safe-area-inset-top` on fixed headers; bottom inset on `.plp-cartwrap`.
@@ -58,7 +58,7 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 - [ ] **A3.1 M** Button-ify the 37 clickable divs/spans (or role+tabIndex+keys); nav as `<nav>` of buttons. Purchase loop becomes keyboard-operable.
 - [ ] **A3.2 M** Wrap the 10 hand-rolled sheets in Radix `Dialog` (focus trap, Escape, aria-modal free; keep CSS).
 - [ ] **A3.3 S** Label every input; `aria-valuetext` on the load slider; label the two AddControl IconButtons.
-- [ ] **A3.4 S** Contrast tokens: text-bearing green-9 → green-11; `#FFD43B` header text → white/dark chip; sub-12px gray-9/10 → gray-11.
+- [x] **A3.4 S** Contrast tokens: text-bearing green-9 → green-11; `#FFD43B` header text → white/dark chip; sub-12px gray-9/10 → gray-11.
 - [ ] **A3.5 S** One polite `aria-live` for cart mutations/toasts; `aria-hidden` ticking timers.
 - [ ] **A3.6 S×5** Heading levels (`as=`), search field as real button, `<s>` + hidden "MRP", reduced-motion for wheel spin + shimmer, `:focus-within` on `.nav-search`.
 
@@ -85,8 +85,8 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 
 ### A6 · Tooling, distribution, presentation
 
-- [ ] **A6.1 S** Real README (pitch, port 5174, hash deep-link table incl. *no-hash = login gate*, demo limits).
-- [ ] **A6.2 S** OG/meta tags (reuse manifest copy + 1200×630 image).
+- [x] **A6.1 S** Real README (pitch, port 5174, hash deep-link table incl. *no-hash = login gate*, demo limits).
+- [x] **A6.2 S** OG/meta tags (reuse manifest copy + 1200×630 image).
 - [ ] **A6.3 S** `vercel.json` → `npm ci`; `engines` field; security headers/CSP.
 - [ ] **A6.4 M** Tests + CI after lint green: vitest on cart/bulk/scheme math + render-smoke per hash; GitHub Actions.
 - [ ] **A6.5 M** Code-split after A5.1 (lazy wheel/quiz/account/orders/login).

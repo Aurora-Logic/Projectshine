@@ -550,7 +550,9 @@ const ProductCard = memo(function ProductCard({ p, grid, onChange }) {
     <div className={`pcard ${grid ? 'grid' : ''}`} onClick={openPdp ? () => openPdp(p) : undefined}>
       <div className="pimg-wrap">
         <Img className={`pimg ${oos ? 'oos' : ''}`} src={img(p.ph, 360)} alt={p.name} loading="lazy" />
-        {p.tag && <span className="pbadge">{p.tag}</span>}
+        {(p.tag || (p.mrp && p.mrp > p.price)) && (
+          <span className="pbadge">{p.tag || `${Math.round(((p.mrp - p.price) / p.mrp) * 100)}% OFF`}</span>
+        )}
         <AddControl qty={qty} onAdd={add} onRemove={remove} onBulk={openQty ? () => openQty(p, (n) => setQty(q => q + n)) : undefined} />
       </div>
       {p.usual && <span className="usual-pill">YOUR USUAL</span>}
@@ -713,7 +715,11 @@ function RecoStrip({ items, onClose, onChange }) {
           <div key={`rs-${x.id}`} className="rmini" onClick={openPdp ? () => openPdp(x) : undefined}>
             <div style={{ position: 'relative' }}>
               <Img src={img(x.ph, 220)} alt={x.name} loading="lazy" />
-              {x.tag && <span className="pbadge" style={{ fontSize: 9, padding: '3px 6px', top: 6, left: 6 }}>{x.tag}</span>}
+              {(x.tag || (x.mrp && x.mrp > x.price)) && (
+                <span className="pbadge" style={{ fontSize: 9, padding: '3px 6px', top: 6, left: 6 }}>
+                  {x.tag || `${Math.round(((x.mrp - x.price) / x.mrp) * 100)}% OFF`}
+                </span>
+              )}
             </div>
             <Text as="div" weight="bold" className="clamp2" style={{ fontSize: 12, lineHeight: 1.3, height: 31 }}>
               {x.name}
@@ -3026,7 +3032,7 @@ function AcctOrders({ lastOrder, onChange }) {
     <>
       <div className="sub-hero blue">
         <Text size="1" weight="bold" as="div" style={{ color: 'var(--blue-11)', fontSize: 10, letterSpacing: '.6px' }}>
-          ORDERS THIS FY
+          ORDERS
         </Text>
         <Flex align="baseline" gap="2" mt="1">
           <Text weight="bold" style={{ fontSize: 27, letterSpacing: '-0.6px' }}>{hist.length}</Text>
@@ -3242,7 +3248,7 @@ function AcctCalc() {
   const [sz, setSz] = useState(450)
   const [ht, setHt] = useState(1800)
   const slide = FEED_POOL
-    .filter(p => p.load && p.load >= wt && /slide|channel|tandem|quadro/i.test(p.name))
+    .filter(p => p.load && p.load >= wt && (!p.size || p.size === sz) && /slide|channel|tandem|quadro/i.test(p.name))
     .sort((a, b) => a.load - b.load)[0]
   const hingeCount = ht < 900 ? 2 : ht < 1500 ? 3 : ht < 2100 ? 4 : 5
   const hinge = FEED_POOL.find(p => /hinge/i.test(p.name))
@@ -3388,7 +3394,9 @@ const VISIT_STAGES = {
 }
 const visitStage = (r, now) => {
   const el = (now - r.ts) / 1000
-  return el < 90 ? 0 : el < 240 ? 1 : 2
+  const raw = el < 90 ? 0 : el < 240 ? 1 : 2
+  // the terminal stage (visited/scheduled-complete) can't precede the booked day
+  return r.date && now < r.date ? Math.min(raw, 1) : raw
 }
 
 function VisitRow({ r, now, kind }) {
@@ -3890,7 +3898,8 @@ const QTY_PACKS = [10, 50, 100]
 
 function QtySheet({ q, onClose, onConfirm }) {
   const p = q.p
-  const [n, setN] = useState(10)
+  const maxN = p.stock != null && p.stock > 0 ? p.stock : 999
+  const [n, setN] = useState(() => Math.min(10, maxN))
   const tier = bulkTier(p)
   const unlocked = tier && n >= tier.thr
   const saved = unlocked ? (p.price - tier.bp) * n : 0
@@ -3915,7 +3924,7 @@ function QtySheet({ q, onClose, onConfirm }) {
         </Text>
         <div className="qs-chips">
           {QTY_PACKS.map(k => (
-            <button key={k} className={`qs-chip ${n === k ? 'on' : ''}`} onClick={() => setN(k)}>
+            <button key={k} className={`qs-chip ${n === k ? 'on' : ''}`} disabled={k > maxN} onClick={() => setN(k)}>
               {tier && k >= tier.thr && <span className="qs-off">{tier.pct}% OFF</span>}
               <span className="qn">{k}</span>
               <span className="qp">₹{(k * (tier && k >= tier.thr ? tier.bp : p.price)).toLocaleString('en-IN')}</span>
@@ -3925,7 +3934,7 @@ function QtySheet({ q, onClose, onConfirm }) {
         <div className="qs-step">
           <button className="qs-sbtn" onClick={() => setN(v => Math.max(1, v - 1))} aria-label="Less"><MinusIcon /></button>
           <Text size="3" weight="bold" style={{ width: 44, textAlign: 'center' }}>{n}</Text>
-          <button className="qs-sbtn" onClick={() => setN(v => v + 1)} aria-label="More"><PlusIcon /></button>
+          <button className="qs-sbtn" onClick={() => setN(v => Math.min(maxN, v + 1))} aria-label="More"><PlusIcon /></button>
           <Text size="1" color="gray" style={{ marginLeft: 'auto' }}>or set a custom quantity</Text>
         </div>
         {tier && (
@@ -4336,7 +4345,7 @@ function OrderCard({ order, onDismiss, onReorder, onAddMore }) {
         </Flex>
         {!delivered && windowLeft > 0 && (
           <button className="oc-window" onClick={onAddMore}>
-            Forgot something? Add to this order · {mmss} left
+            Forgot something? Reorder window open · {mmss} left
           </button>
         )}
         {delivered && (
@@ -4641,9 +4650,13 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
         <Heading size="4" style={{ flex: 1, letterSpacing: '-0.3px' }}>Your cart</Heading>
         <Text size="1" weight="bold" color="gray">{cart.count} item{cart.count === 1 ? '' : 's'}</Text>
         {items.length > 0 && (
-          <button className="sheet-back" onClick={() => setEstSheet(true)} aria-label="Download estimate PDF" title="Download estimate">
-            <FileTextIcon width={16} height={16} />
-          </button>
+          <Button
+            size="1" variant="soft" color="green" radius="full"
+            style={{ fontWeight: 800, flex: 'none', gap: 5 }}
+            onClick={() => setEstSheet(true)} aria-label="Download estimate PDF"
+          >
+            <FileTextIcon width={13} height={13} /> Estimate
+          </Button>
         )}
       </div>
       <div className="cp-body">

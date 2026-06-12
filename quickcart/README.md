@@ -1,16 +1,50 @@
-# React + Vite
+# QuickCart — Furniture Hardware for Dealers
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A B2B quick-commerce prototype: furniture **fittings** (drawer slides, hinges, locks, handles, kitchen & wardrobe systems, office fittings, lighting) for hardware **dealers** — benchmarked against Blinkit/Instamart, built dealer-first.
 
-Currently, two official plugins are available:
+**Live:** https://quickcart-nine-iota.vercel.app · Installable as a PWA (Add to Home Screen).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## What's inside
 
-## React Compiler
+- **Commerce:** category/brand IA, full filter system (incl. spec filters), bulk-tier pricing, qty sheet with dealer quantities, product pages with Zara-style swipe nav, cart with volume schemes + express delivery, order placement → live tracking → GST invoice download.
+- **Dealer layer:** 30-day credit ledger (status-colored, pay bills, downloadable ledger), monthly/quarterly/yearly targets, tier journey, one-tap reorder with buying-cadence intelligence, project lists per job site, site/showroom visit booking with customer capture + tracking.
+- **Engagement:** daily quiz & spin (game-night design, 7 daily felt themes), streaks, rotating hero palettes & layouts per open.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Run it
 
-## Expanding the ESLint configuration
+```bash
+npm install
+npm run dev        # http://localhost:5174
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Demo behavior you should know
+
+- **No hash → dealer login gate** (phone + OTP; *demo — any 10-digit number and any 4-digit OTP work*; guest path available). **Any `#hash` URL bypasses the gate** — intentional, for design review.
+- Data is seeded/mock; orders, credit and requests persist to `localStorage` (`qc-*` keys). "Reset app data" lives on the error screen; or clear site data.
+- Product photos are interior stand-ins; real packshots arrive from the backend.
+
+### Review deep links
+
+| Hash | Opens |
+|---|---|
+| `#home` | Home (skips gate) |
+| `#login` | Login gate |
+| `#plp` / `#plp-Hinges` | Category listing |
+| `#search` | Search |
+| `#pdp` | Product details |
+| `#qty` | Bulk qty sheet |
+| `#cart` | Cart (preloaded) |
+| `#order` / `#ordpg` | Order tracking card / order detail page |
+| `#reorder` / `#pastorder` | Reorder page / past-order edit sheet |
+| `#account` `#dash` `#credit` `#lists` `#orders` `#site` | Account + sub-pages |
+| `#wheel` | Spin & Win |
+| `#sim` | Dev simulator (sky/quiz/hero variants) |
+| `#fest-a`…`#fest-e` / `#hero-<palette>` | Pin a hero layout / palette |
+
+## Stack
+
+React 19 · Vite · Radix Themes (green accent) · single-file app by design for prototype speed (split planned — see `docs/PLAN.md`).
+
+## Working docs
+
+Everything tracked in **[docs/PLAN.md](docs/PLAN.md)** — audit-driven fix tracks (A0–A6) + client feature roadmap (B1–B12).

@@ -4667,3 +4667,6 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 .slot.on { background: var(--green-11); border-color: var(--green-11); }
 .cal-day.sel { background: var(--green-11); }
 .lg-cta { background: var(--green-11); }
+
+/* qty chips beyond available stock are visibly unavailable */
+.qs-chip:disabled { opacity: .4; cursor: default; }
