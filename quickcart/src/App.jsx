@@ -7,12 +7,14 @@ import {
   LightningBoltIcon, StarFilledIcon, MinusIcon, PlusIcon, TimerIcon, Cross2Icon,
   HomeIcon, DashboardIcon, CounterClockwiseClockIcon, RocketIcon, ArrowLeftIcon,
   MixerHorizontalIcon, GearIcon, FileTextIcon, DiscIcon, CheckIcon,
+  BarChartIcon, BellIcon, LockClosedIcon, ExitIcon, RulerSquareIcon, SewingPinIcon,
+  EyeOpenIcon, ChatBubbleIcon, MobileIcon, EnvelopeClosedIcon, CalendarIcon,
 } from '@radix-ui/react-icons'
 import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
   FEED_POOL, CATEGORIES, BANNERS, COMBOS, CLEARANCE_TILES, QUIZ,
   LEADERS, SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
-  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES, REORDER, PAST_ORDERS,
+  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES, REORDER, PAST_ORDERS, DASH,
 } from './data.js'
 import './App.css'
 
@@ -1984,13 +1986,13 @@ function CartBar({ cart }) {
   )
 }
 
-function NavBar({ onCategories, onUtilities, onReorder, active = 'home', mini = false }) {
+function NavBar({ onCategories, onUtilities, onReorder, onAccount, active = 'home', mini = false }) {
   const items = [
     { icon: HomeIcon, label: 'Home', key: 'home', go: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
     { icon: DashboardIcon, label: 'Categories', key: 'categories', go: onCategories },
     { icon: GearIcon, label: 'Utilities', key: 'utilities', go: onUtilities },
     { icon: CounterClockwiseClockIcon, label: 'Reorder', key: 'reorder', go: onReorder },
-    { icon: PersonIcon, label: 'Account', key: 'account' },
+    { icon: PersonIcon, label: 'Account', key: 'account', go: onAccount },
   ]
   return (
     <div className={`navbar ${mini ? 'mini' : ''}`}>
@@ -2009,6 +2011,620 @@ function NavBar({ onCategories, onUtilities, onReorder, active = 'home', mini = 
 }
 
 /* ---------------- App ---------------- */
+
+/* ---------------- Account page ---------------- */
+
+function Toggle({ on, onToggle }) {
+  return (
+    <button className={`tgl ${on ? 'on' : ''}`} onClick={onToggle} role="switch" aria-checked={on}>
+      <span />
+    </button>
+  )
+}
+
+function usePersisted(key, initial) {
+  const [v, setV] = useState(() => {
+    try { const s = JSON.parse(localStorage.getItem(key) || 'null'); return s ?? initial } catch { return initial }
+  })
+  const set = (next) => {
+    setV(next)
+    localStorage.setItem(key, JSON.stringify(next))
+  }
+  return [v, set]
+}
+
+/* interactive monthly bar chart: tap a bar to inspect it */
+function Bars({ data }) {
+  const [sel, setSel] = useState(data.length - 1)
+  const ready = useNextFrame()
+  const max = Math.max(...data.map(d => d[1]))
+  const si = Math.min(sel, data.length - 1)
+  return (
+    <>
+      <Flex align="baseline" gap="2" mt="2">
+        <Text size="5" weight="bold" style={{ letterSpacing: '-0.4px' }}>{fmtL(data[si][1] * 1000)}</Text>
+        <Text size="1" color="gray">{data[si][0]} purchases</Text>
+      </Flex>
+      <div className="bars">
+        {data.map(([m, v], i) => (
+          <button key={m} className={`bar ${i === si ? 'on' : ''}`} onClick={() => setSel(i)}>
+            <span style={{ height: ready ? `${(v / max) * 100}%` : '0%' }} />
+            <em>{m}</em>
+          </button>
+        ))}
+      </div>
+    </>
+  )
+}
+
+/* category donut: tap the legend to read the center */
+function Donut({ cats }) {
+  const [sel, setSel] = useState(0)
+  let acc = 0
+  const stops = cats.map(([, pct, c]) => {
+    const s = `${c} ${acc}% ${acc + pct}%`
+    acc += pct
+    return s
+  }).join(', ')
+  return (
+    <Flex gap="4" align="center" mt="3">
+      <div className="donut" style={{ background: `conic-gradient(${stops})` }}>
+        <div className="donut-hole">
+          <Text size="4" weight="bold" as="div">{cats[sel][1]}%</Text>
+          <Text as="div" style={{ fontSize: 9, color: 'var(--gray-10)' }}>{cats[sel][0]}</Text>
+        </div>
+      </div>
+      <Box flexGrow="1" style={{ minWidth: 0 }}>
+        {cats.map(([l, pct, c], i) => (
+          <button key={l} className={`leg ${i === sel ? 'on' : ''}`} onClick={() => setSel(i)}>
+            <span className="leg-dot" style={{ background: c }} />
+            <Text size="1" weight={i === sel ? 'bold' : 'medium'}>{l}</Text>
+            <Text size="1" color="gray" style={{ marginLeft: 'auto' }}>{pct}%</Text>
+          </button>
+        ))}
+      </Box>
+    </Flex>
+  )
+}
+
+function AcctDash() {
+  const [per, setPer] = useState(12)
+  const ready = useNextFrame()
+  const k = DASH.kpis
+  return (
+    <>
+      <div className="kpi-grid">
+        <div className="kpi"><Text size="1" color="gray">This month</Text><Text size="4" weight="bold" as="div">{fmtL(k.month)}</Text><Text size="1" as="div" style={{ color: 'var(--green-10)', fontWeight: 700 }}>+{k.growth}% YoY</Text></div>
+        <div className="kpi"><Text size="1" color="gray">Orders</Text><Text size="4" weight="bold" as="div">{k.orders}</Text><Text size="1" color="gray" as="div">this month</Text></div>
+        <div className="kpi"><Text size="1" color="gray">Avg order</Text><Text size="4" weight="bold" as="div">₹{(k.aov / 1000).toFixed(1)}k</Text><Text size="1" color="gray" as="div">last 90 days</Text></div>
+        <div className="kpi"><Text size="1" color="gray">Saved</Text><Text size="4" weight="bold" as="div">₹{(k.saved / 1000).toFixed(1)}k</Text><Text size="1" as="div" style={{ color: 'var(--green-10)', fontWeight: 700 }}>bulk + schemes</Text></div>
+      </div>
+      <div className="cp-card">
+        <Flex align="center" justify="between">
+          <Text size="2" weight="bold">Purchases</Text>
+          <div className="seg" style={{ margin: 0 }}>
+            {[[6, '6M'], [12, '1Y']].map(([n, l]) => (
+              <button key={l} className={`seg-b ${per === n ? 'on' : ''}`} onClick={() => setPer(n)}>{l}</button>
+            ))}
+          </div>
+        </Flex>
+        <Bars key={per} data={DASH.months.slice(-per)} />
+      </div>
+      <div className="cp-card">
+        <Text size="2" weight="bold">Category mix</Text>
+        <Donut cats={DASH.cats} />
+      </div>
+      <div className="cp-card">
+        <Text size="2" weight="bold">Brand split</Text>
+        {DASH.brands.map(([b, pct], i) => (
+          <Flex key={b} align="center" gap="3" mt={i === 0 ? '3' : '2'}>
+            <Text size="1" weight="bold" style={{ width: 76, flex: 'none' }}>{b}</Text>
+            <div className="hbar"><div style={{ width: ready ? `${pct}%` : '0%' }} /></div>
+            <Text size="1" color="gray" style={{ width: 34, textAlign: 'right', flex: 'none' }}>{pct}%</Text>
+          </Flex>
+        ))}
+      </div>
+      <TargetsCard />
+      <Box pb="4" />
+    </>
+  )
+}
+
+function AcctOrders({ lastOrder, onChange }) {
+  const [view, setView] = useState(null)
+  const hist = [
+    ...(lastOrder ? [{
+      id: lastOrder.id, date: 'Today', status: 'In transit',
+      items: (lastOrder.items || []).map(({ p, n }) => ({ p, n })),
+    }] : []),
+    ...PAST_ORDERS.map(o => ({
+      ...o, status: 'Delivered',
+      items: o.items.map(([id, n]) => ({ p: FEED_POOL.find(p => p.id === id), n })).filter(x => x.p),
+    })),
+  ]
+  return (
+    <>
+      <div className="cp-card">
+        {hist.map(o => (
+          <div className="ro-past" key={`h-${o.id}`} onClick={() => setView(o)}>
+            <Flex>
+              {o.items.slice(0, 3).map(({ p }) => (
+                <Img key={`hp-${o.id}-${p.id}`} className="thumb" src={img(p.ph, 80)} alt="" />
+              ))}
+            </Flex>
+            <Box flexGrow="1" style={{ minWidth: 0 }}>
+              <Text size="1" weight="bold" as="div">{o.date} · {o.items.length} items · ₹{o.items.reduce((s, { p, n }) => s + p.price * n, 0).toLocaleString('en-IN')}</Text>
+              <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>PO {o.id}</Text>
+            </Box>
+            <span className={`st-chip ${o.status === 'Delivered' ? 'ok' : ''}`}>{o.status}</span>
+            <ChevronRightIcon width={14} height={14} color="var(--gray-8)" style={{ flex: 'none' }} />
+          </div>
+        ))}
+      </div>
+      {view && <PastOrderSheet key={view.id} order={view} onClose={() => setView(null)} onChange={onChange} />}
+    </>
+  )
+}
+
+function AcctSchemes() {
+  return (
+    <>
+      <div className="cp-card cp-scheme">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--violet-11)', letterSpacing: '.5px', fontSize: 10.5 }}>PER-ORDER VOLUME SCHEME</Text>
+        {SCHEMES.map(s => (
+          <Flex key={s.min} justify="between" mt="2">
+            <Text size="2">Orders above {fmtL(s.min)}</Text>
+            <Text size="2" weight="bold" style={{ color: 'var(--violet-11)' }}>{s.off}% off invoice</Text>
+          </Flex>
+        ))}
+        <Text size="1" color="gray" as="div" mt="2">Applied automatically at checkout · stacks with bulk prices</Text>
+      </div>
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>MONTHLY TIER PERKS</Text>
+        {TIERS.map(t => (
+          <Flex key={t.name} align="center" gap="2" mt="2">
+            <span className="tier-mini" style={{ background: t.c }} />
+            <Text size="2" weight="bold" style={{ width: 76, flex: 'none' }}>{t.name}</Text>
+            <Text size="1" color="gray" style={{ flex: 1 }}>{t.min === 0 ? 'Base' : `${fmtL(t.min)}+/mo`}</Text>
+            <Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>{t.perk}</Text>
+          </Flex>
+        ))}
+      </div>
+    </>
+  )
+}
+
+function AcctGst() {
+  const [gst, setGst] = usePersisted('qc-gst', { gstin: '29ABCDE1234F1Z5', name: 'Bora Hardware & Plywood' })
+  const valid = /^[0-9]{2}[A-Z0-9]{13}$/.test(gst.gstin.toUpperCase())
+  return (
+    <div className="cp-card">
+      <Flex align="center" justify="between">
+        <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>GST DETAILS</Text>
+        {valid && <span className="st-chip ok"><CheckIcon width={10} height={10} /> Verified</span>}
+      </Flex>
+      <Text size="1" color="gray" as="div" mt="3">GSTIN</Text>
+      <input className="cp-input" style={{ marginTop: 4, textTransform: 'uppercase' }} value={gst.gstin}
+        onChange={(e) => setGst({ ...gst, gstin: e.target.value })} maxLength={15} />
+      <Text size="1" color="gray" as="div">Registered business name</Text>
+      <input className="cp-input" style={{ marginTop: 4 }} value={gst.name}
+        onChange={(e) => setGst({ ...gst, name: e.target.value })} />
+      <Text size="1" color="gray" as="div" mt="1">Input credit appears on every invoice automatically.</Text>
+    </div>
+  )
+}
+
+function AcctAddr() {
+  const [addrs, setAddrs] = useState(loadAddrs)
+  const [sel, setSel] = usePersisted('qc-addr-sel', loadAddrs()[0].id)
+  const [adding, setAdding] = useState(false)
+  const [label, setLabel] = useState('')
+  const [addr, setAddr] = useState('')
+  const save = () => {
+    const a = { id: `a${Date.now()}`, label: label.trim(), addr: addr.trim() }
+    const next = [...addrs, a]
+    setAddrs(next)
+    localStorage.setItem('qc-addr', JSON.stringify(next))
+    setSel(a.id)
+    setAdding(false)
+    setLabel('')
+    setAddr('')
+  }
+  const remove = (id) => {
+    const next = addrs.filter(a => a.id !== id)
+    setAddrs(next)
+    localStorage.setItem('qc-addr', JSON.stringify(next))
+    if (sel === id && next[0]) setSel(next[0].id)
+  }
+  return (
+    <div className="cp-card">
+      {addrs.map(a => (
+        <div key={a.id} className="addr-row" style={{ cursor: 'default' }}>
+          <button className={`radio ${a.id === sel ? 'on' : ''}`} style={{ marginTop: 2, cursor: 'pointer', background: 'none', padding: 0 }} onClick={() => setSel(a.id)} aria-label="Default" />
+          <span style={{ minWidth: 0, flex: 1 }}>
+            <Text size="2" weight="bold" as="div">{a.label} {a.id === sel && <span className="st-chip ok" style={{ marginLeft: 4 }}>Default</span>}</Text>
+            <Text size="1" color="gray" as="div" style={{ lineHeight: 1.35 }}>{a.addr}</Text>
+          </span>
+          {addrs.length > 1 && (
+            <button className="reco-x" onClick={() => remove(a.id)} aria-label="Delete"><Cross2Icon width={12} height={12} /></button>
+          )}
+        </div>
+      ))}
+      {adding ? (
+        <div className="addr-form">
+          <input className="cp-input" placeholder="Label — e.g. Site 2" value={label} onChange={(e) => setLabel(e.target.value)} />
+          <textarea className="cp-note" rows={2} placeholder="Full address" value={addr} onChange={(e) => setAddr(e.target.value)} />
+          <Button size="2" color="green" mt="2" style={{ fontWeight: 800, width: '100%' }} disabled={!label.trim() || !addr.trim()} onClick={save}>Save address</Button>
+        </div>
+      ) : (
+        <button className="addr-add" onClick={() => setAdding(true)}><PlusIcon width={14} height={14} /> Add new address</button>
+      )}
+    </div>
+  )
+}
+
+function AcctCalc() {
+  const openQty = useContext(QtyCtx)
+  const [tab, setTab] = useState('slide')
+  const [wt, setWt] = useState(30)
+  const [sz, setSz] = useState(450)
+  const [ht, setHt] = useState(1800)
+  const slide = FEED_POOL
+    .filter(p => p.load && p.load >= wt && /slide|channel|tandem|quadro/i.test(p.name))
+    .sort((a, b) => a.load - b.load)[0]
+  const hingeCount = ht < 900 ? 2 : ht < 1500 ? 3 : ht < 2100 ? 4 : 5
+  const hinge = FEED_POOL.find(p => /hinge/i.test(p.name))
+  const Sugg = ({ p, qty, note }) => p ? (
+    <div className="calc-out">
+      <Text size="1" weight="bold" as="div" style={{ color: 'var(--green-11)' }}>{note}</Text>
+      <Flex align="center" gap="3" mt="2">
+        <Img src={img(p.ph, 100)} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover' }} />
+        <Box flexGrow="1" style={{ minWidth: 0 }}>
+          <Text size="1" weight="bold" as="div" className="clamp1">{p.name}</Text>
+          <Text size="1" color="gray" as="div">₹{p.price.toLocaleString('en-IN')}{p.bulk ? ` · ${p.bulk}` : ''}</Text>
+        </Box>
+        <Button size="1" color="green" radius="full" style={{ fontWeight: 800, flex: 'none' }}
+          onClick={() => openQty && openQty(p, null, { noReco: true })}>
+          ADD{qty ? ` ${qty}` : ''}
+        </Button>
+      </Flex>
+    </div>
+  ) : (
+    <div className="calc-out"><Text size="1" weight="bold" style={{ color: 'var(--amber-11)' }}>Above 60 kg — talk to support for heavy-duty options</Text></div>
+  )
+  return (
+    <>
+      <div className="seg" style={{ marginTop: 0 }}>
+        <button className={`seg-b ${tab === 'slide' ? 'on' : ''}`} onClick={() => setTab('slide')}>Slide load</button>
+        <button className={`seg-b ${tab === 'hinge' ? 'on' : ''}`} onClick={() => setTab('hinge')}>Hinge count</button>
+      </div>
+      {tab === 'slide' ? (
+        <div className="cp-card">
+          <Text size="2" weight="bold" as="div">Drawer slide selector</Text>
+          <Text size="1" color="gray" as="div" mt="1">Loaded drawer weight (kg)</Text>
+          <input className="cp-input" style={{ marginTop: 4 }} type="number" min="1" max="80" value={wt}
+            onChange={(e) => setWt(Math.max(1, +e.target.value || 0))} />
+          <Text size="1" color="gray" as="div">Slide length</Text>
+          <Flex gap="2" mt="1" mb="2">
+            {[450, 500, 600].map(s => (
+              <button key={s} className={`seg-b ${sz === s ? 'on' : ''}`} style={{ flex: 1 }} onClick={() => setSz(s)}>{s} mm</button>
+            ))}
+          </Flex>
+          <Sugg p={slide} note={`For ${wt} kg · recommended ${slide ? `${slide.load} kg rated` : ''}`} />
+        </div>
+      ) : (
+        <div className="cp-card">
+          <Text size="2" weight="bold" as="div">Hinges per door</Text>
+          <Text size="1" color="gray" as="div" mt="1">Door height (mm)</Text>
+          <input className="cp-input" style={{ marginTop: 4 }} type="number" min="300" max="3000" value={ht}
+            onChange={(e) => setHt(Math.max(300, +e.target.value || 0))} />
+          <Sugg p={hinge} qty={hingeCount} note={`${ht} mm door → ${hingeCount} hinges per door`} />
+        </div>
+      )}
+    </>
+  )
+}
+
+function VisitForm({ kind }) {
+  const key = kind === 'site' ? 'qc-site' : 'qc-display'
+  const [done, setDone] = usePersisted(key, null)
+  const [type, setType] = useState(kind === 'site' ? 'New site' : 'Today')
+  const [slot, setSlot] = useState('11 AM')
+  const [city, setCity] = useState('')
+  const [notes, setNotes] = useState('')
+  const opts = kind === 'site' ? ['New site', 'Renovation', 'Project bid'] : ['Today', 'Tomorrow', 'Saturday']
+  if (done) {
+    return (
+      <div className="cp-card">
+        <Flex align="center" gap="2">
+          <span className="st-chip ok"><CheckIcon width={10} height={10} /> Requested</span>
+          <Text size="2" weight="bold">{done.type}{done.slot ? ` · ${done.slot}` : ''}</Text>
+        </Flex>
+        <Text size="1" color="gray" as="div" mt="2">
+          {kind === 'site' ? 'Our team will call within 4 working hours to confirm the visit.' : 'See you at the Ebco Display Centre, 100 Ft Road, Indiranagar · 10 AM–7 PM.'}
+        </Text>
+        <Button mt="3" size="1" variant="soft" color="green" radius="full" style={{ fontWeight: 800 }} onClick={() => setDone(null)}>
+          {kind === 'site' ? 'Submit another' : 'Change slot'}
+        </Button>
+      </div>
+    )
+  }
+  return (
+    <div className="cp-card">
+      {kind === 'display' && (
+        <>
+          <Text size="2" weight="bold" as="div">Ebco Display Centre</Text>
+          <Text size="1" color="gray" as="div" mt="1">100 Ft Road, Indiranagar, Bengaluru · 10 AM–7 PM · full kitchen + wardrobe range on live display</Text>
+        </>
+      )}
+      <Text size="1" color="gray" as="div" mt="2">{kind === 'site' ? 'Visit type' : 'Day'}</Text>
+      <Flex gap="2" mt="1">
+        {opts.map(o => (
+          <button key={o} className={`seg-b ${type === o ? 'on' : ''}`} style={{ flex: 1 }} onClick={() => setType(o)}>{o}</button>
+        ))}
+      </Flex>
+      {kind === 'display' ? (
+        <>
+          <Text size="1" color="gray" as="div" mt="2">Slot</Text>
+          <Flex gap="2" mt="1">
+            {['11 AM', '2 PM', '5 PM'].map(o => (
+              <button key={o} className={`seg-b ${slot === o ? 'on' : ''}`} style={{ flex: 1 }} onClick={() => setSlot(o)}>{o}</button>
+            ))}
+          </Flex>
+        </>
+      ) : (
+        <>
+          <Text size="1" color="gray" as="div" mt="2">Site location</Text>
+          <input className="cp-input" style={{ marginTop: 4 }} placeholder="Area / city" value={city} onChange={(e) => setCity(e.target.value)} />
+          <Text size="1" color="gray" as="div">What should the team bring?</Text>
+          <textarea className="cp-note" rows={2} placeholder="e.g. Kitchen systems catalogue, Quadro samples" value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </>
+      )}
+      <Button mt="3" size="2" color="green" style={{ fontWeight: 800, width: '100%' }}
+        disabled={kind === 'site' && !city.trim()}
+        onClick={(e) => { sparkle(e); setDone(kind === 'site' ? { type, city, notes } : { type, slot }) }}>
+        {kind === 'site' ? 'Request site visit' : 'Book display centre slot'}
+      </Button>
+    </div>
+  )
+}
+
+function AcctSupport() {
+  const rows = [
+    [MobileIcon, 'Call dealer desk', '080 4512 3456 · Mon–Sat, 9–7', 'tel:+918045123456'],
+    [ChatBubbleIcon, 'WhatsApp us', 'Replies in ~10 min', 'https://wa.me/918045123456'],
+    [EnvelopeClosedIcon, 'Email', 'dealers@quickcart.in', 'mailto:dealers@quickcart.in'],
+  ]
+  const faqs = [
+    ['Where is my invoice?', 'Invoices land on your email and WhatsApp within 15 minutes of dispatch, with GST input credit itemised.'],
+    ['How do bulk prices apply?', 'Bulk unit prices apply automatically once a line crosses its threshold; the savings are itemised on the invoice.'],
+    ['Can I return hardware?', 'Unopened boxes can be returned within 7 days from the order detail page — pickup is free.'],
+  ]
+  return (
+    <>
+      <div className="cp-card">
+        {rows.map(([Icon, t, s, href]) => (
+          <a key={t} className="sup-row" href={href} target="_blank" rel="noreferrer">
+            <span className="mrow-ic"><Icon width={16} height={16} /></span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <Text size="2" weight="bold" as="div">{t}</Text>
+              <Text size="1" color="gray" as="div">{s}</Text>
+            </span>
+            <ChevronRightIcon width={14} height={14} color="var(--gray-8)" />
+          </a>
+        ))}
+      </div>
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>FAQS</Text>
+        {faqs.map(([q, a]) => (
+          <details className="faq" key={q}>
+            <summary><Text size="2" weight="bold">{q}</Text><ChevronDownIcon width={14} height={14} /></summary>
+            <Text size="1" color="gray" as="div" style={{ lineHeight: 1.5, paddingBottom: 10 }}>{a}</Text>
+          </details>
+        ))}
+      </div>
+    </>
+  )
+}
+
+function AcctNotif() {
+  const [prefs, setPrefs] = usePersisted('qc-notif', { orders: true, flash: true, quiz: true, price: false, wa: true })
+  const defs = [
+    ['orders', 'Order updates', 'Dispatch, delivery, invoices'],
+    ['flash', 'Flash sale alerts', 'When deals go live'],
+    ['quiz', 'Quiz & rewards', 'Daily quiz, spins, streaks'],
+    ['price', 'Price drops', 'On items you buy often'],
+    ['wa', 'WhatsApp updates', 'Mirror everything on WhatsApp'],
+  ]
+  return (
+    <div className="cp-card">
+      {defs.map(([k, t, s]) => (
+        <Flex key={k} align="center" gap="3" className="pref-row">
+          <Box flexGrow="1" style={{ minWidth: 0 }}>
+            <Text size="2" weight="bold" as="div">{t}</Text>
+            <Text size="1" color="gray" as="div">{s}</Text>
+          </Box>
+          <Toggle on={!!prefs[k]} onToggle={() => setPrefs({ ...prefs, [k]: !prefs[k] })} />
+        </Flex>
+      ))}
+    </div>
+  )
+}
+
+function AcctPrivacy() {
+  const [prefs, setPrefs] = usePersisted('qc-priv', { personalize: true, analytics: true })
+  const [msg, setMsg] = useState(null)
+  return (
+    <>
+      <div className="cp-card">
+        {[['personalize', 'Personalised offers', 'Recommendations from your buying pattern'], ['analytics', 'Usage analytics', 'Helps us improve the app']].map(([k, t, s]) => (
+          <Flex key={k} align="center" gap="3" className="pref-row">
+            <Box flexGrow="1" style={{ minWidth: 0 }}>
+              <Text size="2" weight="bold" as="div">{t}</Text>
+              <Text size="1" color="gray" as="div">{s}</Text>
+            </Box>
+            <Toggle on={!!prefs[k]} onToggle={() => setPrefs({ ...prefs, [k]: !prefs[k] })} />
+          </Flex>
+        ))}
+      </div>
+      <div className="cp-card">
+        <button className="sup-row" style={{ width: '100%' }} onClick={() => setMsg('A copy of your data will reach your email within 24 hours.')}>
+          <span className="mrow-ic"><FileTextIcon width={16} height={16} /></span>
+          <Text size="2" weight="bold" style={{ flex: 1, textAlign: 'left' }}>Download my data</Text>
+          <ChevronRightIcon width={14} height={14} color="var(--gray-8)" />
+        </button>
+        <button className="sup-row" style={{ width: '100%' }} onClick={() => setMsg('Deletion request noted. The dealer desk will call to confirm before anything is removed.')}>
+          <span className="mrow-ic" style={{ background: 'var(--red-3)', color: 'var(--red-11)' }}><Cross2Icon width={14} height={14} /></span>
+          <Text size="2" weight="bold" style={{ flex: 1, textAlign: 'left', color: 'var(--red-11)' }}>Request account deletion</Text>
+          <ChevronRightIcon width={14} height={14} color="var(--gray-8)" />
+        </button>
+        {msg && <Text size="1" as="div" mt="2" style={{ color: 'var(--green-11)', fontWeight: 700 }}>{msg}</Text>}
+      </div>
+    </>
+  )
+}
+
+const ACCT_GROUPS = [
+  ['BUSINESS', [
+    ['dash', BarChartIcon, 'Performance dashboard', 'Purchases, growth, category mix'],
+    ['orders', CounterClockwiseClockIcon, 'Order history', 'Receipts, repeat, invoices'],
+    ['schemes', StarFilledIcon, 'Schemes & discounts', 'Volume slabs, tier perks'],
+    ['gst', FileTextIcon, 'GST details', 'GSTIN, billing name'],
+  ]],
+  ['TOOLS & SERVICES', [
+    ['calc', RulerSquareIcon, 'Calculators', 'Slide load, hinges per door'],
+    ['site', SewingPinIcon, 'Submit site visit', 'Get our team to your site'],
+    ['display', EyeOpenIcon, 'Display centre visit', 'Book a showroom slot'],
+    ['support', ChatBubbleIcon, 'Support', 'Call, WhatsApp, FAQs'],
+  ]],
+  ['SETTINGS', [
+    ['addr', HomeIcon, 'Address book', 'Delivery locations'],
+    ['notif', BellIcon, 'Notification preferences', 'Orders, offers, price drops'],
+    ['privacy', LockClosedIcon, 'Account privacy', 'Data and permissions'],
+  ]],
+]
+
+const ACCT_TITLES = {
+  dash: 'Performance dashboard', orders: 'Order history', schemes: 'Schemes & discounts',
+  gst: 'GST details', calc: 'Calculators', site: 'Submit site visit',
+  display: 'Display centre visit', support: 'Support', addr: 'Address book',
+  notif: 'Notification preferences', privacy: 'Account privacy',
+}
+
+function AccountPage({ onClose, onChange, cart, lastOrder, subRef }) {
+  const [sub, setSub] = useState(() => (window.location.hash === '#dash' ? 'dash' : null))
+  const [lo, setLo] = useState(null) // null | 'confirm' | 'out'
+  subRef.current = sub !== null
+  const backSub = () => {
+    if (window.history.state?.qcAcctSub) window.history.back()
+    else setSub(null)
+  }
+  useEffect(() => {
+    if (!sub) return
+    if (!window.history.state?.qcAcctSub) window.history.pushState({ qcAcctSub: true }, '')
+    const onPop = () => setSub(null)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [sub !== null]) // eslint-disable-line react-hooks/exhaustive-deps
+  const renderSub = () => {
+    switch (sub) {
+      case 'dash': return <AcctDash />
+      case 'orders': return <AcctOrders lastOrder={lastOrder} onChange={onChange} />
+      case 'schemes': return <AcctSchemes />
+      case 'gst': return <AcctGst />
+      case 'calc': return <AcctCalc />
+      case 'site': return <VisitForm kind="site" />
+      case 'display': return <VisitForm kind="display" />
+      case 'support': return <AcctSupport />
+      case 'addr': return <AcctAddr />
+      case 'notif': return <AcctNotif />
+      case 'privacy': return <AcctPrivacy />
+      default: return null
+    }
+  }
+  return (
+    <div className="acctpage">
+      <div className="pdp-head">
+        <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
+        <Text size="2" weight="bold" style={{ flex: 1 }}>Account</Text>
+      </div>
+      <div className="cp-body">
+        <div className="cp-card prof">
+          <Flex align="center" gap="3">
+            <div className="prof-av">VB</div>
+            <Box flexGrow="1" style={{ minWidth: 0 }}>
+              <Text size="3" weight="bold" as="div">Virag Bora</Text>
+              <Text size="1" color="gray" as="div">Bora Hardware & Plywood · HSR Layout</Text>
+              <Flex align="center" gap="2" mt="1">
+                <span className="tier-mini" style={{ background: '#98A2B3' }} />
+                <Text size="1" weight="bold">Silver dealer</Text>
+                <Text size="1" color="gray">· member since Mar 2023</Text>
+              </Flex>
+            </Box>
+          </Flex>
+        </div>
+        {ACCT_GROUPS.map(([g, items]) => (
+          <div className="cp-card" key={g} style={{ padding: '10px 6px' }}>
+            <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-9)', letterSpacing: '.5px', fontSize: 10, padding: '2px 10px 4px' }}>{g}</Text>
+            {items.map(([key, Icon, t, s]) => (
+              <button key={key} className="mrow" onClick={() => setSub(key)}>
+                <span className="mrow-ic"><Icon width={16} height={16} /></span>
+                <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                  <Text size="2" weight="bold" as="div">{t}</Text>
+                  <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>{s}</Text>
+                </span>
+                <ChevronRightIcon width={15} height={15} color="var(--gray-8)" />
+              </button>
+            ))}
+          </div>
+        ))}
+        <div className="cp-card" style={{ padding: '6px' }}>
+          <button className="mrow" onClick={() => setLo('confirm')}>
+            <span className="mrow-ic" style={{ background: 'var(--red-3)', color: 'var(--red-11)' }}><ExitIcon width={15} height={15} /></span>
+            <Text size="2" weight="bold" style={{ flex: 1, textAlign: 'left', color: 'var(--red-11)' }}>Log out</Text>
+          </button>
+        </div>
+        <Text size="1" color="gray" as="div" style={{ textAlign: 'center', padding: '4px 0 16px' }}>QuickCart · v1.0 · Furniture hardware for dealers</Text>
+      </div>
+
+      {sub && (
+        <div className="acct-sub">
+          <div className="pdp-head">
+            <button className="sheet-back" onClick={backSub} aria-label="Back"><ArrowLeftIcon /></button>
+            <Text size="2" weight="bold" style={{ flex: 1 }}>{ACCT_TITLES[sub]}</Text>
+          </div>
+          <div className="cp-body">{renderSub()}</div>
+        </div>
+      )}
+
+      {lo && (
+        <div className="order-done" onClick={() => lo === 'confirm' && setLo(null)}>
+          <div className="od-card" onClick={(e) => e.stopPropagation()}>
+            {lo === 'confirm' ? (
+              <>
+                <Heading size="5" style={{ letterSpacing: '-0.3px' }}>Log out?</Heading>
+                <Text size="2" color="gray" as="div" mt="1">Your cart and preferences stay saved on this device.</Text>
+                <Flex gap="2" mt="4">
+                  <Button size="3" variant="soft" color="gray" radius="full" style={{ fontWeight: 800, flex: 1 }} onClick={() => setLo(null)}>Cancel</Button>
+                  <Button size="3" color="red" radius="full" style={{ fontWeight: 800, flex: 1 }} onClick={() => setLo('out')}>Log out</Button>
+                </Flex>
+              </>
+            ) : (
+              <>
+                <div className="od-tick">✓</div>
+                <Heading size="5" mt="3" style={{ letterSpacing: '-0.3px' }}>Logged out</Heading>
+                <Text size="2" color="gray" as="div" mt="1">See you soon — your targets are waiting.</Text>
+                <Button mt="4" size="3" color="green" radius="full" style={{ fontWeight: 800, width: '100%' }} onClick={() => { setLo(null); onClose() }}>
+                  Log back in
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 /* ---------------- Bulk qty sheet — every ADD opens dealer-scale options ---------------- */
 
@@ -3174,6 +3790,8 @@ export default function App() {
   const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
   const [cartOpen, setCartOpen] = useState(window.location.hash === '#cart')
   const [reorderOpen, setReorderOpen] = useState(['#reorder', '#pastorder'].includes(window.location.hash))
+  const [acctOpen, setAcctOpen] = useState(['#account', '#dash'].includes(window.location.hash))
+  const acctSubRef = useRef(false)
   const [order, setOrder] = useState(() => {
     if (window.location.hash === '#order') {
       return {
@@ -3215,6 +3833,8 @@ export default function App() {
   cartRef.current = cartOpen
   const reorderRef = useRef(reorderOpen)
   reorderRef.current = reorderOpen
+  const acctRef = useRef(acctOpen)
+  acctRef.current = acctOpen
   const plpOpen = plp !== null
   const closePlp = () => {
     if (window.history.state?.qcPlp) window.history.back()
@@ -3264,6 +3884,19 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop)
   }, [qtyOpen])
 
+  const closeAcct = () => {
+    if (window.history.state?.qcAcct) window.history.back()
+    else setAcctOpen(false)
+  }
+  useEffect(() => {
+    if (!acctOpen) return
+    if (!window.history.state?.qcAcct) window.history.pushState({ qcAcct: true }, '')
+    const onPop = () => {
+      if (!pdpRef.current && !qtyRef.current && !cartRef.current && !acctSubRef.current) setAcctOpen(false)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [acctOpen])
   const closeReorder = () => {
     if (window.history.state?.qcReorder) window.history.back()
     else setReorderOpen(false)
@@ -3566,6 +4199,10 @@ export default function App() {
           <ReorderPage onClose={closeReorder} onChange={changeCart} cart={cart} lastOrder={order} />
         )}
 
+        {acctOpen && (
+          <AccountPage onClose={closeAcct} onChange={changeCart} cart={cart} lastOrder={order} subRef={acctSubRef} />
+        )}
+
         {pdp && <ProductPage key={pdp.id} p={pdp} onClose={closePdp} onChange={changeCart} cart={cart} />}
 
         {qsheet && <QtySheet q={qsheet} onClose={closeQty} onConfirm={confirmQty} />}
@@ -3611,7 +4248,8 @@ export default function App() {
               onCategories={() => setPlp('All')}
               onUtilities={() => { /* Utilities page comes later */ }}
               onReorder={() => setReorderOpen(true)}
-              active={reorderOpen ? 'reorder' : plp ? 'categories' : 'home'}
+              onAccount={() => setAcctOpen(true)}
+              active={acctOpen ? 'account' : reorderOpen ? 'reorder' : plp ? 'categories' : 'home'}
               mini={navMini}
             />
             <button

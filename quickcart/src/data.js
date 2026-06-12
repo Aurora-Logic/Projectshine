@@ -373,3 +373,11 @@ export const PAST_ORDERS = [
   { id: 'QC-471203', date: 'Mon, 2 Jun', items: [['ba1', 20], ['ba3', 50], ['dl1', 24]] },
   { id: 'QC-458819', date: 'Sat, 17 May', items: [['ba2', 30], ['ba1', 20], ['ws1', 8], ['ba5', 12]] },
 ]
+
+/* Performance dashboard data (₹ thousands for the trend) */
+export const DASH = {
+  months: [['Jul', 92], ['Aug', 110], ['Sep', 98], ['Oct', 135], ['Nov', 128], ['Dec', 96], ['Jan', 118], ['Feb', 142], ['Mar', 165], ['Apr', 121], ['May', 138], ['Jun', 124]],
+  cats: [['Drawer slides', 34, '#30A46C'], ['Hinges', 22, '#2D6FE8'], ['Locks', 14, '#E3B33C'], ['Kitchen', 12, '#7C5CE0'], ['Lighting', 9, '#E8553C'], ['Other', 9, '#98A2B3']],
+  brands: [['Ebco', 58], ['Worksmart', 16], ['Livsmart', 11], ['Zipco', 9], ['Peka', 6]],
+  kpis: { month: 124500, growth: 18, aov: 8300, saved: 14320, orders: 15 },
+}
