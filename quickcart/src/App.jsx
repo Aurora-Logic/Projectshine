@@ -3829,6 +3829,7 @@ const ACCT_FLAT = [
   ['calc', RulerSquareIcon, 'Calculators'],
   ['site', SewingPinIcon, 'Submit site visit'],
   ['display', EyeOpenIcon, 'Display centre visit'],
+  ['estpdf', FileTextIcon, 'Estimate PDF settings'],
   ['support', ChatBubbleIcon, 'Support'],
   ['notif', BellIcon, 'Notification preferences'],
   ['privacy', LockClosedIcon, 'Account privacy'],
@@ -3840,6 +3841,94 @@ const ACCT_TITLES = {
   gst: 'GST details', calc: 'Calculators', site: 'Submit site visit',
   display: 'Display centre visit', support: 'Support', addr: 'Address book',
   notif: 'Notification preferences', privacy: 'Account privacy',
+  estpdf: 'Estimate PDF settings',
+}
+
+/* Estimate PDF branding: company name, logo upload, text colours */
+const EST_SWATCHES = ['#1A1C1F', '#696E74', '#14633F', '#30A46C', '#1A43AE', '#C9A44A', '#9A3412', '#7C2D92']
+function ColorRow({ label, value, onChange }) {
+  return (
+    <div>
+      <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        {label}
+      </Text>
+      <div className="clr-row">
+        {EST_SWATCHES.map(c => (
+          <button
+            key={c} type="button"
+            className={`clr-dot ${value.toUpperCase() === c ? 'on' : ''}`}
+            style={{ background: c }}
+            onClick={() => onChange(c)} aria-label={`Colour ${c}`}
+          />
+        ))}
+        <label className="clr-custom" title="Custom colour">
+          <input type="color" value={value} onChange={(e) => onChange(e.target.value.toUpperCase())} aria-label="Custom colour" />
+        </label>
+      </div>
+    </div>
+  )
+}
+
+function AcctEstPdf() {
+  const [saved, setBrand] = usePersisted('qc-est-brand', EST_BRAND_DEFAULT)
+  const brand = { ...EST_BRAND_DEFAULT, ...saved }
+  const set = (k, v) => setBrand({ ...brand, [k]: v })
+  const onFile = (e) => {
+    const file = e.target.files && e.target.files[0]
+    if (!file) return
+    const url = URL.createObjectURL(file)
+    const im = new Image()
+    im.onload = () => {
+      // downscale to ≤512px so the dataURL stays localStorage-friendly
+      const sc = Math.min(1, 512 / Math.max(im.naturalWidth, im.naturalHeight))
+      const c = document.createElement('canvas')
+      c.width = Math.round(im.naturalWidth * sc)
+      c.height = Math.round(im.naturalHeight * sc)
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height)
+      set('logo', c.toDataURL('image/png'))
+      URL.revokeObjectURL(url)
+    }
+    im.src = url
+    e.target.value = ''
+  }
+  return (
+    <>
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          COMPANY ON THE PDF
+        </Text>
+        <Flex direction="column" gap="2" mt="2">
+          <input className="cp-input" style={{ fontSize: 16 }} placeholder="Company name" value={brand.name} onChange={(e) => set('name', e.target.value)} />
+        </Flex>
+        <Flex align="center" gap="3" mt="3">
+          <img className="est-logo-prev" src={brand.logo || '/brand-logo.png'} alt="Company logo preview" />
+          <Flex direction="column" gap="2" style={{ flex: 1 }}>
+            <Button asChild size="2" variant="soft" color="green" radius="full" style={{ fontWeight: 800 }}>
+              <label style={{ cursor: 'pointer', justifyContent: 'center' }}>
+                Upload logo
+                <input type="file" accept="image/*" onChange={onFile} style={{ display: 'none' }} />
+              </label>
+            </Button>
+            {brand.logo && (
+              <Button size="2" variant="ghost" color="gray" radius="full" style={{ fontWeight: 700 }} onClick={() => set('logo', null)}>
+                Reset to default
+              </Button>
+            )}
+          </Flex>
+        </Flex>
+        <Text size="1" color="gray" as="div" mt="2">Shown at the top-right of every customer estimate.</Text>
+      </div>
+
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          PDF TEXT COLOURS
+        </Text>
+        <ColorRow label="FOOTER TEXT" value={brand.footer} onChange={(v) => set('footer', v)} />
+        <ColorRow label="SIDE VERTICAL TEXT" value={brand.side} onChange={(v) => set('side', v)} />
+        <Text size="1" color="gray" as="div" mt="3">Item rows and totals always stay ink-on-paper for readability.</Text>
+      </div>
+    </>
+  )
 }
 
 function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCategory, onGoReorder }) {
@@ -3880,6 +3969,7 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
       case 'addr': return <AcctAddr />
       case 'notif': return <AcctNotif />
       case 'privacy': return <AcctPrivacy />
+      case 'estpdf': return <AcctEstPdf />
       default: return null
     }
   }
@@ -4555,7 +4645,7 @@ const fetchB64 = async (url) => {
 /* original PNG bytes go straight into the PDF (a canvas re-encode would
    balloon palette PNGs into full RGBA); Image is only used to read dims */
 const imgData = async (url) => {
-  const data = 'data:image/png;base64,' + await fetchB64(url)
+  const data = url.startsWith('data:') ? url : 'data:image/png;base64,' + await fetchB64(url)
   return new Promise((resolve, reject) => {
     const im = new Image()
     im.onload = () => resolve({ data, w: im.naturalWidth, h: im.naturalHeight })
@@ -4564,7 +4654,21 @@ const imgData = async (url) => {
   })
 }
 
-async function generateEstimate({ cust, items, bill }) {
+/* dealer-editable PDF branding (Account → Estimate PDF settings) */
+const EST_BRAND_DEFAULT = {
+  name: 'Interior Innovation',
+  logo: null, // dataURL from upload; null = bundled /brand-logo.png
+  footer: '#696E74',
+  side: '#696E74',
+}
+const hexToRgb = (hex) => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '')
+  if (!m) return [105, 110, 116]
+  const v = parseInt(m[1], 16)
+  return [(v >> 16) & 255, (v >> 8) & 255, v & 255]
+}
+
+async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }) {
   // product thumbnails: square JPEGs fetched per line item; a failed fetch
   // degrades to a neutral placeholder square rather than failing the export
   const thumb = (ph) => fetchB64(`https://images.unsplash.com/photo-${ph}?fit=crop&w=160&h=160&q=70&fm=jpg`)
@@ -4572,7 +4676,7 @@ async function generateEstimate({ cust, items, bill }) {
   const [{ jsPDF }, { default: autoTable }, fontN, fontB, mark, thumbs, ...brands] = await Promise.all([
     import('jspdf'), import('jspdf-autotable'),
     fetchB64('/fonts/PJS-Regular.ttf'), fetchB64('/fonts/PJS-Bold.ttf'),
-    imgData('/icon-192.png'),
+    imgData(brand.logo || '/brand-logo.png'),
     Promise.all(items.map(({ p }) => thumb(p.ph))),
     ...Object.values(BRAND_LOGOS).map(imgData),
   ])
@@ -4593,9 +4697,11 @@ async function generateEstimate({ cust, items, bill }) {
   const paper = () => doc.setFillColor(...PAPER).rect(0, 0, W, H, 'F')
   paper()
 
-  // ---- masthead: wordmark left, monogram right (tight)
-  doc.setFont('PJS', 'bold').setFontSize(25).setTextColor(...INK).text('QuickCart', M, 23)
-  doc.addImage(mark.data, 'PNG', W - M - 13, 12, 13, 13)
+  // ---- masthead: company wordmark left, company logo right (tight)
+  const FOOT = hexToRgb(brand.footer), SIDE = hexToRgb(brand.side)
+  doc.setFont('PJS', 'bold').setFontSize(brand.name.length > 14 ? 20 : 25).setTextColor(...INK).text(brand.name, M, 23)
+  const mw = Math.min(40, (mark.w / mark.h) * 16)
+  doc.addImage(mark.data, 'PNG', W - M - mw, 8, mw, 16)
 
   // ---- information columns
   doc.setFont('PJS', 'bold').setFontSize(9).setTextColor(...INK)
@@ -4603,7 +4709,7 @@ async function generateEstimate({ cust, items, bill }) {
   doc.setFont('PJS', 'normal').setFontSize(8.5).setTextColor(...GRAY)
   const custLines = [cust.name, cust.phone, ...(cust.site ? doc.splitTextToSize(cust.site, 80) : [])].filter(Boolean)
   doc.text(custLines, M, 42)
-  doc.text(['Virag Bora — QuickCart dealer', '304 Maple Heights, HSR Layout', 'Bengaluru 560102 · +91 98450 00000'], 112, 42)
+  doc.text([`Virag Bora — ${brand.name}`, '304 Maple Heights, HSR Layout', 'Bengaluru 560102 · +91 98450 00000'], 112, 42)
 
   // ---- title row between hairlines: Estimate big, number/date body-size
   const tTop = 42 + Math.max(custLines.length, 3) * 4.3 + 5
@@ -4617,7 +4723,7 @@ async function generateEstimate({ cust, items, bill }) {
   // ---- items table: hairline rows, product thumbnails
   autoTable(doc, {
     startY: tTop + 19,
-    margin: { left: M, right: M, bottom: 34 },
+    margin: { left: M, right: M, bottom: 44 },
     head: [['Qty', '', 'Item no', 'Description', 'Unit price', 'Amount']],
     body: items.map(({ p, n }) => [n, '', p.id.toUpperCase(), `${p.name}\n${p.qty || ''}`, inr(p.price), inr(p.price * n)]),
     theme: 'plain',
@@ -4654,7 +4760,7 @@ async function generateEstimate({ cust, items, bill }) {
     ['Delivery' + (bill.express ? ' (express · 1 hr)' : ''), bill.fee === 0 ? 'FREE' : inr(bill.fee)],
   ].filter(Boolean)
   const blockH = (rows.length + 1) * 7.5 + 14
-  if (y + blockH > H - 42) { doc.addPage(); paper(); y = 30 }
+  if (y + blockH > H - 46) { doc.addPage(); paper(); y = 30 }
   const tx = 118
   for (const [label, val] of rows) {
     doc.setFont('PJS', 'normal').setFontSize(8.5).setTextColor(...GRAY)
@@ -4670,31 +4776,31 @@ async function generateEstimate({ cust, items, bill }) {
   doc.setFont('PJS', 'normal').setFontSize(8).setTextColor(...INK)
     .text(doc.splitTextToSize('Please confirm this estimate within 7 days — GST as applicable.', W - M - tx), tx, y + 9.5)
 
-  // ---- last page: brand logos row above the footer
-  const ly = 252
+  // ---- last page: brand logos row tucked right above the footer rule
+  const ly = 259
   doc.setFont('PJS', 'bold').setFontSize(6.5).setTextColor(...GRAY).setCharSpace(0.5)
   doc.text('AUTHORIZED DEALER FOR', M, ly)
   doc.setCharSpace(0)
-  const lh = 7
+  const lh = 9
   let bx = M
   for (const b of brands) {
     const dw = (b.w / b.h) * lh
     doc.addImage(b.data, 'PNG', bx, ly + 2.5, dw, lh)
-    bx += dw + 9
+    bx += dw + 10
   }
 
-  // ---- footer on every page: hairline + green contact columns + side text
+  // ---- footer on every page: hairline + contact columns + side text
   const pages = doc.getNumberOfPages()
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i)
     doc.setDrawColor(...INK).setLineWidth(0.4).line(M, H - 21, W - M, H - 21)
-    doc.setFont('PJS', 'normal').setFontSize(7.5).setTextColor(...GRAY)
+    doc.setFont('PJS', 'normal').setFontSize(7.5).setTextColor(...FOOT)
     doc.text(['estimates@quickcart.in', 'quickcart-nine-iota.vercel.app'], M, H - 15.5)
     doc.text(['304 Maple Heights, HSR Layout', 'Bengaluru 560102'], 72, H - 15.5)
     doc.text(['Trade prices · GST billing', '90-min site delivery'], 128, H - 15.5)
     doc.text(['GSTIN', '29AAACQ1234L1ZQ'], 176, H - 15.5)
-    doc.setFontSize(6.5)
-      .text('QuickCart · Furniture Hardware · Registered dealer — Bengaluru', 8, H - 10, { angle: 90 })
+    doc.setFontSize(6.5).setTextColor(...SIDE)
+      .text(`${brand.name} · Furniture Hardware · Registered dealer — Bengaluru`, 8, H - 10, { angle: 90 })
   }
 
   doc.save(`${no} ${cust.name.trim()} estimate.pdf`)
@@ -4702,13 +4808,14 @@ async function generateEstimate({ cust, items, bill }) {
 
 function EstimateSheet({ items, bill, onClose }) {
   const [cust, setCust] = usePersisted('qc-est-cust', { name: '', phone: '', site: '' })
+  const [brand] = usePersisted('qc-est-brand', EST_BRAND_DEFAULT)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
   const go = async () => {
     setBusy(true)
     setErr(null)
     try {
-      await generateEstimate({ cust, items, bill })
+      await generateEstimate({ cust, items, bill, brand: { ...EST_BRAND_DEFAULT, ...brand } })
       onClose()
     } catch {
       setErr('Could not prepare the PDF. Check your connection and try again.')

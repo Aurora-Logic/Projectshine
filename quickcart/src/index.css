@@ -4694,3 +4694,37 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   transform: translateY(2px);
   box-shadow: 0 1px 0 #0E4A2F, 0 3px 8px rgba(20, 99, 63, .3);
 }
+
+/* ---------- Estimate PDF settings: color swatches + logo upload ---------- */
+.clr-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 8px; }
+.clr-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 2px solid var(--gray-4);
+  cursor: pointer;
+  padding: 0;
+  transition: transform .12s ease;
+}
+.clr-dot:active { transform: scale(.9); }
+.clr-dot.on { border-color: var(--gray-12); box-shadow: inset 0 0 0 2.5px #fff; }
+.clr-custom {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 2px solid var(--gray-4);
+  background: conic-gradient(#f66, #fc6, #6c6, #6cf, #66f, #c6f, #f66);
+  overflow: hidden;
+  cursor: pointer;
+}
+.clr-custom input[type="color"] { position: absolute; inset: -8px; opacity: 0; cursor: pointer; }
+.est-logo-prev {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  border: 1px solid var(--gray-5);
+  background: #fff;
+  object-fit: contain;
+  padding: 6px;
+}
