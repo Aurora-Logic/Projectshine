@@ -2871,8 +2871,133 @@ function OrderDetailSheet({ order, onClose, onChange }) {
   )
 }
 
+const ordPgRef = { current: false }
+
+function OrderDetailPage({ order, onClose, onChange }) {
+  const pieces = order.items.reduce((s, { n }) => s + n, 0)
+  const total = order.items.reduce((s, { p, n }) => s + p.price * n, 0)
+  const saved = order.items.reduce((s, { p, n }) => {
+    const t = bulkTier(p)
+    return t && n >= t.thr ? s + (p.price - t.bp) * n : s
+  }, 0)
+  const live = order.status !== 'Delivered'
+  const elapsed = live && order.ts ? (Date.now() - order.ts) / 1000 : Infinity
+  let si = 0
+  ORDER_STAGES.forEach(([, t], i) => { if (elapsed >= t) si = i })
+  if (!live) si = ORDER_STAGES.length - 1
+  const fill = (si / (ORDER_STAGES.length - 1)) * 100
+  const TL = [
+    ['Order placed', 'Confirmed at HSR depot'],
+    ['Packed', 'Quality-checked and invoiced'],
+    ['On the way', order.express ? 'Express rider assigned · ~15 min' : 'Out for delivery'],
+    ['Delivered', `Received at ${order.addrLabel || 'Shop'}`],
+  ]
+  const timeFor = (i) => {
+    if (!live) return order.date
+    if (i > si) return '—'
+    return new Date(order.ts + ORDER_STAGES[i][1] * 1000).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+  }
+  const repeat = (e) => {
+    order.items.forEach(({ p, n }) => onChange(n, p, { noReco: true }))
+    sparkle(e)
+  }
+  return (
+    <div className="ordpage">
+      <div className="pdp-head">
+        <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
+        <Heading size="4" style={{ flex: 1, letterSpacing: '-0.3px' }}>PO {order.id}</Heading>
+        <span className={`st-chip ${live ? '' : 'ok'}`}>{live ? ORDER_STAGES[si][0] : 'Delivered'}</span>
+      </div>
+      <div className="cp-body">
+        <div className="cp-card">
+          <Flex align="center" justify="between">
+            <Text size="2" weight="bold">{order.date} · {order.addrLabel || 'Shop'}</Text>
+            <Text size="1" weight="bold" color="gray">{Math.round(fill)}%</Text>
+          </Flex>
+          <div className="oc-line" style={{ marginTop: 10 }}>
+            <div style={{ width: `${fill}%` }} />
+          </div>
+          <div className="tl">
+            {TL.map(([t, s], i) => {
+              const done = i < si || !live
+              const cur = live && i === si
+              return (
+                <div className="tl-row" key={t}>
+                  <div className="tl-rail">
+                    <span className={`tl-dot ${done ? 'done' : cur ? 'cur' : ''}`}>
+                      {done && <CheckIcon width={11} height={11} />}
+                    </span>
+                    {i < TL.length - 1 && <span className={`tl-line ${done ? 'done' : ''}`} />}
+                  </div>
+                  <Box flexGrow="1" style={{ minWidth: 0, paddingBottom: i < TL.length - 1 ? 16 : 0 }}>
+                    <Text size="2" weight={cur || done ? 'bold' : 'medium'} as="div" color={done || cur ? undefined : 'gray'}>{t}</Text>
+                    <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>{s}</Text>
+                  </Box>
+                  <Text style={{ fontSize: 10, color: 'var(--gray-9)', flex: 'none' }}>{timeFor(i)}</Text>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        <div className="cp-card">
+          <div className="ods-stats" style={{ marginTop: 0 }}>
+            <div><Text size="2" weight="bold" as="div">{pieces}</Text><span>pieces</span></div>
+            <div><Text size="2" weight="bold" as="div">{order.items.length}</Text><span>SKUs</span></div>
+            <div><Text size="2" weight="bold" as="div">₹{(total / 1000).toFixed(1)}k</Text><span>value</span></div>
+            <div><Text size="2" weight="bold" as="div" style={{ color: 'var(--green-11)' }}>₹{saved.toLocaleString('en-IN')}</Text><span>saved</span></div>
+          </div>
+        </div>
+        <div className="cp-card">
+          <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>ITEMS</Text>
+          {order.items.map(({ p, n }) => (
+            <div className="cs-row" key={`op-${p.id}`}>
+              <Img src={img(p.ph, 120)} alt="" />
+              <Box flexGrow="1" style={{ minWidth: 0 }}>
+                <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{p.name}</Text>
+                <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>{n} × ₹{p.price.toLocaleString('en-IN')}</Text>
+              </Box>
+              <Text size="1" weight="bold" style={{ minWidth: 60, textAlign: 'right', flex: 'none', whiteSpace: 'nowrap' }}>
+                ₹{(n * p.price).toLocaleString('en-IN')}
+              </Text>
+            </div>
+          ))}
+          <div className="cp-divider" />
+          <Flex justify="between">
+            <Text size="2" weight="bold">Order total</Text>
+            <Text size="2" weight="bold">₹{total.toLocaleString('en-IN')}</Text>
+          </Flex>
+        </div>
+        <Flex gap="2">
+          <button className="qs-cta ghost" style={{ marginTop: 0, flex: 1, justifyContent: 'center', gap: 7 }} onClick={() => downloadInvoice(order)}>
+            <FileTextIcon width={14} height={14} /> Invoice
+          </button>
+          <button className="qs-cta" style={{ marginTop: 0, flex: 1.3, justifyContent: 'center' }} onClick={repeat}>
+            Repeat order
+          </button>
+        </Flex>
+      </div>
+    </div>
+  )
+}
+
 function AcctOrders({ lastOrder, onChange }) {
   const [view, setView] = useState(null)
+  ordPgRef.current = view !== null
+  useEffect(() => {
+    if (!view) return
+    if (!window.history.state?.qcOrdPg) window.history.pushState({ qcOrdPg: true }, '')
+    const onPop = () => setView(null)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [view !== null]) // eslint-disable-line react-hooks/exhaustive-deps
+  const closeView = () => {
+    if (window.history.state?.qcOrdPg) window.history.back()
+    else setView(null)
+  }
+  // #ordpg: open the first receipt for design review
+  useEffect(() => {
+    if (window.location.hash === '#ordpg' && hist[0]) setView(hist[0])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [preset, setPreset] = useState('fy')
   const [from, setFrom] = useState(null)
   const [to, setTo] = useState(null)
@@ -2920,7 +3045,7 @@ function AcctOrders({ lastOrder, onChange }) {
           <Text size="1" color="gray">orders · {fmtL(totalVal + 1040000)} billed · all invoices below</Text>
         </Flex>
       </div>
-      <div className="seg" style={{ marginTop: 0 }}>
+      <div className="seg" style={{ marginTop: 0, marginBottom: 12 }}>
         {[['7d', '7D'], ['30d', '30D'], ['qtr', 'Qtr'], ['fy', 'FY'], ['custom', 'Custom']].map(([k, l]) => (
           <button key={k} className={`seg-b ${preset === k ? 'on' : ''}`} onClick={() => setPreset(k)}>{l}</button>
         ))}
@@ -2937,7 +3062,7 @@ function AcctOrders({ lastOrder, onChange }) {
           </Box>
         </Flex>
       )}
-      <Text size="1" color="gray" as="div" mb="2" style={{ padding: '0 2px' }}>
+      <Text size="1" color="gray" as="div" mb="3" style={{ padding: '0 4px' }}>
         Showing {shownH.length} invoice{shownH.length === 1 ? '' : 's'}
       </Text>
       {shownH.length === 0 && (
@@ -2968,7 +3093,7 @@ function AcctOrders({ lastOrder, onChange }) {
           </div>
         )
       })}
-      {view && <OrderDetailSheet key={view.id} order={view} onClose={() => setView(null)} onChange={onChange} />}
+      {view && <OrderDetailPage key={view.id} order={view} onClose={closeView} onChange={onChange} />}
     </>
   )
 }
@@ -3156,7 +3281,10 @@ function CalPicker({ value, onChange, allowPast }) {
   const today = new Date()
   const [vm, setVm] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState('days')
   const dow = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const years = Array.from({ length: 12 }, (_, i) => today.getFullYear() - 6 + i)
   const startPad = new Date(vm.getFullYear(), vm.getMonth(), 1).getDay()
   const dim = new Date(vm.getFullYear(), vm.getMonth() + 1, 0).getDate()
   const cells = [...Array(startPad).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)]
@@ -3166,34 +3294,84 @@ function CalPicker({ value, onChange, allowPast }) {
   const isToday = (d) => d === today.getDate() && vm.getMonth() === today.getMonth() && vm.getFullYear() === today.getFullYear()
   return (
     <>
-      <button className={`cal-field ${value ? 'has' : ''}`} onClick={() => setOpen(o => !o)}>
+      <button className={`cal-field ${value ? 'has' : ''}`} onClick={() => { setOpen(o => !o); setMode('days') }}>
         <CalendarIcon width={15} height={15} />
-        <span>{value ? value.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Pick a date'}</span>
+        <span>{value ? value.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Pick a date'}</span>
         <ChevronDownIcon width={14} height={14} style={{ marginLeft: 'auto', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
       </button>
       {open && (
         <div className="cal-pop">
-          <div className="cal-head">
-            <button onClick={() => setVm(new Date(vm.getFullYear(), vm.getMonth() - 1, 1))} aria-label="Previous month">
-              <ChevronLeftIcon width={14} height={14} />
-            </button>
-            <Text size="2" weight="bold">{vm.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</Text>
-            <button onClick={() => setVm(new Date(vm.getFullYear(), vm.getMonth() + 1, 1))} aria-label="Next month">
-              <ChevronRightIcon width={14} height={14} />
-            </button>
-          </div>
-          <div className="cal-grid">
-            {dow.map(d => <span key={d} className="cal-dow">{d}</span>)}
-            {cells.map((d, i) => d === null ? <span key={`e${i}`} /> : (
-              <button
-                key={d} disabled={!allowPast && isPast(d)}
-                className={`cal-day ${isSel(d) ? 'sel' : ''} ${isToday(d) ? 'today' : ''}`}
-                onClick={() => { onChange(new Date(vm.getFullYear(), vm.getMonth(), d)); setOpen(false) }}
-              >
-                {d}
-              </button>
-            ))}
-          </div>
+          {mode === 'days' && (
+            <>
+              <div className="cal-head">
+                <button onClick={() => setVm(new Date(vm.getFullYear(), vm.getMonth() - 1, 1))} aria-label="Previous month">
+                  <ChevronLeftIcon width={14} height={14} />
+                </button>
+                <button className="cal-title" onClick={() => setMode('months')}>
+                  {vm.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                  <ChevronDownIcon width={12} height={12} />
+                </button>
+                <button onClick={() => setVm(new Date(vm.getFullYear(), vm.getMonth() + 1, 1))} aria-label="Next month">
+                  <ChevronRightIcon width={14} height={14} />
+                </button>
+              </div>
+              <div className="cal-grid">
+                {dow.map(d => <span key={d} className="cal-dow">{d}</span>)}
+                {cells.map((d, i) => d === null ? <span key={`e${i}`} /> : (
+                  <button
+                    key={d} disabled={!allowPast && isPast(d)}
+                    className={`cal-day ${isSel(d) ? 'sel' : ''} ${isToday(d) ? 'today' : ''}`}
+                    onClick={() => { onChange(new Date(vm.getFullYear(), vm.getMonth(), d)); setOpen(false) }}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {mode === 'months' && (
+            <>
+              <div className="cal-head">
+                <button onClick={() => setVm(new Date(vm.getFullYear() - 1, vm.getMonth(), 1))} aria-label="Previous year">
+                  <ChevronLeftIcon width={14} height={14} />
+                </button>
+                <button className="cal-title" onClick={() => setMode('years')}>
+                  {vm.getFullYear()}
+                  <ChevronDownIcon width={12} height={12} />
+                </button>
+                <button onClick={() => setVm(new Date(vm.getFullYear() + 1, vm.getMonth(), 1))} aria-label="Next year">
+                  <ChevronRightIcon width={14} height={14} />
+                </button>
+              </div>
+              <div className="cal-mgrid">
+                {MONTHS.map((m, i) => (
+                  <button
+                    key={m} className={`cal-mcell ${i === vm.getMonth() ? 'sel' : ''}`}
+                    onClick={() => { setVm(new Date(vm.getFullYear(), i, 1)); setMode('days') }}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {mode === 'years' && (
+            <>
+              <div className="cal-head">
+                <Text size="2" weight="bold" style={{ width: '100%', textAlign: 'center' }}>Select year</Text>
+              </div>
+              <div className="cal-mgrid">
+                {years.map(y => (
+                  <button
+                    key={y} className={`cal-mcell ${y === vm.getFullYear() ? 'sel' : ''}`}
+                    onClick={() => { setVm(new Date(y, vm.getMonth(), 1)); setMode('months') }}
+                  >
+                    {y}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
     </>
@@ -3529,7 +3707,7 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, o
     if (h === '#dash') return 'dash'
     if (h === '#credit') return 'credit'
     if (h === '#lists') return 'lists'
-    if (h === '#orders') return 'orders'
+    if (h === '#orders' || h === '#ordpg') return 'orders'
     if (h === '#site') return 'site'
     return initialSub || null
   })
@@ -3542,7 +3720,7 @@ function AccountPage({ onClose, onChange, cart, lastOrder, subRef, initialSub, o
   useEffect(() => {
     if (!sub) return
     if (!window.history.state?.qcAcctSub) window.history.pushState({ qcAcctSub: true }, '')
-    const onPop = () => setSub(null)
+    const onPop = () => { if (!ordPgRef.current) setSub(null) }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [sub !== null]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -4870,7 +5048,7 @@ export default function App() {
   const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
   const [cartOpen, setCartOpen] = useState(window.location.hash === '#cart')
   const [reorderOpen, setReorderOpen] = useState(['#reorder', '#pastorder'].includes(window.location.hash))
-  const [acctOpen, setAcctOpen] = useState(['#account', '#dash', '#credit', '#lists', '#orders', '#site'].includes(window.location.hash))
+  const [acctOpen, setAcctOpen] = useState(['#account', '#dash', '#credit', '#lists', '#orders', '#site', '#ordpg'].includes(window.location.hash))
   const acctSubRef = useRef(false)
   const acctInitSub = useRef(null)
   const [authed, setAuthed] = useState(() => {

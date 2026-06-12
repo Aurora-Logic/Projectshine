@@ -4010,3 +4010,109 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   border-radius: 0;
   display: block;
 }
+
+/* ---------- Buttery screen transitions: iOS-style push ---------- */
+@keyframes pushin {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.plp, .sheet, .reorderpage, .acctpage, .cartpage, .pdp, .ordpage {
+  animation: pushin .34s cubic-bezier(.32, .72, .25, 1);
+}
+.acct-sub { animation: pushin .3s cubic-bezier(.32, .72, .25, 1); }
+.pdp.pdp-in-r { animation: pdpr .32s cubic-bezier(.22, 1, .36, 1); }
+.pdp.pdp-in-l { animation: pdpl .32s cubic-bezier(.22, 1, .36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .plp, .sheet, .reorderpage, .acctpage, .cartpage, .pdp, .ordpage, .acct-sub {
+    animation: none !important;
+  }
+}
+
+/* ---------- Order detail page + timeline ---------- */
+.ordpage {
+  position: fixed;
+  inset: 0;
+  margin: 0 auto;
+  max-width: 480px;
+  background: var(--gray-2);
+  z-index: 76;
+  display: flex;
+  flex-direction: column;
+}
+.ordpage .pdp-head { flex: none; background: #fff; }
+.tl { margin-top: 16px; }
+.tl-row { display: flex; gap: 12px; }
+.tl-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+  width: 22px;
+}
+.tl-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--gray-4);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.tl-dot.done { background: var(--green-9); }
+.tl-dot.cur {
+  background: #fff;
+  box-shadow: inset 0 0 0 2px var(--green-9);
+  position: relative;
+}
+.tl-dot.cur::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green-9);
+  animation: ocpulse 1.6s ease-in-out infinite;
+}
+.tl-line {
+  width: 2.5px;
+  flex: 1;
+  min-height: 14px;
+  background: var(--gray-4);
+  border-radius: 99px;
+}
+.tl-line.done { background: var(--green-9); }
+
+/* calendar month/year pickers */
+.cal-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: var(--gray-2);
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 13.5px;
+  color: var(--gray-12);
+  border-radius: 9px;
+  padding: 6px 11px;
+  cursor: pointer;
+}
+.cal-mgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 4px 2px 2px;
+}
+.cal-mcell {
+  border: none;
+  background: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--gray-12);
+  padding: 11px 4px;
+  cursor: pointer;
+}
+.cal-mcell.sel { background: var(--green-9); color: #fff; }
