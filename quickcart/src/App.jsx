@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Theme, Box, Flex, Grid, Text, Heading, Button, IconButton, TextField, Dialog,
 } from '@radix-ui/themes'
@@ -143,6 +143,20 @@ function bulkNudge(p, qty) {
   return qty >= thr
     ? { done: true, text: `${pct}% bulk price unlocked 🎉` }
     : { done: false, text: `Add ${thr - qty} more → ${pct}% off` }
+}
+
+/* App-wide intents: any ADD opens the bulk qty sheet; any card tap opens the product page */
+const QtyCtx = createContext(null)
+const PdpCtx = createContext(null)
+
+const BRAND_NAMES = { ebco: 'Ebco', zipco: 'Zipco', peka: 'Peka', worksmart: 'Worksmart by Ebco', livsmart: 'Livsmart by Ebco' }
+
+/* Parse "10+ @ ₹350/pc" into a usable tier: threshold, bulk price, % off */
+const bulkTier = (p) => {
+  const m = p.bulk?.match(/(\d+)\+\s*@\s*₹([\d,]+)/)
+  if (!m) return null
+  const bp = +m[2].replace(/,/g, '')
+  return { thr: +m[1], bp, pct: Math.max(1, Math.round((1 - bp / p.price) * 100)) }
 }
 
 const scrollToId = (id) =>
@@ -455,7 +469,7 @@ function SectionHead({ title, extra, light, sub, onSeeAll }) {
   )
 }
 
-function AddControl({ qty, onAdd, onRemove }) {
+function AddControl({ qty, onAdd, onRemove, onBulk }) {
   if (qty === 0) {
     return (
       <Button
@@ -471,7 +485,12 @@ function AddControl({ qty, onAdd, onRemove }) {
       <IconButton size="1" onClick={onRemove} style={{ background: 'transparent', color: '#fff' }}>
         <MinusIcon />
       </IconButton>
-      <Text size="2" weight="bold" style={{ color: '#fff' }}>{qty}</Text>
+      <Text
+        size="2" weight="bold" style={{ color: '#fff' }}
+        onClick={onBulk ? (e) => { e.stopPropagation(); onBulk() } : undefined}
+      >
+        {qty}
+      </Text>
       <IconButton size="1" onClick={onAdd} style={{ background: 'transparent', color: '#fff' }}>
         <PlusIcon />
       </IconButton>
@@ -481,16 +500,22 @@ function AddControl({ qty, onAdd, onRemove }) {
 
 const ProductCard = memo(function ProductCard({ p, grid, onChange }) {
   const [qty, setQty] = useState(0)
-  const add = (e) => { setQty(q => q + 1); onChange(1, p); sparkle(e) }
-  const remove = () => { setQty(q => q - 1); onChange(-1, p) }
+  const openQty = useContext(QtyCtx)
+  const openPdp = useContext(PdpCtx)
+  const add = (e) => {
+    e.stopPropagation()
+    if (qty === 0 && openQty) { openQty(p, (n) => setQty(q => q + n)); return }
+    setQty(q => q + 1); onChange(1, p); sparkle(e)
+  }
+  const remove = (e) => { e?.stopPropagation(); setQty(q => q - 1); onChange(-1, p) }
 
   const oos = p.stock === 0
   return (
-    <div className={`pcard ${grid ? 'grid' : ''}`}>
+    <div className={`pcard ${grid ? 'grid' : ''}`} onClick={openPdp ? () => openPdp(p) : undefined}>
       <div className="pimg-wrap">
         <Img className={`pimg ${oos ? 'oos' : ''}`} src={img(p.ph, 360)} alt={p.name} loading="lazy" />
         {p.tag && <span className="pbadge">{p.tag}</span>}
-        <AddControl qty={qty} onAdd={add} onRemove={remove} />
+        <AddControl qty={qty} onAdd={add} onRemove={remove} onBulk={openQty ? () => openQty(p, (n) => setQty(q => q + n)) : undefined} />
       </div>
       {p.usual && <span className="usual-pill">YOUR USUAL</span>}
       <Text size="2" weight="bold" as="div" mt={p.usual ? '1' : '3'} className="clamp2" style={{ fontSize: 13, lineHeight: 1.3, minHeight: 34 }}>
@@ -632,6 +657,8 @@ const MERCH_ROWS = [
 
 /* "People also add" strip — shared by PLP and Search */
 function RecoStrip({ items, onClose, onChange }) {
+  const openQty = useContext(QtyCtx)
+  const openPdp = useContext(PdpCtx)
   if (!items || items.length === 0) return null
   return (
     <div className="rstrip">
@@ -645,7 +672,7 @@ function RecoStrip({ items, onClose, onChange }) {
       </Flex>
       <div className="rstrip-scroll">
         {items.map(x => (
-          <div key={`rs-${x.id}`} className="rmini">
+          <div key={`rs-${x.id}`} className="rmini" onClick={openPdp ? () => openPdp(x) : undefined}>
             <div style={{ position: 'relative' }}>
               <Img src={img(x.ph, 220)} alt={x.name} loading="lazy" />
               {x.tag && <span className="pbadge" style={{ fontSize: 9, padding: '3px 6px', top: 6, left: 6 }}>{x.tag}</span>}
@@ -676,7 +703,11 @@ function RecoStrip({ items, onClose, onChange }) {
               </Box>
               <Button
                 size="1" color="teal" radius="full" style={{ fontWeight: 800, height: 26, padding: '0 12px', flex: 'none' }}
-                onClick={(e) => { onChange(1, x, { noReco: true }); sparkle(e) }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (openQty) openQty(x, null, { noReco: true })
+                  else { onChange(1, x, { noReco: true }); sparkle(e) }
+                }}
               >
                 ADD
               </Button>
@@ -1158,9 +1189,14 @@ function ComboDeals({ onChange }) {
 
 function ComboCard({ c, onChange }) {
   const [qty, setQty] = useState(0)
-  const p = { id: c.id, ph: c.ph, price: c.price }
-  const add = (e) => { setQty(q => q + 1); onChange(1, p); sparkle(e) }
-  const remove = () => { setQty(q => q - 1); onChange(-1, p) }
+  const p = { id: c.id, ph: c.ph, price: c.price, name: c.title, qty: c.items }
+  const openQty = useContext(QtyCtx)
+  const add = (e) => {
+    e.stopPropagation()
+    if (qty === 0 && openQty) { openQty(p, (n) => setQty(q => q + n), { noReco: true }); return }
+    setQty(q => q + 1); onChange(1, p); sparkle(e)
+  }
+  const remove = (e) => { e?.stopPropagation(); setQty(q => q - 1); onChange(-1, p) }
 
   return (
     <div className="combo-card" style={{ background: c.tint }}>
@@ -1703,16 +1739,22 @@ function FestHero({ onCat, palette }) {
 /* Flash Sale — Deal of the day + Clearance merged: timer, discounts, selling-fast bars */
 function FlashCard({ p, onChange }) {
   const [qty, setQty] = useState(0)
-  const add = (e) => { setQty(q => q + 1); onChange(1, p); sparkle(e) }
-  const remove = () => { setQty(q => q - 1); onChange(-1, p) }
+  const openQty = useContext(QtyCtx)
+  const openPdp = useContext(PdpCtx)
+  const add = (e) => {
+    e.stopPropagation()
+    if (qty === 0 && openQty) { openQty(p, (n) => setQty(q => q + n)); return }
+    setQty(q => q + 1); onChange(1, p); sparkle(e)
+  }
+  const remove = (e) => { e?.stopPropagation(); setQty(q => q - 1); onChange(-1, p) }
   const pct = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0
   const sold = Math.max(15, Math.min(95, 100 - (p.stock ?? 50)))
   return (
-    <div className="flash-card">
+    <div className="flash-card" onClick={openPdp ? () => openPdp(p) : undefined}>
       <div className="pimg-wrap" style={{ aspectRatio: 'auto', height: 104 }}>
         <Img className="pimg" src={img(p.ph, 320)} alt={p.name} style={{ borderRadius: '16px 16px 0 0' }} />
         {pct > 0 && <span className="flash-off">-{pct}%</span>}
-        <AddControl qty={qty} onAdd={add} onRemove={remove} />
+        <AddControl qty={qty} onAdd={add} onRemove={remove} onBulk={openQty ? () => openQty(p, (n) => setQty(q => q + n)) : undefined} />
       </div>
       <div className="flash-body">
         <Text as="div" weight="bold" className="clamp1" style={{ fontSize: 12.5 }}>{p.name}</Text>
@@ -1948,6 +1990,218 @@ function NavBar({ onCategories, onUtilities, active = 'home', mini = false }) {
 
 /* ---------------- App ---------------- */
 
+/* ---------------- Bulk qty sheet — every ADD opens dealer-scale options ---------------- */
+
+const QTY_PACKS = [10, 50, 100]
+
+function QtySheet({ q, onClose, onConfirm }) {
+  const p = q.p
+  const [n, setN] = useState(10)
+  const tier = bulkTier(p)
+  const unlocked = tier && n >= tier.thr
+  const saved = unlocked ? (p.price - tier.bp) * n : 0
+  return (
+    <div className="qsheet-overlay" onClick={onClose}>
+      <div className="qsheet" onClick={(e) => e.stopPropagation()}>
+        <div className="qsheet-grab" />
+        <div className="qs-prod">
+          <Img src={img(p.ph, 140)} alt="" />
+          <Box flexGrow="1" style={{ minWidth: 0 }}>
+            <Text size="2" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{p.name}</Text>
+            {p.qty && <Text size="1" color="gray" as="div" truncate>{p.qty}</Text>}
+            <Flex align="center" gap="2" mt="1">
+              <Text size="2" weight="bold">₹{p.price.toLocaleString('en-IN')}</Text>
+              {p.mrp && <Text size="1" color="gray" style={{ textDecoration: 'line-through' }}>₹{p.mrp.toLocaleString('en-IN')}</Text>}
+              {tier && <span className="qs-bulkpill">{tier.thr}+ @ ₹{tier.bp.toLocaleString('en-IN')}</span>}
+            </Flex>
+          </Box>
+        </div>
+        <Text size="1" weight="bold" as="div" mt="4" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          SELECT QUANTITY
+        </Text>
+        <div className="qs-chips">
+          {QTY_PACKS.map(k => (
+            <button key={k} className={`qs-chip ${n === k ? 'on' : ''}`} onClick={() => setN(k)}>
+              {tier && k >= tier.thr && <span className="qs-off">{tier.pct}% OFF</span>}
+              <span className="qn">{k}</span>
+              <span className="qp">₹{(k * (tier && k >= tier.thr ? tier.bp : p.price)).toLocaleString('en-IN')}</span>
+            </button>
+          ))}
+        </div>
+        <div className="qs-step">
+          <button className="qs-sbtn" onClick={() => setN(v => Math.max(1, v - 1))} aria-label="Less"><MinusIcon /></button>
+          <Text size="3" weight="bold" style={{ width: 44, textAlign: 'center' }}>{n}</Text>
+          <button className="qs-sbtn" onClick={() => setN(v => v + 1)} aria-label="More"><PlusIcon /></button>
+          <Text size="1" color="gray" style={{ marginLeft: 'auto' }}>or set a custom quantity</Text>
+        </div>
+        {tier && (
+          <div className={`qs-meter ${unlocked ? 'done' : ''}`}>
+            <Text size="1" weight="bold" as="div" style={{ color: unlocked ? 'var(--teal-11)' : 'var(--amber-11)' }}>
+              {unlocked
+                ? `${tier.pct}% bulk price unlocked 🎉 ₹${saved.toLocaleString('en-IN')} savings on invoice`
+                : `Add ${tier.thr - n} more to unlock ₹${tier.bp.toLocaleString('en-IN')}/pc (${tier.pct}% off)`}
+            </Text>
+            <div className="qs-mbar"><div style={{ width: `${Math.min(100, (n / tier.thr) * 100)}%` }} /></div>
+          </div>
+        )}
+        <button className="qs-cta" onClick={(e) => onConfirm(n, e)}>
+          <span>Add {n} {n === 1 ? 'piece' : 'pieces'}</span>
+          <span>₹{(n * p.price).toLocaleString('en-IN')}</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ---------------- Product details page ---------------- */
+
+function ProductPage({ p, onClose, onChange }) {
+  const openQty = useContext(QtyCtx)
+  const [added, setAdded] = useState(0)
+  const recos = useMemo(() => recosFor(p), [p])
+  const club = recos[0]
+  const more = recos.slice(1, 5)
+  const tier = bulkTier(p)
+  const off = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0
+  const oos = p.stock === 0
+  const specs = [
+    ['Brand', BRAND_NAMES[p.brand] || p.brand],
+    p.mat && ['Material / finish', p.mat],
+    p.load && ['Load capacity', `${p.load} kg`],
+    p.size && ['Size', `${p.size} mm`],
+    p.qty && ['Pack contents', p.qty],
+    p.bulk && ['Bulk pricing', p.bulk],
+    ['Item code', p.id.toUpperCase()],
+    [oos ? 'Lead time' : 'Availability', oos ? `Ships in ${p.lead} days` : `In stock · ${p.stock}+ pcs`],
+  ].filter(Boolean)
+  return (
+    <div className="pdp">
+      <div className="pdp-head">
+        <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
+        <Text size="2" weight="bold" style={{ flex: 1, minWidth: 0 }} truncate>Product details</Text>
+        {BRAND_LOGOS[p.brand] && <img src={BRAND_LOGOS[p.brand]} alt={p.brand} style={{ height: 16, flex: 'none' }} />}
+      </div>
+      <div className="pdp-body">
+        <div className="pdp-hero">
+          <Img src={img(p.ph, 720)} alt={p.name} />
+          {(p.tag || off > 0) && <span className="pbadge" style={{ top: 14, left: 14 }}>{p.tag || `${off}% OFF`}</span>}
+        </div>
+        <Box px="4" pt="4">
+          <Heading size="5" style={{ letterSpacing: '-0.3px', lineHeight: 1.25 }}>{p.name}</Heading>
+          {p.qty && <Text size="2" color="gray" as="div" mt="1">{p.qty}</Text>}
+          {(p.rating || p.buys) && (
+            <Flex align="center" gap="3" mt="2">
+              {p.rating && <span className="pdp-rate"><StarFilledIcon width={11} height={11} /> {p.rating}</span>}
+              {p.buys && (
+                <Flex align="center" gap="1">
+                  <LightningBoltIcon width={11} height={11} color="var(--amber-11)" />
+                  <Text size="1" weight="bold">{p.buys}</Text>
+                </Flex>
+              )}
+            </Flex>
+          )}
+          {p.stock != null && (
+            <Text size="1" as="div" mt="2" weight="bold" style={{
+              color: oos ? 'var(--red-10)' : p.stock <= 10 ? 'var(--amber-11)' : 'var(--teal-10)',
+            }}>
+              {oos
+                ? `Out of stock · ships in ${p.lead} days`
+                : p.stock <= 10 ? `Only ${p.stock} left` : `In stock · ${p.stock}+ pcs · same-day dispatch`}
+            </Text>
+          )}
+          <Flex align="center" gap="2" mt="3">
+            <Text weight="bold" style={{ fontSize: 24, letterSpacing: '-0.4px' }}>₹{p.price.toLocaleString('en-IN')}</Text>
+            {p.mrp && <Text size="2" color="gray" style={{ textDecoration: 'line-through' }}>₹{p.mrp.toLocaleString('en-IN')}</Text>}
+            {off > 0 && <span className="off-pill">{off}% OFF</span>}
+          </Flex>
+          {tier && (
+            <div className="bulk-box">
+              <div className="bulk-row">
+                <Text size="1" weight="bold" style={{ color: 'var(--teal-11)', fontSize: 10.5, letterSpacing: '.5px' }}>
+                  DEALER BULK PRICING
+                </Text>
+                <Text size="1" color="gray">per pc / set</Text>
+              </div>
+              <div className="bulk-row">
+                <Text size="2">1–{tier.thr - 1} pcs</Text>
+                <Text size="2" weight="bold">₹{p.price.toLocaleString('en-IN')}</Text>
+              </div>
+              <div className="bulk-row hot">
+                <Flex align="center" gap="2">
+                  <Text size="2" weight="bold">{tier.thr}+ pcs</Text>
+                  <span className="off-pill">{tier.pct}% OFF</span>
+                </Flex>
+                <Text size="2" weight="bold" style={{ color: 'var(--teal-11)' }}>₹{tier.bp.toLocaleString('en-IN')}</Text>
+              </div>
+            </div>
+          )}
+        </Box>
+
+        {club && (
+          <Box px="4" pt="5">
+            <SectionHead title="Buy it with" sub="Dealers usually club these together" />
+            <div className="club">
+              <Img src={img(p.ph, 160)} alt="" />
+              <div className="club-plus"><PlusIcon width={14} height={14} /></div>
+              <Img src={img(club.ph, 160)} alt={club.name} />
+              <Box flexGrow="1" style={{ minWidth: 0 }}>
+                <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{club.name}</Text>
+                <Text size="2" weight="bold" as="div" mt="1">
+                  ₹{(p.price + club.price).toLocaleString('en-IN')} <Text size="1" color="gray" weight="medium">for both</Text>
+                </Text>
+                <Button
+                  size="1" color="teal" radius="full" mt="2" style={{ fontWeight: 800 }}
+                  onClick={(e) => {
+                    onChange(1, p, { noReco: true }); onChange(1, club, { noReco: true })
+                    sparkle(e); setAdded(a => a + 1)
+                  }}
+                >
+                  Add both
+                </Button>
+              </Box>
+            </div>
+          </Box>
+        )}
+
+        <Box px="4" pt="5">
+          <SectionHead title="Specifications" />
+          <div className="spec-card">
+            {specs.map(([k, v]) => (
+              <div className="spec-row" key={k}>
+                <Text size="2" color="gray" style={{ flex: 'none' }}>{k}</Text>
+                <Text size="2" weight="bold" style={{ textAlign: 'right', minWidth: 0 }}>{v}</Text>
+              </div>
+            ))}
+          </div>
+        </Box>
+
+        {more.length > 0 && (
+          <Box pt="5" pb="4">
+            <SectionHead title="You may also like" sub="More from this range" />
+            <div className="pdp-grid">
+              {more.map(x => <ProductCard key={`pd-${x.id}`} p={x} grid onChange={onChange} />)}
+            </div>
+          </Box>
+        )}
+      </div>
+      <div className="pdp-cta">
+        <Box style={{ minWidth: 0, flex: 'none' }}>
+          <Text size="3" weight="bold" as="div">₹{p.price.toLocaleString('en-IN')}</Text>
+          <Text size="1" color="gray" as="div" truncate>
+            {added > 0 ? `${added} in cart` : p.mrp ? `MRP ₹${p.mrp.toLocaleString('en-IN')}` : 'per unit'}
+          </Text>
+        </Box>
+        <button
+          className="qs-cta" style={{ marginTop: 0, flex: 1, justifyContent: 'center' }}
+          onClick={() => openQty && openQty(p, (n) => setAdded(a => a + n))}
+        >
+          {added > 0 ? 'Add more' : 'Add to cart'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [cart, setCart] = useState({ count: 0, total: 0, photos: [] })
   // #compact hash forces the scrolled header state (handy for design review)
@@ -1994,6 +2248,8 @@ export default function App() {
   })
   const [sheet, setSheet] = useState(() =>
     window.location.hash === '#search' ? { items: FEED_POOL } : null)
+  const [pdp, setPdp] = useState(() => (window.location.hash === '#pdp' ? FEED_POOL[0] : null))
+  const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
   const [plp, setPlp] = useState(() => {
     if (window.location.hash.startsWith('#fsheet')) return 'Hinges'
     if (window.location.hash === '#strip') return 'All'
@@ -2012,6 +2268,10 @@ export default function App() {
   // UI close buttons route THROUGH history.back() so the entry stack stays consistent.
   const sheetRef = useRef(sheet)
   sheetRef.current = sheet
+  const pdpRef = useRef(pdp)
+  pdpRef.current = pdp
+  const qtyRef = useRef(qsheet)
+  qtyRef.current = qsheet
   const plpOpen = plp !== null
   const closePlp = () => {
     if (window.history.state?.qcPlp) window.history.back()
@@ -2020,7 +2280,7 @@ export default function App() {
   useEffect(() => {
     if (!plpOpen) return
     if (!window.history.state?.qcPlp) window.history.pushState({ qcPlp: true }, '')
-    const onPop = () => { if (!sheetRef.current) setPlp(null) }
+    const onPop = () => { if (!sheetRef.current && !pdpRef.current && !qtyRef.current) setPlp(null) }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [plpOpen])
@@ -2032,10 +2292,46 @@ export default function App() {
   useEffect(() => {
     if (!sheetOpen) return
     if (!window.history.state?.qcSheet) window.history.pushState({ qcSheet: true }, '')
-    const onPop = () => setSheet(null)
+    const onPop = () => { if (!pdpRef.current && !qtyRef.current) setSheet(null) }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [sheetOpen])
+  const pdpOpen = pdp !== null
+  const closePdp = () => {
+    if (window.history.state?.qcPdp) window.history.back()
+    else setPdp(null)
+  }
+  useEffect(() => {
+    if (!pdpOpen) return
+    if (!window.history.state?.qcPdp) window.history.pushState({ qcPdp: true }, '')
+    const onPop = () => { if (!qtyRef.current) setPdp(null) }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [pdpOpen])
+  const qtyOpen = qsheet !== null
+  const closeQty = () => {
+    if (window.history.state?.qcQty) window.history.back()
+    else setQsheet(null)
+  }
+  useEffect(() => {
+    if (!qtyOpen) return
+    if (!window.history.state?.qcQty) window.history.pushState({ qcQty: true }, '')
+    const onPop = () => setQsheet(null)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [qtyOpen])
+
+  // stable intents — memoized cards subscribe via context, never re-render
+  const openQty = useCallback((p, apply, opts) => setQsheet({ p, apply, opts }), [])
+  const openPdp = useCallback((p) => setPdp(p), [])
+  const confirmQty = (n, e) => {
+    const q = qsheet
+    if (!q) return
+    changeCart(n, q.p, q.opts)
+    q.apply?.(n)
+    if (e) sparkle(e)
+    closeQty()
+  }
 
   // Theme vars go on :root so portaled dialogs (quiz popup) inherit the sky too
   useEffect(() => {
@@ -2137,6 +2433,8 @@ export default function App() {
 
   return (
     <Theme accentColor="teal" grayColor="slate" radius="large">
+      <QtyCtx.Provider value={openQty}>
+      <PdpCtx.Provider value={openPdp}>
       <div className="app">
         <TopBar
           compact={scrolled} weather={{ icon: T.icon }} dp={sky.dp} cond={sky.cond}
@@ -2189,7 +2487,7 @@ export default function App() {
         {brand === 'ALL' && <ComboDeals onChange={changeCart} />}
 
         {brand === 'ALL' && (
-          <BrandDay onShop={() => setSheet({ items: FEED_POOL, query: BRAND_DAY.query, title: 'Brand of the day' })} />
+          <BrandDay onShop={() => setSheet({ items: FEED_POOL, query: BRAND_DAY.query, title: 'Product of the day' })} />
         )}
 
         {homeMode === 'brand' && bf(NEW_EBCO).length > 0 && (
@@ -2270,6 +2568,10 @@ export default function App() {
 
         <SearchSheet sheet={sheet} onClose={closeSheet} onChange={changeCart} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
 
+        {pdp && <ProductPage key={pdp.id} p={pdp} onClose={closePdp} onChange={changeCart} />}
+
+        {qsheet && <QtySheet q={qsheet} onClose={closeQty} onConfirm={confirmQty} />}
+
         <button
           className={`backtop ${scrolled ? 'show' : ''}`}
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -2291,7 +2593,7 @@ export default function App() {
               </Box>
               <Button
                 size="1" color="teal" radius="full" style={{ fontWeight: 800, flex: 'none' }}
-                onClick={(e) => { changeCart(1, reco, { noReco: true }); sparkle(e); setReco(null) }}
+                onClick={() => { const r = reco; setReco(null); openQty(r, null, { noReco: true }) }}
               >
                 ADD
               </Button>
@@ -2309,6 +2611,8 @@ export default function App() {
           />
         </div>
       </div>
+      </PdpCtx.Provider>
+      </QtyCtx.Provider>
     </Theme>
   )
 }
