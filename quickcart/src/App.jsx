@@ -1261,18 +1261,17 @@ function UqChip({ c, icon: Icon, label, badge, onClick }) {
 }
 
 // "Buy Now" style promo banner (CSS-art only, no <img>). hero = wider flagship card.
-function UqBanner({ tone, hero, tag, title, sub, icon: Icon, cta, onClick }) {
+// Clean home-style featured card (white, 3D icon, dark text, subtle link).
+function UqBanner({ c, hero, tag, title, sub, icon: Icon, cta, onClick }) {
   return (
-    <button className={`uq-pb uq-tone-${tone} ${hero ? 'uq-pb-hero' : ''}`} onClick={onClick}>
-      <span className="uq-pb-blob uq-pb-blob-a" aria-hidden="true" />
-      <span className="uq-pb-blob uq-pb-blob-b" aria-hidden="true" />
-      <span className="uq-pb-copy">
+    <button className={`uq-pb ${hero ? 'uq-pb-hero' : ''}`} onClick={onClick}>
+      <Flex align="center" justify="between" className="uq-pb-top">
+        <span className={`flat-ic c-${c}`}><Icon width={18} height={18} /></span>
         {tag ? <span className="uq-pb-tag">{tag}</span> : null}
-        <Text size={hero ? '5' : '3'} weight="bold" as="div" className="uq-pb-title">{title}</Text>
-        <Text size="1" as="div" className="uq-pb-sub">{sub}</Text>
-        <span className="uq-pb-cta">{cta}<ChevronRightIcon width={14} height={14} /></span>
-      </span>
-      <span className="uq-pb-ic"><Icon width={hero ? 28 : 24} height={hero ? 28 : 24} /></span>
+      </Flex>
+      <Text size="3" weight="bold" as="div" className="uq-pb-title">{title}</Text>
+      <Text size="1" color="gray" as="div" className="uq-pb-sub">{sub}</Text>
+      <span className="uq-pb-cta">{cta} <ChevronRightIcon width={13} height={13} /></span>
     </button>
   )
 }
@@ -1436,17 +1435,13 @@ function UtilitiesPage({ onClose, onSpin, onQuiz, lastOrder, bomCount = 0 }) {
 
           {/* flagship featured banner — pure-CSS concentric-ring art, » affordance */}
           <button className="uq-flag" onClick={() => push('spscalc')}>
-            <span className="uq-flag-art" aria-hidden="true">
-              <span className="uq-ring" />
-              <span className="uq-ring uq-ring2" />
-              <span className="uq-flag-glyph"><MixerHorizontalIcon width={28} height={28} /></span>
-            </span>
+            <span className="flat-ic c-green uq-flag-ic"><MixerHorizontalIcon width={22} height={22} /></span>
             <span className="uq-flag-tx">
               <span className="uq-flag-eyebrow">FLAGSHIP CALCULATOR</span>
-              <Heading as="h3" size="5" className="uq-flag-title">Partition BoM</Heading>
-              <Text size="1" as="div" className="uq-flag-sub">Linked & Syncro → instant priced bill of materials</Text>
-              <span className="uq-flag-cta">Open calculator <span className="uq-chev">»</span></span>
+              <Heading as="h3" size="4" className="uq-flag-title">Partition BoM</Heading>
+              <Text size="1" color="gray" as="div" className="uq-flag-sub">Linked & Syncro → instant priced bill of materials</Text>
             </span>
+            <span className="uq-flag-cta">Open <ChevronRightIcon width={14} height={14} /></span>
           </button>
 
           {/* "Buy Now" style scrolling promo carousel */}
@@ -1457,13 +1452,13 @@ function UtilitiesPage({ onClose, onSpin, onQuiz, lastOrder, bomCount = 0 }) {
             </button>
           </Flex>
           <div className="uq-hscroll">
-            <UqBanner hero tone="green" tag="VERIFIED PROS" title="Find a Pro"
+            <UqBanner hero c="orange" tag="VERIFIED PROS" title="Find a Pro"
               sub="Rated carpenters & architects" icon={PersonIcon} cta="Browse"
               onClick={() => { setProTab('carpenter'); push('pros') }} />
-            <UqBanner tone="violet" tag="NEW TOOL" title="Panel weight"
+            <UqBanner c="violet" tag="NEW TOOL" title="Panel weight"
               sub="Ply · MDF · glass in seconds" icon={DashboardIcon} cta="Open"
               onClick={() => push('weightcalc')} />
-            <UqBanner tone="amber" tag="EARN COINS" title="Daily Quiz"
+            <UqBanner c="amber" tag="EARN COINS" title="Daily Quiz"
               sub="Answer & win rewards" icon={LightningBoltIcon} cta="Play"
               onClick={onQuiz} />
           </div>

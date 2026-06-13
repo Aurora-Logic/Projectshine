@@ -1575,8 +1575,8 @@ button.padd::after { content: ''; position: absolute; inset: -6px; }
 /* ---------- Page entrances (native-feel push/slide) ---------- */
 .plp { animation: pagein .26s cubic-bezier(.32, .72, .25, 1); }
 @keyframes pagein {
-  from { transform: translateX(7%); opacity: .5; }
-  to { transform: translateX(0); opacity: 1; }
+  from { opacity: 0; transform: scale(.975); }
+  to { opacity: 1; transform: scale(1); }
 }
 .sheet { animation: sheetin .24s cubic-bezier(.32, .72, .25, 1); }
 @keyframes sheetin {
@@ -3764,9 +3764,10 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 }
 
 /* ---------- Buttery screen transitions: iOS-style push ---------- */
+/* iOS-style page transition: a soft fade + subtle scale (no left/right slide) */
 @keyframes pushin {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from { opacity: 0; transform: scale(.975); }
+  to { opacity: 1; transform: scale(1); }
 }
 .plp, .sheet, .reorderpage, .acctpage, .cartpage, .pdp, .ordpage {
   animation: pushin .34s cubic-bezier(.32, .72, .25, 1);
@@ -3887,7 +3888,8 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   animation: pushout .3s cubic-bezier(.32, .72, .25, 1) forwards !important;
 }
 @keyframes pushout {
-  to { transform: translateX(100%); }
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(.985); }
 }
 .pgx.sheetv.out > * {
   animation: qfadeout .24s ease forwards !important;
@@ -5775,3 +5777,41 @@ button.lg-link {
 }
 .uq-foot .flat-ic { width: 30px; height: 30px; }
 .uq-foot-t.uq-foot-t { color: var(--green-11); }
+
+/* === Utilities → match the home page: flat white cards, home colours, only icons stay 3D === */
+.uq-head {
+  background-color: var(--hdr-c, #1A43AE);
+  background-image: linear-gradient(168deg, var(--hdr-a, #2F66DD) 0%, var(--hdr-b, #2353C4) 50%, var(--hdr-c, #1A43AE) 100%);
+  box-shadow: 0 10px 26px rgba(26, 67, 174, .2);
+}
+/* flagship → clean white card with a green CTA (home button) */
+.uq-flag {
+  align-items: center; border: 1px solid var(--gray-3);
+  background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+}
+.uq-flag-ic { width: 46px; height: 46px; flex: none; align-self: center; }
+.uq-flag-eyebrow { color: var(--green-11); background: var(--green-3); }
+.uq-flag-title.uq-flag-title { color: var(--gray-12); }
+.uq-flag-sub.uq-flag-sub { color: var(--gray-10); }
+.uq-flag-cta {
+  align-self: center; margin-top: 0; color: #fff; background: var(--green-9);
+  box-shadow: none; padding: 8px 13px;
+}
+/* featured carousel → clean white home-style cards */
+.uq-pb {
+  width: 200px; border: 1px solid var(--gray-3); background: #fff; background-image: none;
+  color: var(--gray-12); box-shadow: 0 1px 2px rgba(0, 0, 0, .04); padding: 14px;
+  display: flex; flex-direction: column;
+}
+.uq-pb-hero { width: 200px; }
+.uq-pb .flat-ic { width: 40px; height: 40px; }
+.uq-pb-top { margin-bottom: 12px; }
+.uq-pb-tag { color: var(--green-11); background: var(--green-3); }
+.uq-pb-title.uq-pb-title { color: var(--gray-12); }
+.uq-pb-sub.uq-pb-sub { color: var(--gray-10); }
+.uq-pb-cta { color: var(--green-11); background: none; box-shadow: none; padding: 0; margin-top: 11px; }
+/* tool grid → clean white (drop the token tints) */
+.uq-tool { box-shadow: 0 1px 2px rgba(0, 0, 0, .04); }
+.uq-t-blue, .uq-t-teal, .uq-t-indigo, .uq-t-pink, .uq-t-violet, .uq-t-red {
+  background: #fff; border-color: var(--gray-3);
+}
