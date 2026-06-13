@@ -4639,6 +4639,21 @@ function TplCard({ k, label, active, paper, accent, onClick }) {
             <div className="tp-row" style={{ width: '60%', alignSelf: 'flex-end', background: 'rgba(0,0,0,.14)', height: 3 }} />
           </>
         )}
+        {k === 'japan' && (
+          <>
+            <Flex align="center" gap="1">
+              <div style={{ width: 7, height: 7, borderRadius: 99, background: '#BC002D', flex: 'none' }} />
+              <div className="tp-line" style={{ width: '40%', height: 3, background: ink }} />
+            </Flex>
+            <div style={{ width: 14, height: 2, background: '#BC002D', marginTop: 2 }} />
+            <div className="tp-line" style={{ width: '30%', marginTop: 8 }} />
+            <div className="tp-line" style={{ marginTop: 6 }} />
+            {[1, 2].map(i => <div key={i} className="tp-row" style={{ marginTop: i === 1 ? 5 : 1 }} />)}
+            <div className="tp-row" style={{ width: '40%', alignSelf: 'flex-end', marginTop: 1 }} />
+            <div style={{ flex: 1 }} />
+            <div style={{ width: 14, height: 2, background: '#BC002D' }} />
+          </>
+        )}
       </div>
       <span className="tpl-lab">{label}</span>
     </button>
@@ -4725,7 +4740,7 @@ function AcctEstPdf() {
           TEMPLATE
         </Text>
         <div className="tpl-grid">
-          {[['classic', 'Classic'], ['bold', 'Bold'], ['studio', 'Studio']].map(([k, l]) => (
+          {[['classic', 'Classic'], ['bold', 'Bold'], ['studio', 'Studio'], ['japan', 'Japan']].map(([k, l]) => (
             <TplCard
               key={k} k={k} label={l}
               active={(brand.template || 'classic') === k}
@@ -4735,7 +4750,7 @@ function AcctEstPdf() {
           ))}
         </div>
         <Text size="1" color="gray" as="div" mt="2">
-          Classic — hairlines, logos on top. Bold — colour bands, logos below. Studio — editorial caps, amount in words.
+          Classic — hairlines, logos on top. Bold — colour bands, logos below. Studio — editorial caps, amount in words. Japan — minimal, hinomaru-red accent, lots of air.
         </Text>
         <Text size="1" weight="bold" as="div" mt="3" className="u-seclabel">
           FONT

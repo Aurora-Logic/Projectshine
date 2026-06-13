@@ -471,8 +471,54 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
     }
   }
 
+  /* ============ template: JAPAN (minimal — hinomaru accent, airy hairlines) ============ */
+  const renderJapan = () => {
+    const RED = [188, 0, 45]                         // 日の丸 — the single bold accent
+    // masthead: hinomaru dot + restrained wordmark, generous air, logo top-right
+    doc.setFillColor(...RED).circle(M + 3.5, 17, 3.5, 'F')
+    doc.setFont('DOC', 'normal').setFontSize(17).setTextColor(...WORD).setCharSpace(0.3)
+    doc.text(brand.name, M + 11, 19)
+    doc.setCharSpace(0)
+    const mw = Math.min(24, (mark.w / mark.h) * 11)
+    doc.addImage(mark.data, 'PNG', W - M - mw, 10, mw, 11)
+    doc.setDrawColor(...RED).setLineWidth(0.5).line(M, 28, M + 16, 28)
+
+    // title — small, wide-tracked, lots of whitespace above the body
+    doc.setFont('DOC', 'normal').setFontSize(9).setTextColor(...GRAY).setCharSpace(1.4)
+    doc.text(docTitle.toUpperCase(), M, 48)
+    doc.setCharSpace(0)
+    doc.setFontSize(8).setTextColor(...GRAY).text(`${no}      ${today}`, W - M, 48, { align: 'right' })
+    doc.setDrawColor(...HAIR).setLineWidth(0.2).line(M, 52, W - M, 52)
+
+    // customer / dealer — airy, minimal labels
+    doc.setFont('DOC', 'bold').setFontSize(6.5).setTextColor(...GRAY).setCharSpace(0.8)
+    doc.text('CUSTOMER', M, 63).text('DEALER', 112, 63)
+    doc.setCharSpace(0)
+    doc.setFont('DOC', 'normal').setFontSize(8.5).setTextColor(...INK)
+    doc.text(custLines, M, 69)
+    doc.text(dealerLines, 112, 69)
+
+    const fin = itemsTable({ startY: 69 + Math.max(custLines.length, 3) * 4.3 + 9, bottom: 40 })
+    let y = totalsBlock(fin + 11, H - 40)
+    y = drawRich(doc, note, 118, y + 11, W - M - 118, { size: 8 })
+    signature(y + 6, H - 40)
+
+    const pages = doc.getNumberOfPages()
+    for (let i = 1; i <= pages; i++) {
+      doc.setPage(i)
+      let lx = M
+      for (const b of brands) { const dw = (b.w / b.h) * 6.5; doc.addImage(b.data, 'PNG', lx, H - 30, dw, 6.5); lx += dw + 9 }
+      doc.setDrawColor(...RED).setLineWidth(0.4).line(M, H - 20, M + 16, H - 20)
+      doc.setFont('DOC', 'normal').setFontSize(7).setTextColor(...FOOT)
+      doc.text([`${dealer.email}    ${dealer.website}`, `${dealer.addr1}, ${dealer.addr2}    GSTIN ${dealer.gstin}`], M, H - 15)
+      doc.text(`${i} / ${pages}`, W - M, H - 15, { align: 'right' })
+      doc.setFontSize(6.5).setTextColor(...SIDE).text(`${brand.name} — Bengaluru`, 8, H - 10, { angle: 90 })
+    }
+  }
+
   if (brand.template === 'bold') renderBold()
   else if (brand.template === 'studio') renderStudio()
+  else if (brand.template === 'japan') renderJapan()
   else renderClassic()
 
   doc.save(`${no} ${cust.name.trim()} BOM.pdf`)
