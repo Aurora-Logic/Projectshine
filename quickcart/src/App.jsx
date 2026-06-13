@@ -4257,6 +4257,8 @@ function AcctEstPdf() {
   const brand = { ...EST_BRAND_DEFAULT, ...saved, dealer: { ...EST_BRAND_DEFAULT.dealer, ...(saved && saved.dealer) } }
   const set = (k, v) => setBrand({ ...brand, [k]: v })
   const setDealer = (k) => (e) => setBrand({ ...brand, dealer: { ...brand.dealer, [k]: e.target.value } })
+  const bank = { name: '', acc: '', ifsc: '', upi: '', ...(saved && saved.bank) }
+  const setBank = (k) => (e) => setBrand({ ...brand, bank: { ...bank, [k]: e.target.value } })
   const onFile = (e) => {
     const file = e.target.files && e.target.files[0]
     if (!file) return
@@ -4420,6 +4422,31 @@ function AcctEstPdf() {
             <input className="cp-input" style={{ fontSize: 16, flex: 1, minWidth: 0 }} type="email" placeholder="Email" value={brand.dealer.email} onChange={setDealer('email')} />
             <input className="cp-input" style={{ fontSize: 16, flex: 1, minWidth: 0 }} placeholder="Website" value={brand.dealer.website} onChange={setDealer('website')} />
           </Flex>
+        </Flex>
+      </div>
+
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" className="u-seclabel">
+          PAYMENT &amp; TERMS ON THE PDF
+        </Text>
+        <Text size="1" color="gray" as="div" mt="1">Shown in a panel under the items. Leave blank to hide.</Text>
+        <Flex direction="column" gap="2" mt="2">
+          <Flex gap="2">
+            <input className="cp-input" style={{ fontSize: 16, flex: 1, minWidth: 0 }} placeholder="Bank / account name" value={bank.name} onChange={setBank('name')} />
+            <input className="cp-input" style={{ fontSize: 16, flex: 1, minWidth: 0 }} placeholder="A/c number" value={bank.acc} onChange={setBank('acc')} />
+          </Flex>
+          <Flex gap="2">
+            <input className="cp-input" style={{ fontSize: 16, flex: 1, minWidth: 0 }} placeholder="IFSC" value={bank.ifsc} onChange={setBank('ifsc')} />
+            <input className="cp-input" style={{ fontSize: 16, flex: 1, minWidth: 0 }} placeholder="UPI ID" value={bank.upi} onChange={setBank('upi')} />
+          </Flex>
+          <input className="cp-input" style={{ fontSize: 16 }} placeholder="QR target — UPI link or website (empty = no QR)" value={brand.qr} onChange={(e) => set('qr', e.target.value)} />
+          <Text size="1" color="gray" as="div">e.g. <Text size="1" weight="bold">upi://pay?pa=you@bank&amp;pn=Name</Text> to make the QR a one-tap payment.</Text>
+          <textarea
+            className="cp-note" style={{ fontSize: 16 }} rows={3}
+            placeholder="Terms & conditions (one per line). Wrap **words** to bold them."
+            value={brand.terms}
+            onChange={(e) => set('terms', e.target.value)}
+          />
         </Flex>
       </div>
 
