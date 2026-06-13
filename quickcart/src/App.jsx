@@ -21,6 +21,7 @@ import {
 } from './data.js'
 import { generateEstimate, EST_BRAND_DEFAULT, EST_FONTS, EST_PAPERS } from './lib/estimate.js'
 import { calculateBoM } from './lib/spsBom.js'
+import { calculateWeights } from './lib/panelWeight.js'
 import { img, DAY, daypart, condition, sparkle, bulkNudge, scrollToId, dealSecsLeft } from './lib/util.js'
 import { usePersisted, safeGet, safeSet, safeRemove, getJSON, setJSON } from './lib/storage.js'
 import { useSkyTheme, useNextFrame, useSheetA11y, useCountUp } from './hooks.js'
@@ -1170,6 +1171,72 @@ function SpsCalc({ onBack }) {
   )
 }
 
+/* Panel weight calculator — Ply / MDF / HDHMR / Glass, 3D */
+function WeightCalc({ onBack }) {
+  const a11y = useSheetA11y(onBack)
+  const [t, setT] = useState(18)
+  const [w, setW] = useState('1255')
+  const [h, setH] = useState('125')
+  const res = useMemo(() => {
+    try { return { data: calculateWeights({ thicknessMm: t, widthMm: w, heightMm: h }), err: null } }
+    catch (e) { return { data: null, err: e.message } }
+  }, [t, w, h])
+  const data = res.data
+  const MATS = [['Ply', 'green'], ['MDF', 'amber'], ['HDHMR', 'blue'], ['Glass', 'indigo']]
+  return (
+    <div className="sc-page" role="dialog" aria-modal="true" aria-label="Panel Weight Calculator" tabIndex={-1} ref={a11y}>
+      <div className="pdp-head">
+        <button className="sheet-back" onClick={onBack} aria-label="Back"><ArrowLeftIcon /></button>
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Panel Weight Calculator</Heading>
+          <Text size="1" color="gray" as="div">Ply · MDF · HDHMR · Glass</Text>
+        </Box>
+      </div>
+      <div className="cp-body">
+        <div className="sc-card">
+          <Text size="1" weight="bold" className="u-seclabel" as="div">PANEL SIZE</Text>
+          <div className="sc-field" style={{ marginTop: 12 }}>
+            <Text size="1" color="gray" as="div" mb="1">Thickness</Text>
+            <Stepper value={t} set={setT} min={1} max={50} suffix="mm" />
+          </div>
+          <div className="sc-grid" style={{ marginTop: 14 }}>
+            <div className="sc-field">
+              <Text size="1" color="gray" as="div" mb="1">Width</Text>
+              <div className="wt-in"><input type="text" inputMode="numeric" style={{ fontSize: 16 }} value={w} onChange={(e) => setW(e.target.value.replace(/[^\d.]/g, ''))} /><span>mm</span></div>
+            </div>
+            <div className="sc-field">
+              <Text size="1" color="gray" as="div" mb="1">Height</Text>
+              <div className="wt-in"><input type="text" inputMode="numeric" style={{ fontSize: 16 }} value={h} onChange={(e) => setH(e.target.value.replace(/[^\d.]/g, ''))} /><span>mm</span></div>
+            </div>
+          </div>
+        </div>
+
+        {res.err && <div className="sc-warn err"><ExclamationTriangleIcon width={13} height={13} /> <span>Enter a positive thickness, width and height.</span></div>}
+
+        <div className="wt-grid">
+          {MATS.map(([m, c]) => {
+            const v = data ? data[m] : null
+            const cap = v === 'Not Recommended'
+            return (
+              <div key={m} className={`wt-card k-${c} ${cap ? 'cap' : ''}`}>
+                <Flex align="center" gap="2">
+                  <span className={`flat-ic c-${c} wt-dot`}>{m[0]}</span>
+                  <Text size="2" weight="bold">{m}</Text>
+                </Flex>
+                <div className="wt-val">{cap ? 'Not advised' : (data ? v : '—')}{(!cap && data) ? <i>kg</i> : null}</div>
+                {cap
+                  ? <Text size="1" style={{ color: 'var(--red-10)', fontWeight: 600 }}>Glass &gt; 20 mm thickness</Text>
+                  : <Text size="1" color="gray">approx. per panel</Text>}
+              </div>
+            )
+          })}
+        </div>
+        <Text size="1" color="gray" as="div" style={{ textAlign: 'center', marginTop: 12 }}>Conservative estimate (rounded up). Densities — Ply 618 · MDF 752 · HDHMR 897 · Glass 2520 kg/m³.</Text>
+      </div>
+    </div>
+  )
+}
+
 function UxCard({ c, icon: Icon, title, sub, onClick, badge }) {
   return (
     <button className={`ux-card k-${c}`} onClick={onClick}>
@@ -1219,6 +1286,7 @@ function UtilitiesPage({ onClose, onSpin, onQuiz, lastOrder, bomCount = 0 }) {
   )
 
   if (view === 'spscalc') return <SpsCalc onBack={back} />
+  if (view === 'weightcalc') return <WeightCalc onBack={back} />
   if (view === 'calc') return subScreen('Hardware calculators', 'Slides · hinges · closers', <AcctCalc />)
   if (view === 'bom') return subScreen('BOM', null, <AcctBoms onSettings={() => push('estpdf')} />)
   if (view === 'estpdf') return subScreen('BOM PDF settings', null, <AcctEstPdf />)
@@ -1293,7 +1361,7 @@ function UtilitiesPage({ onClose, onSpin, onQuiz, lastOrder, bomCount = 0 }) {
         </button>
 
         <div className="ux-grid">
-          <UxCard c="violet" icon={MixerHorizontalIcon} title="Partition BoM" sub="LSPS & SSPS" badge="NEW" onClick={() => push('spscalc')} />
+          <UxCard c="violet" icon={DashboardIcon} title="Panel weight" sub="Ply · MDF · glass" badge="NEW" onClick={() => push('weightcalc')} />
           <UxCard c="blue" icon={RulerSquareIcon} title="Hardware calc" sub="Slides · hinges" onClick={() => push('calc')} />
           <UxCard c="green" icon={FileTextIcon} title="BOM" sub={bomCount > 0 ? `${bomCount} saved · quote` : 'Create quotes'} onClick={() => push('bom')} />
           <UxCard c="red" icon={ExclamationTriangleIcon} title="Claims & returns" sub="Raise a request" onClick={() => push('claims')} />
