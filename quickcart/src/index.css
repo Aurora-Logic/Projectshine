@@ -666,7 +666,7 @@ button.padd::after { content: ''; position: absolute; inset: -6px; }
 /* Apple-style shrink: smooth — transform scale + animated label fold (no layout snaps) */
 .navbar {
   transform-origin: 50% 100%;
-  transition: transform .32s cubic-bezier(.4, 0, .2, 1);
+  transition: transform .32s cubic-bezier(.4, 0, .2, 1), background .3s ease, border-color .3s ease, box-shadow .3s ease;
 }
 .nav-lb {
   max-height: 16px;
@@ -674,11 +674,22 @@ button.padd::after { content: ''; position: absolute; inset: -6px; }
   overflow: hidden;
   transition: max-height .26s cubic-bezier(.4, 0, .2, 1), opacity .16s ease;
 }
-.navbar.mini { transform: scale(.8); }
+/* shrunk state turns the bar into green-tinted Liquid Glass; full state stays
+   the normal solid-white pill */
+.navbar.mini {
+  transform: scale(.8);
+  background: rgba(232, 248, 240, .55);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border-color: rgba(176, 216, 196, .7);
+  box-shadow: 0 12px 32px rgba(20, 80, 60, .20), inset 0 1px 1px rgba(255, 255, 255, .7);
+}
 .navbar.mini .nav-lb {
   max-height: 0;
   opacity: 0;
 }
+/* brighten the active tab so it reads on the green glass (labels are hidden) */
+.navbar.mini .nav-item.active { background: rgba(255, 255, 255, .72); }
 
 /* ---------- Utilities sheet ---------- */
 .util-sheet { padding: 18px 16px calc(26px + env(safe-area-inset-bottom)); }
@@ -2229,25 +2240,25 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 /* ---------- Back-to-top FAB docked beside the navbar ---------- */
 .navrow { display: flex; align-items: flex-end; }
 .navrow .navbar { flex: 1; min-width: 0; }
-/* back-to-top: iOS-26 "Liquid Glass" — frosted, translucent, specular rim */
+/* back-to-top: iOS-26 "Liquid Glass" — frosted, GREEN-tinted, specular rim */
 .fab {
   width: 50px;
   height: 50px;
   border-radius: 50%;
   border: none;
-  background: rgba(214, 240, 228, .40);
+  background: rgba(40, 150, 100, .42);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
-  color: var(--green-11);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 10px max(14px, calc(env(safe-area-inset-bottom) + 4px)) -60px;
   box-shadow:
-    0 8px 24px rgba(18, 55, 42, .22),
-    inset 0 0 0 1px rgba(255, 255, 255, .5),
-    inset 0 1.5px 2px rgba(255, 255, 255, .85),
-    inset 0 -8px 16px rgba(255, 255, 255, .12);
+    0 8px 24px rgba(18, 55, 42, .26),
+    inset 0 0 0 1px rgba(255, 255, 255, .45),
+    inset 0 1.5px 2px rgba(255, 255, 255, .7),
+    inset 0 -8px 16px rgba(8, 60, 40, .12);
   cursor: pointer;
   flex: none;
   transform: scale(0);
@@ -2258,6 +2269,7 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 /* no backdrop-filter (older/desktop): fall back to the solid brand disc */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .fab { background: var(--green-9); color: #fff; box-shadow: 0 10px 26px rgba(0, 0, 0, .22); }
+  .navbar.mini { background: rgba(232, 248, 240, .94); }
 }
 .fab.show { transform: scale(1); margin-left: 0; pointer-events: auto; }
 .fab.mini.show { transform: scale(.8); }
