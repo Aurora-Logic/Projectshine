@@ -5356,17 +5356,15 @@ function AcctBoms({ onSettings }) {
         {settingsBtn}
       </div>
 
-      {boms.length >= 3 && (
-        <div className="bom-search">
-          <MagnifyingGlassIcon width={16} height={16} />
-          <input
-            value={q} onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by customer or BOM number" style={{ fontSize: 16 }}
-            aria-label="Search saved BOMs"
-          />
-          {q && <button className="bom-search-x" onClick={() => setQ('')} aria-label="Clear search"><Cross2Icon width={15} height={15} /></button>}
-        </div>
-      )}
+      <div className="bom-search">
+        <MagnifyingGlassIcon width={16} height={16} />
+        <input
+          value={q} onChange={(e) => setQ(e.target.value)}
+          placeholder="Search by customer or BOM number" style={{ fontSize: 16 }}
+          aria-label="Search saved BOMs"
+        />
+        {q && <button className="bom-search-x" onClick={() => setQ('')} aria-label="Clear search"><Cross2Icon width={15} height={15} /></button>}
+      </div>
 
       {filtered.length === 0 ? (
         <Text size="2" color="gray" as="div" style={{ textAlign: 'center', padding: '28px 0' }}>
