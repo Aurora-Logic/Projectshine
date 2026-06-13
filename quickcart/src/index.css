@@ -2246,7 +2246,9 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   height: 50px;
   border-radius: 50%;
   border: none;
-  background: rgba(40, 150, 100, .42);
+  /* prominent brand green, still glassy: high-opacity green gradient over the
+     backdrop blur so the edges frost but the disc reads clearly green */
+  background: linear-gradient(180deg, rgba(48, 170, 112, .9), rgba(28, 124, 84, .92));
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
   color: #fff;
@@ -4285,7 +4287,12 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 /* ---------- Pitch-black dealer performance ---------- */
 .sub-dark .cp-body { background: #050507; }
 .sub-dark .pdp-head { background: #0B0C0F; border-color: #1B1D23; }
-.sub-dark .pdp-head h1 { color: #F2F4F7; }
+/* heading renders as h1/h2/h3 depending on level — match the Radix class so
+   the dark-dashboard title is never invisible on the near-black header */
+.sub-dark .pdp-head h1,
+.sub-dark .pdp-head h2,
+.sub-dark .pdp-head h3,
+.sub-dark .pdp-head .rt-Heading { color: #F2F4F7; }
 .sub-dark .sheet-back { background: #1A1C22; color: #E8EAEE; }
 .sub-dark .dash-hero {
   box-shadow: 0 6px 0 #03130C, 0 22px 48px rgba(27, 122, 79, .35), inset 0 1px 0 rgba(255, 255, 255, .14);
