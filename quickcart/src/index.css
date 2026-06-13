@@ -3366,7 +3366,7 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 
 /* glossy "3D" icon tiles for the settings list (and the BOM Settings button) */
 .flat-ic {
-  width: 29px; height: 29px; border-radius: 8px; flex: none;
+  width: 29px; height: 29px; border-radius: 50%; flex: none;
   display: flex; align-items: center; justify-content: center; color: #fff;
   box-shadow:
     0 2px 4px rgba(0, 0, 0, .17),
@@ -3374,7 +3374,7 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
     inset 0 -1.5px 1px rgba(0, 0, 0, .13);
 }
 .flat-ic svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .22)); }
-.flat-ic.sm { width: 23px; height: 23px; border-radius: 7px; }
+.flat-ic.sm { width: 23px; height: 23px; }
 .flat-ic.c-blue   { background: linear-gradient(155deg, #5AA0F2, #2D6FD6); }
 .flat-ic.c-orange { background: linear-gradient(155deg, #FFB057, #F57C28); }
 .flat-ic.c-teal   { background: linear-gradient(155deg, #34D6B4, #11A488); }
@@ -5202,7 +5202,7 @@ button.lg-link {
   padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
 }
 .bom-tile {
-  width: 42px; height: 42px; border-radius: 12px; flex: none;
+  width: 42px; height: 42px; border-radius: 50%; flex: none;
   display: flex; align-items: center; justify-content: center;
 }
 .bom-tile.t-green { background: var(--green-3); color: var(--green-11); }
@@ -5235,7 +5235,7 @@ button.lg-link {
 
 .bom-empty { text-align: center; padding: 30px 12px; }
 .bom-empty-ico {
-  width: 60px; height: 60px; border-radius: 18px; margin: 0 auto;
+  width: 60px; height: 60px; border-radius: 50%; margin: 0 auto;
   display: flex; align-items: center; justify-content: center;
   background: var(--green-3); color: var(--green-11);
 }
