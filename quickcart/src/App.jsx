@@ -1481,7 +1481,7 @@ function InspoPage({ onClose, onChange, startLook, lookRef }) {
               Every fitting in this install, ready to order
             </Text>
             <div className="cp-card" style={{ marginTop: 14 }}>
-              <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              <Text size="1" weight="bold" as="div" className="u-seclabel">
                 SHOP THIS LOOK · {look.products.length} ITEMS
               </Text>
               {resolve(look.products).map(p => {
@@ -1606,7 +1606,7 @@ function ProsPage({ onClose, onGoCalc, onGoVisit }) {
         {pros.map((pro, i) => <ProCard key={pro.id} pro={pro} i={i} />)}
 
         <div className="cp-card" style={{ marginTop: 16 }}>
-          <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          <Text size="1" weight="bold" as="div" className="u-seclabel">
             REFER A PRO
           </Text>
           <Text size="1" color="gray" as="div" mt="1">
@@ -1737,7 +1737,7 @@ function KitPage({ onClose, onChange, onGoCart }) {
         <Text size="1" color="gray" as="div" mt="2" mb="3" style={{ padding: '0 4px' }}>{kit.blurb}</Text>
 
         <div className="cp-card">
-          <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          <Text size="1" weight="bold" as="div" className="u-seclabel">
             PROJECT SIZE
           </Text>
           {kit.counts.map(([key, label]) => (
@@ -1754,7 +1754,7 @@ function KitPage({ onClose, onChange, onGoCart }) {
 
         <div className="cp-card">
           <Flex align="center" justify="between">
-            <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+            <Text size="1" weight="bold" className="u-seclabel">
               YOUR KIT · {live.length} ITEMS · {pieces} PCS
             </Text>
             {listSave > 0 && <span className="st-chip ok">SAVES ₹{listSave.toLocaleString('en-IN')}</span>}
@@ -2994,7 +2994,7 @@ function AcctCredit() {
 
       {bills.length > 0 ? (
         <div className="cp-card">
-          <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          <Text size="1" weight="bold" as="div" className="u-seclabel">
             OPEN BILLS
           </Text>
           {bills.map(b => (
@@ -3028,7 +3028,7 @@ function AcctCredit() {
 
       {settled.length > 0 && (
         <div className="cp-card">
-          <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          <Text size="1" weight="bold" as="div" className="u-seclabel">
             SETTLED
           </Text>
           {settled.map(b => (
@@ -3044,7 +3044,7 @@ function AcctCredit() {
       )}
 
       <div className="cp-card">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" className="u-seclabel">
           LEDGER STATEMENT · FY 2026–27
         </Text>
         <Text size="1" color="gray" as="div" mt="1">Every bill, payment and running balance — CA-ready.</Text>
@@ -3072,7 +3072,7 @@ function AcctCredit() {
             <Text size="1" color="gray" as="div" mt="1">
               {pay.length} bill{pay.length === 1 ? '' : 's'} · settles to QuickCart Trading Pvt Ltd
             </Text>
-            <Text size="1" weight="bold" as="div" mt="4" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+            <Text size="1" weight="bold" as="div" mt="4" className="u-seclabel">
               PAY VIA
             </Text>
             <Flex gap="2" mt="1">
@@ -3580,7 +3580,7 @@ function OrderDetailPage({ order, onClose, onChange }) {
         {(!live || si === ORDER_STAGES.length - 1) && (
           <div className="cp-card">
             <Flex align="center" justify="between">
-              <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              <Text size="1" weight="bold" className="u-seclabel">
                 PROOF OF DELIVERY
               </Text>
               <span className="st-chip ok">OTP VERIFIED</span>
@@ -3608,7 +3608,7 @@ function OrderDetailPage({ order, onClose, onChange }) {
           </div>
         </div>
         <div className="cp-card">
-          <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>ITEMS</Text>
+          <Text size="1" weight="bold" as="div" className="u-seclabel">ITEMS</Text>
           {order.items.map((it) => {
             const u = it.unit ?? unitPriceFor(it.p, it.n)
             return (
@@ -3811,7 +3811,7 @@ function AcctSchemes({ onCategory }) {
         <Text size="1" color="gray" as="div" mt="2">Applied automatically at checkout · stacks with bulk prices</Text>
       </div>
       <div className="cp-card">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>MONTHLY TIER PERKS</Text>
+        <Text size="1" weight="bold" as="div" className="u-seclabel">MONTHLY TIER PERKS</Text>
         {TIERS.map(t => (
           <Flex key={t.name} align="center" gap="2" mt="2">
             <span className="tier-mini" style={{ background: t.c }} />
@@ -3822,7 +3822,7 @@ function AcctSchemes({ onCategory }) {
         ))}
       </div>
       <div className="cp-card">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" className="u-seclabel">
           LIVE CATEGORY SCHEMES
         </Text>
         {CAT_SCHEMES.map(s => {
@@ -3852,7 +3852,7 @@ function AcctGst() {
   return (
     <div className="cp-card">
       <Flex align="center" justify="between">
-        <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>GST DETAILS</Text>
+        <Text size="1" weight="bold" className="u-seclabel">GST DETAILS</Text>
         {valid && <span className="st-chip ok"><CheckIcon width={10} height={10} /> Verified</span>}
       </Flex>
       <Text size="1" color="gray" as="div" mt="3">GSTIN</Text>
@@ -4238,7 +4238,7 @@ function VisitForm({ kind }) {
       {formOpen && (
       <div className="cp-card" style={{ animation: 'stepin .22s cubic-bezier(.22, 1, .36, 1)' }}>
         <Flex align="center" justify="between">
-          <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          <Text size="1" weight="bold" className="u-seclabel">
             CUSTOMER DETAILS
           </Text>
           <button className="reco-x" onClick={() => setFormOpen(false)} aria-label="Close form">
@@ -4264,7 +4264,7 @@ function VisitForm({ kind }) {
           </>
         )}
 
-        <Text size="1" weight="bold" as="div" mt="2" mb="1" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" mt="2" mb="1" className="u-seclabel">
           DATE & TIME
         </Text>
         <CalPicker value={date} onChange={setDate} />
@@ -4276,7 +4276,7 @@ function VisitForm({ kind }) {
 
         {kind === 'site' && (
           <>
-            <Text size="1" weight="bold" as="div" mt="2" mb="1" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+            <Text size="1" weight="bold" as="div" mt="2" mb="1" className="u-seclabel">
               SITE ADDRESS
             </Text>
             <input className="cp-input" placeholder="Line 1 — building / site no." value={l1} onChange={(e) => setL1(e.target.value)} />
@@ -4305,7 +4305,7 @@ function VisitForm({ kind }) {
       {reqs.length > 0 ? (
         <div className="cp-card">
           <Flex align="center" justify="between">
-            <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+            <Text size="1" weight="bold" className="u-seclabel">
               YOUR REQUESTS · {reqs.length}
             </Text>
             {reqs.filter(r => visitStage(r, now) < 2).length > 0 && (
@@ -4316,7 +4316,7 @@ function VisitForm({ kind }) {
         </div>
       ) : (
         <div className="cp-card">
-          <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          <Text size="1" weight="bold" as="div" className="u-seclabel">
             YOUR REQUESTS
           </Text>
           <Text size="1" color="gray" as="div" mt="2">
@@ -4387,7 +4387,7 @@ function AcctBrand() {
       {formOpen && (
         <div className="cp-card" style={{ animation: 'stepin .22s cubic-bezier(.22, 1, .36, 1)' }}>
           <Flex align="center" justify="between">
-            <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+            <Text size="1" weight="bold" className="u-seclabel">
               WHAT DO YOU NEED?
             </Text>
             <button className="reco-x" onClick={() => setFormOpen(false)} aria-label="Close form">
@@ -4401,7 +4401,7 @@ function AcctBrand() {
           </div>
           {needsQty ? (
             <>
-              <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              <Text size="1" weight="bold" as="div" mt="3" className="u-seclabel">
                 {type === 'Branding kit' ? 'BOARDS / STANDEES NEEDED' : 'APPROX. PIECES NEEDED'}
               </Text>
               <input
@@ -4411,7 +4411,7 @@ function AcctBrand() {
             </>
           ) : (
             <>
-              <Text size="1" weight="bold" as="div" mt="3" mb="1" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              <Text size="1" weight="bold" as="div" mt="3" mb="1" className="u-seclabel">
                 PREFERRED DATE
               </Text>
               <CalPicker value={date} onChange={setDate} />
@@ -4428,7 +4428,7 @@ function AcctBrand() {
         </div>
       )}
       <div className="cp-card">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" className="u-seclabel">
           YOUR REQUESTS{reqs.length ? ` · ${reqs.length}` : ''}
         </Text>
         {reqs.length === 0 && (
@@ -4547,7 +4547,7 @@ function AcctClaims({ lastOrder }) {
       {formOpen && (
         <div className="cp-card" style={{ animation: 'stepin .22s cubic-bezier(.22, 1, .36, 1)' }}>
           <Flex align="center" justify="between">
-            <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+            <Text size="1" weight="bold" className="u-seclabel">
               WHICH ORDER?
             </Text>
             <button className="reco-x" onClick={() => setFormOpen(false)} aria-label="Close form">
@@ -4562,7 +4562,7 @@ function AcctClaims({ lastOrder }) {
               </button>
             ))}
           </div>
-          <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          <Text size="1" weight="bold" as="div" mt="3" className="u-seclabel">
             CLAIM TYPE
           </Text>
           <div className="claim-types">
@@ -4572,7 +4572,7 @@ function AcctClaims({ lastOrder }) {
           </div>
           {order && (
             <>
-              <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              <Text size="1" weight="bold" as="div" mt="3" className="u-seclabel">
                 AFFECTED ITEMS
               </Text>
               {order.items.map(it => {
@@ -4618,7 +4618,7 @@ function AcctClaims({ lastOrder }) {
         </div>
       )}
       <div className="cp-card">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" className="u-seclabel">
           YOUR CLAIMS{claims.length ? ` · ${claims.length}` : ''}
         </Text>
         {claims.length === 0 && (
@@ -4681,7 +4681,7 @@ function AcctSupport() {
         ))}
       </div>
       <div className="cp-card">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>FAQS</Text>
+        <Text size="1" weight="bold" as="div" className="u-seclabel">FAQS</Text>
         {faqs.map(([q, a]) => (
           <details className="faq" key={q}>
             <summary><Text size="2" weight="bold">{q}</Text><ChevronDownIcon width={14} height={14} /></summary>
@@ -4843,7 +4843,7 @@ function TplCard({ k, label, active, paper, accent, onClick }) {
 function ColorRow({ label, value, onChange, swatches = EST_SWATCHES }) {
   return (
     <div>
-      <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+      <Text size="1" weight="bold" as="div" mt="3" className="u-seclabel">
         {label}
       </Text>
       <div className="clr-row">
@@ -4889,7 +4889,7 @@ function AcctEstPdf() {
   return (
     <>
       <div className="cp-card">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" className="u-seclabel">
           COMPANY ON THE PDF
         </Text>
         <Flex direction="column" gap="2" mt="2">
@@ -4916,7 +4916,7 @@ function AcctEstPdf() {
       </div>
 
       <div className="cp-card">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" className="u-seclabel">
           TEMPLATE
         </Text>
         <div className="tpl-grid">
@@ -4932,7 +4932,7 @@ function AcctEstPdf() {
         <Text size="1" color="gray" as="div" mt="2">
           Classic — hairlines, logos on top. Bold — colour bands, logos below. Studio — editorial caps, amount in words.
         </Text>
-        <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" mt="3" className="u-seclabel">
           FONT
         </Text>
         <Flex gap="2" mt="2" wrap="wrap">
@@ -4948,7 +4948,7 @@ function AcctEstPdf() {
             </Button>
           ))}
         </Flex>
-        <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" mt="3" className="u-seclabel">
           BRAND LOGOS (CLASSIC)
         </Text>
         <Flex gap="2" mt="2">
@@ -4967,7 +4967,7 @@ function AcctEstPdf() {
       </div>
 
       <div className="cp-card">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" className="u-seclabel">
           PDF COLOURS
         </Text>
         <ColorRow label="PAPER BACKGROUND" value={brand.paper} onChange={(v) => set('paper', v)} swatches={EST_PAPERS} />
@@ -4979,7 +4979,7 @@ function AcctEstPdf() {
       </div>
 
       <div className="cp-card">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" className="u-seclabel">
           CONTENT
         </Text>
         <Flex align="center" justify="between" mt="2">
@@ -4989,7 +4989,7 @@ function AcctEstPdf() {
           </div>
           <Toggle on={brand.photos !== false} onToggle={() => set('photos', brand.photos === false)} />
         </Flex>
-        <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" mt="3" className="u-seclabel">
           VALID FOR
         </Text>
         <Flex gap="2" mt="2">
@@ -5005,7 +5005,7 @@ function AcctEstPdf() {
             </Button>
           ))}
         </Flex>
-        <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" mt="3" className="u-seclabel">
           NOTE ON EVERY BOM
         </Text>
         <textarea
@@ -5017,7 +5017,7 @@ function AcctEstPdf() {
       </div>
 
       <div className="cp-card">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" className="u-seclabel">
           DEALER DETAILS ON THE PDF
         </Text>
         <Flex direction="column" gap="2" mt="2">
@@ -5035,7 +5035,7 @@ function AcctEstPdf() {
       </div>
 
       <div className="cp-card">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" className="u-seclabel">
           DOCUMENT
         </Text>
         <Flex direction="column" gap="2" mt="2">
@@ -5052,7 +5052,7 @@ function AcctEstPdf() {
       </div>
 
       <div className="cp-card">
-        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" className="u-seclabel">
           PRICING ON THE PDF
         </Text>
         <Flex align="center" justify="between" mt="2">
@@ -5071,7 +5071,7 @@ function AcctEstPdf() {
               </div>
               <Toggle on={brand.showSavings !== false} onToggle={() => set('showSavings', brand.showSavings === false)} />
             </Flex>
-            <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+            <Text size="1" weight="bold" as="div" mt="3" className="u-seclabel">
               GST LINE
             </Text>
             <Flex gap="2" mt="2">
@@ -5197,7 +5197,7 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
           return (
             <button className="credit-snap" onClick={() => setSub('credit')}>
               <Flex align="center" justify="between">
-                <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                <Text size="1" weight="bold" className="u-seclabel">
                   CREDIT AVAILABLE
                 </Text>
                 {od > 0 ? <span className="st-chip bad">{od} overdue</span> : <span className="st-chip ok">On track</span>}
@@ -5342,7 +5342,7 @@ function QtySheet({ q, onClose, onConfirm }) {
             </Flex>
           </Box>
         </div>
-        <Text size="1" weight="bold" as="div" mt="4" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+        <Text size="1" weight="bold" as="div" mt="4" className="u-seclabel">
           SELECT QUANTITY
         </Text>
         <div className="qs-chips">
@@ -5661,7 +5661,7 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
             )}
 
             <div className="cp-card">
-              <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              <Text size="1" weight="bold" as="div" className="u-seclabel">
                 YOUR REGULARS
               </Text>
               {regular.map(m => (
@@ -5672,7 +5672,7 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
             </div>
 
             <div className="cp-card">
-              <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              <Text size="1" weight="bold" as="div" className="u-seclabel">
                 PAST ORDERS
               </Text>
               {past.map(o => (
@@ -6527,7 +6527,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
             </div>
 
             <div className="cp-card">
-              <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              <Text size="1" weight="bold" as="div" className="u-seclabel">
                 DELIVERY SPEED
               </Text>
               <button className="dlv-row" onClick={() => setExpress(false)}>
@@ -6556,7 +6556,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
             <div className="cp-card">
               <Flex align="center" justify="between" gap="3">
                 <Box style={{ minWidth: 0 }}>
-                  <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                  <Text size="1" weight="bold" as="div" className="u-seclabel">
                     DELIVER TO · {addr.label.toUpperCase()}
                   </Text>
                   <Text size="1" as="div" mt="1" style={{ lineHeight: 1.4 }}>{addr.addr}</Text>
@@ -6571,7 +6571,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
             </div>
 
             <div className="cp-card">
-              <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              <Text size="1" weight="bold" as="div" className="u-seclabel">
                 SPECIAL INSTRUCTIONS
               </Text>
               <textarea
@@ -6582,7 +6582,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
 
             <div className="cp-card">
               <Flex align="center" justify="between">
-                <Text size="1" weight="bold" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                <Text size="1" weight="bold" className="u-seclabel">
                   PAYMENT
                 </Text>
                 <span className="st-chip ok">30-DAY CREDIT</span>
@@ -6596,7 +6596,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
             </div>
 
             <div className="cp-card">
-              <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              <Text size="1" weight="bold" as="div" className="u-seclabel">
                 BILL DETAILS
               </Text>
               <Flex justify="between" mt="2"><Text size="1" color="gray">Item total</Text><Text size="1" weight="bold">₹{grossTotal.toLocaleString('en-IN')}</Text></Flex>
@@ -6920,7 +6920,7 @@ function ProductPage({ p, onClose, onChange, cart }) {
           <Text size="1" color="gray" as="div" mt="1">GST included · input credit itemised on your invoice</Text>
           {sizes.length > 1 && (
             <Box mt="3">
-              <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', fontSize: 10.5, letterSpacing: '.5px' }}>
+              <Text size="1" weight="bold" as="div" className="u-seclabel">
                 AVAILABLE LENGTHS · THIS RANGE
               </Text>
               <Flex gap="2" mt="1">

@@ -1,3 +1,18 @@
+/* ============================================================================
+   A4.6 · CLASS-PREFIX LEGEND (feature namespaces — kept short by design)
+   topbar/nav  header + bottom nav        plp/pdp    product list / detail page
+   cp          cart page                  qs/qsheet  quantity + bottom sheets
+   oc          order card (live tracking) ro         reorder page
+   acct/ds/d3  account / dashboard        cr         credit ledger
+   fs          flash sale                 cz/blb     spin-wheel (casino skin/bulb)
+   bs          bestsellers                tj         target journey
+   est         estimate / BOM PDF         claim      claims centre
+   insp        inspiration gallery        pros/kit   find-a-pro / project kit
+   cs          cart stepper               u-*        utility classes (A4.4)
+   Generic primitives: .page (full-screen panel), .progress-track/-fill.
+   Renaming the leaky cross-page names (.pdp-head, .cp-card) rides the A5.1 split.
+   ============================================================================ */
+
 /* self-hosted Plus Jakarta Sans (variable, latin) — no third-party request */
 @font-face {
   font-family: 'Plus Jakarta Sans';
@@ -1586,17 +1601,6 @@ button.padd::after { content: ''; position: absolute; inset: -6px; }
 }
 
 /* ---------- Reduced motion: respect the OS setting ---------- */
-@media (prefers-reduced-motion: reduce) {
-  .cloud, .star, .drop, .flake, .gust, .leafy, .fogband,
-  .timer-chip, .timer-dot, .lbv-bar::after, .coin-pop, .spark,
-  .day-dot.today, .lb-card.go .lb-av, .cardin, .bsheet, .plp, .sheet {
-    animation: none !important;
-  }
-  /* loc-row/tabs-t/rewards-strip no longer transition — they track scroll position */
-  .lbv-bar, .cartbar, .bar-fill {
-    transition-duration: .01s !important;
-  }
-}
 
 /* ---------- Add-to-cart sparkle ---------- */
 .spark {
@@ -2349,10 +2353,6 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 .seg-b, .plp-chips button { transition: background .2s ease, color .2s ease, transform .15s ease; }
 .seg-b:active, .plp-chips button:active { transform: scale(.95); }
 
-@media (prefers-reduced-motion: reduce) {
-  .pdp-in-r, .pdp-in-l, .stepin, .numpop, .linepop { animation: none !important; }
-  .pdp-hero .pdp-shot { transition: opacity .15s ease; transform: none; }
-}
 
 /* ---------- Cart sheet + PDP go-to-cart ---------- */
 .pdp-back {
@@ -2704,9 +2704,6 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   display: flex;
 }
 .oc-star.on { color: var(--amber-9); }
-@media (prefers-reduced-motion: reduce) {
-  .oc-pulse { animation: none; }
-}
 
 /* unlocked nudges carry a check icon */
 .qnudge { display: inline-flex; align-items: center; gap: 4px; }
@@ -3754,11 +3751,6 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 .acct-sub { animation: pushin .3s cubic-bezier(.32, .72, .25, 1); }
 .pdp.pdp-in-r { animation: pdpr .32s cubic-bezier(.22, 1, .36, 1); }
 .pdp.pdp-in-l { animation: pdpl .32s cubic-bezier(.22, 1, .36, 1); }
-@media (prefers-reduced-motion: reduce) {
-  .plp, .sheet, .reorderpage, .acctpage, .cartpage, .pdp, .ordpage, .acct-sub {
-    animation: none !important;
-  }
-}
 
 /* ---------- Order detail page + timeline ---------- */
 .ordpage {
@@ -3885,9 +3877,6 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 }
 @keyframes qfadeout {
   to { opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .pgx.out > *, .pgx.sheetv.out .qsheet { animation: none !important; }
 }
 
 /* navbar cluster: pill + buttons share one height and baseline */
@@ -4151,9 +4140,6 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   background:
     radial-gradient(130% 130% at 22% 0%, #17684A 0%, #0A3D26 65%) !important;
   box-shadow: inset 0 0 0 2px rgba(245, 194, 66, .35), inset 0 0 30px rgba(0, 0, 0, .3);
-}
-@media (prefers-reduced-motion: reduce) {
-  .blb-row i, .rim-blb { animation: none; }
 }
 
 /* ---------- Fest grid layout variants (rotate per open) ---------- */
@@ -4613,10 +4599,6 @@ button.lg-link {
 .rail-item:focus-visible, .rewards-strip:focus-visible {
   outline: 2px solid var(--green-9);
   outline-offset: 2px;
-}
-@media (prefers-reduced-motion: reduce) {
-  .skel { animation: none; }
-  .wheel { transition-duration: .01s; }
 }
 
 /* ---------- BOM template preview cards (settings) ---------- */
@@ -5087,3 +5069,33 @@ button.lg-link {
 }
 
 .sub-hero.stack { display: block; }
+
+/* ---------- A4.4 · "section label" utility (was 50 inline-style copies) ----------
+   double-class (.x.x) raises specificity to beat Radix Themes' Text rules.
+   The remaining combined-style repeats (minWidth/flex/accent) fold in during
+   the A5.1 split per the plan. */
+.u-seclabel.u-seclabel { color: var(--gray-10); letter-spacing: .5px; font-size: 10.5px; }
+
+
+/* ---------- A4.6 · all reduced-motion overrides, one block ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .cloud, .star, .drop, .flake, .gust, .leafy, .fogband,
+  .timer-chip, .timer-dot, .lbv-bar::after, .coin-pop, .spark,
+  .day-dot.today, .lb-card.go .lb-av, .cardin, .bsheet, .plp, .sheet {
+  animation: none !important;
+  }
+  /* loc-row/tabs-t/rewards-strip no longer transition — they track scroll position */
+  .lbv-bar, .cartbar, .bar-fill {
+  transition-duration: .01s !important;
+  }
+  .pdp-in-r, .pdp-in-l, .stepin, .numpop, .linepop { animation: none !important; }
+  .pdp-hero .pdp-shot { transition: opacity .15s ease; transform: none; }
+  .oc-pulse { animation: none; }
+  .plp, .sheet, .reorderpage, .acctpage, .cartpage, .pdp, .ordpage, .acct-sub {
+  animation: none !important;
+  }
+  .pgx.out > *, .pgx.sheetv.out .qsheet { animation: none !important; }
+  .blb-row i, .rim-blb { animation: none; }
+  .skel { animation: none; }
+  .wheel { transition-duration: .01s; }
+}
