@@ -5128,3 +5128,23 @@ button.lg-link {
 .bom-act:active { transform: scale(.94); }
 .bom-act.primary { background: var(--green-9); border-color: var(--green-9); color: #fff; }
 .bom-act.del { border-color: var(--red-5); color: var(--red-10); }
+
+/* #13 · dealer quote-tier swap (cart, dealer-only) */
+.cp-tier { border: 1px dashed var(--gray-6); background: var(--gray-1); }
+.tier-hint { font-size: 9px; font-weight: 800; letter-spacing: .3px; color: var(--gray-9); text-transform: uppercase; }
+.tier-chip {
+  flex: 1;
+  border: 1px solid var(--gray-5);
+  background: #fff;
+  color: var(--gray-12);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 9px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .12s ease, border-color .12s ease;
+}
+.tier-chip:active { transform: scale(.95); }
+.tier-chip:disabled { opacity: .4; cursor: default; }

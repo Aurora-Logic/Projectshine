@@ -470,3 +470,24 @@ export const CAT_SCHEMES = [
   { cat: 'Kitchen', deal: 'Flat ₹500 off Quadro systems', till: 'Launch offer', tag: 'FLAT OFF' },
   { cat: 'Lighting', deal: '12% off LED strips & profiles', till: 'Last units', tag: 'CLEARANCE' },
 ]
+
+/* #13 · curated equivalent groups for one-click tier conversion (DEALER-ONLY).
+   Each group lists SKUs that serve the same function, ordered cheapest → dearest.
+   The economy/standard/premium labels never appear on the customer BOM. */
+export const TIER_GROUPS = [
+  ['ba1', 'dl1', 'zp1'],   // drawer slides:   450mm → 500mm ball-bearing → 600mm heavy
+  ['ne1', 'ne4'],          // drawer systems:  Quadro → Tandem deep
+  ['zp2', 'ba2', 'dl2'],   // hinges:          Peka concealed → soft-close → 10-pc soft-close
+  ['ba3', 'zp3', 'dl3'],   // locks:           cam → wardrobe → digital
+  ['ls4', 'ls1', 'ls2'],   // lighting:        night light → LED strip → sensor cabinet
+  ['dc1', 'dc2', 'dc3'],   // door closers:    DC-60 → DC-85 → DC-120
+]
+// target: 'economy' | 'standard' | 'premium' → equivalent SKU id (same id if no group)
+export const tierSwap = (id, target) => {
+  const g = TIER_GROUPS.find(grp => grp.includes(id))
+  if (!g) return id
+  const idx = target === 'economy' ? 0 : target === 'premium' ? g.length - 1 : Math.floor((g.length - 1) / 2)
+  return g[idx]
+}
+// how many cart lines would actually change for a given target (for the UI hint)
+export const tierSwapCount = (ids, target) => ids.filter(id => tierSwap(id, target) !== id).length

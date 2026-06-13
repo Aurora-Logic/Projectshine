@@ -17,6 +17,7 @@ import {
   FEED_POOL, CATEGORIES, BANNERS, COMBOS, QUIZ, KITS, PROS, INSPO, INSPO_ROOMS,
   SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
   BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES, REORDER, PAST_ORDERS, DASH, CREDIT, CAT_SCHEMES,
+  tierSwap, tierSwapCount,
 } from './data.js'
 import { generateEstimate, EST_BRAND_DEFAULT, EST_FONTS, EST_SWATCHES, EST_PAPERS } from './lib/estimate.js'
 import { img, DAY, daypart, condition, sparkle, bulkNudge, scrollToId, dealSecsLeft } from './lib/util.js'
@@ -5362,7 +5363,7 @@ function AcctBoms() {
   )
 }
 
-function CartPage({ cart, onClose, onChange, onPlaced }) {
+function CartPage({ cart, onClose, onChange, onConvertTier, onPlaced }) {
   const a11y = useSheetA11y(onClose)
   const openQty = useContext(QtyCtx)
   const items = Object.values(cart.items)
@@ -5437,6 +5438,26 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
               <div className="cp-save">
                 <StarFilledIcon width={13} height={13} style={{ flex: 'none' }} />
                 You're saving ₹{saving.toLocaleString('en-IN')} on this order
+              </div>
+            )}
+
+            {onConvertTier && (
+              <div className="cp-card cp-tier">
+                <Flex align="center" justify="between">
+                  <Text size="1" weight="bold" className="u-seclabel">DEALER · QUOTE TIER</Text>
+                  <span className="tier-hint">customers never see this</span>
+                </Flex>
+                <Text size="1" color="gray" as="div" mt="1">Swap the whole list to a price tier in one tap.</Text>
+                <Flex gap="2" mt="2">
+                  {[['economy', 'Economy'], ['standard', 'Standard'], ['premium', 'Premium']].map(([k, l]) => {
+                    const cnt = tierSwapCount(items.map(it => it.p.id), k)
+                    return (
+                      <button key={k} className="tier-chip" disabled={cnt === 0} onClick={() => onConvertTier(k)}>
+                        {l}{cnt > 0 ? ` · ${cnt}` : ''}
+                      </button>
+                    )
+                  })}
+                </Flex>
               </div>
             )}
 
@@ -6415,6 +6436,20 @@ export default function App() {
     }
   }, [])
 
+  // #13 · one-click tier conversion — swap every cart line to its economy/standard/
+  // premium equivalent (dealer-only; the customer BOM never shows these labels)
+  const convertTier = useCallback((target) => {
+    setCartItems(items => {
+      const next = {}
+      for (const { p, n } of Object.values(items)) {
+        const id = tierSwap(p.id, target)
+        const np = id === p.id ? p : (FEED_POOL.find(x => x.id === id) || p)
+        next[np.id] = { p: np, n: (next[np.id]?.n || 0) + n }
+      }
+      return next
+    })
+  }, [])
+
   // #cart hash: preload a mixed cart so the sheet can be reviewed
   useEffect(() => {
     if (window.location.hash !== '#cart') return
@@ -6660,7 +6695,7 @@ export default function App() {
         <PageExit open={cartOpen}>
           {cartOpen && (
           <CartPage
-            cart={cart} onClose={closeCart} onChange={changeCart}
+            cart={cart} onClose={closeCart} onChange={changeCart} onConvertTier={convertTier}
             onPlaced={(rec) => {
               setOrder(rec)
               safeSet('qc-order', JSON.stringify(rec))
