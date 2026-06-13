@@ -5448,26 +5448,6 @@ function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced
               </div>
             )}
 
-            {onConvertTier && (
-              <div className="cp-card cp-tier">
-                <Flex align="center" justify="between">
-                  <Text size="1" weight="bold" className="u-seclabel">DEALER · QUOTE TIER</Text>
-                  <span className="tier-hint">customers never see this</span>
-                </Flex>
-                <Text size="1" color="gray" as="div" mt="1">Swap the whole list to a price tier in one tap.</Text>
-                <Flex gap="2" mt="2">
-                  {[['economy', 'Economy'], ['standard', 'Standard'], ['premium', 'Premium']].map(([k, l]) => {
-                    const cnt = tierSwapCount(items.map(it => it.p.id), k)
-                    return (
-                      <button key={k} className="tier-chip" disabled={cnt === 0} onClick={() => onConvertTier(k)}>
-                        {l}{cnt > 0 ? ` · ${cnt}` : ''}
-                      </button>
-                    )
-                  })}
-                </Flex>
-              </div>
-            )}
-
             <div className="cp-card">
               {items.map(({ p, n }) => {
                 const t = bulkTier(p)
@@ -5502,6 +5482,26 @@ function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced
                 )
               })}
             </div>
+
+            {onConvertTier && (
+              <div className="cp-card cp-tier">
+                <Flex align="center" justify="between">
+                  <Text size="1" weight="bold" className="u-seclabel">DEALER · QUOTE TIER</Text>
+                  <span className="tier-hint">customers never see this</span>
+                </Flex>
+                <Text size="1" color="gray" as="div" mt="1">Swap the whole list to a price tier in one tap.</Text>
+                <Flex gap="2" mt="2">
+                  {[['economy', 'Economy'], ['standard', 'Standard'], ['premium', 'Premium']].map(([k, l]) => {
+                    const cnt = tierSwapCount(items.map(it => it.p.id), k)
+                    return (
+                      <button key={k} className="tier-chip" disabled={cnt === 0} onClick={() => onConvertTier(k)}>
+                        {l}{cnt > 0 ? ` · ${cnt}` : ''}
+                      </button>
+                    )
+                  })}
+                </Flex>
+              </div>
+            )}
 
             {deals.length > 0 && (
               <div className="cp-card cp-flash">
@@ -5617,21 +5617,6 @@ function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced
               />
             </div>
 
-            <div className="cp-card cp-credit">
-              <Flex align="center" justify="between">
-                <Text size="1" weight="bold" className="u-seclabel">
-                  PAYMENT
-                </Text>
-                <span className="st-chip ok">30-DAY CREDIT</span>
-              </Flex>
-              <Text size="2" weight="bold" as="div" mt="2" style={{ color: 'var(--green-11)' }}>
-                ₹{toPay.toLocaleString('en-IN')} on credit · due {dueLabel}
-              </Text>
-              <Text size="1" color="gray" as="div" mt="1">
-                Interest-free · ₹{Math.max(0, credit.limit - credit.outstanding - toPay).toLocaleString('en-IN')} credit left after this order
-              </Text>
-            </div>
-
             <div className="cp-card">
               <Text size="1" weight="bold" as="div" className="u-seclabel">
                 BILL DETAILS
@@ -5683,6 +5668,21 @@ function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced
               {mrpSave > 0 && (
                 <Text size="1" as="div" mt="1" color="gray">Plus ₹{mrpSave.toLocaleString('en-IN')} below MRP on these items</Text>
               )}
+            </div>
+
+            <div className="cp-card cp-credit">
+              <Flex align="center" justify="between">
+                <Text size="1" weight="bold" className="u-seclabel">
+                  PAYMENT
+                </Text>
+                <span className="st-chip ok">30-DAY CREDIT</span>
+              </Flex>
+              <Text size="2" weight="bold" as="div" mt="2" style={{ color: 'var(--green-11)' }}>
+                ₹{toPay.toLocaleString('en-IN')} on credit · due {dueLabel}
+              </Text>
+              <Text size="1" color="gray" as="div" mt="1">
+                Interest-free · ₹{Math.max(0, credit.limit - credit.outstanding - toPay).toLocaleString('en-IN')} credit left after this order
+              </Text>
             </div>
 
             <button
