@@ -464,8 +464,8 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT, 
 
   /* ============ template: STUDIO (editorial caps, meta table, amount in words) ============ */
   const renderStudio = () => {
-    const mw = Math.min(30, (mark.w / mark.h) * 13)
-    doc.addImage(mark.data, 'PNG', M, 8, mw, 13)
+    const mw = Math.min(38, (mark.w / mark.h) * 16)
+    doc.addImage(mark.data, 'PNG', M, 8, mw, 16)
 
     const metaRows = [
       ['TO', cust.name.toUpperCase()],
@@ -512,8 +512,8 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT, 
       doc.setPage(i)
       let lx = M
       for (const b of brands) {
-        const dw = (b.w / b.h) * 8
-        doc.addImage(b.data, 'PNG', lx, H - 39, dw, 8)
+        const dw = (b.w / b.h) * 9.5
+        doc.addImage(b.data, 'PNG', lx, H - 40, dw, 9.5)
         lx += dw + 9
       }
       doc.setFont('DOC', 'normal').setFontSize(6.5).setTextColor(...FOOT).setCharSpace(0.6)
