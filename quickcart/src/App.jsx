@@ -7,9 +7,9 @@ import {
   LightningBoltIcon, StarFilledIcon, MinusIcon, PlusIcon, Cross2Icon,
   HomeIcon, DashboardIcon, CounterClockwiseClockIcon, RocketIcon, ArrowLeftIcon,
   MixerHorizontalIcon, GearIcon, FileTextIcon, DiscIcon, CheckIcon,
-  BarChartIcon, BellIcon, LockClosedIcon, ExitIcon, RulerSquareIcon, SewingPinIcon,
+  BarChartIcon, BellIcon, LockClosedIcon, ExitIcon, SewingPinIcon,
   EyeOpenIcon, ChatBubbleIcon, MobileIcon, EnvelopeClosedIcon, CalendarIcon,
-  IdCardIcon, BookmarkIcon, ChevronLeftIcon, SpeakerLoudIcon, ExclamationTriangleIcon,
+  IdCardIcon, BookmarkIcon, ChevronLeftIcon, ExclamationTriangleIcon,
   UploadIcon, DownloadIcon, Share2Icon, TrashIcon,
 } from '@radix-ui/react-icons'
 import {
@@ -23,6 +23,7 @@ import { generateEstimate, EST_BRAND_DEFAULT, EST_FONTS, EST_PAPERS } from './li
 import { calculateBoM } from './lib/spsBom.js'
 import { calculateWeights } from './lib/panelWeight.js'
 import { img, DAY, daypart, condition, sparkle, bulkNudge, scrollToId, dealSecsLeft } from './lib/util.js'
+import { LEARN } from './lib/learn.js'
 import { usePersisted, safeGet, safeSet, safeRemove, getJSON, setJSON } from './lib/storage.js'
 import { useSkyTheme, useNextFrame, useSheetA11y, useCountUp } from './hooks.js'
 import { QtyCtx, PdpCtx, CartCtx, CartItemsCtx } from './contexts.js'
@@ -1240,25 +1241,6 @@ function WeightCalc({ onBack }) {
 /* ============ Utilities hub — helper components (place ABOVE UtilitiesPage) ============ */
 
 // Chunky raised 3D mode tile (Instamart FOOD/INSTAMART/... pillar). Active tile pops white.
-/* Image tile (home FestHero style): photo + shade + 3D icon badge + label. */
-function UqTile({ ph, c, icon: Icon, title, sub, onClick, badge, big }) {
-  return (
-    <button className={`uq-tile ${big ? 'uq-tile-big' : ''}`} onClick={onClick}>
-      <span className="uq-tile-img">
-        <Img src={img(ph, big ? 640 : 360)} alt="" loading="lazy" />
-        {badge ? <span className="uq-tile-badge">{badge}</span> : null}
-      </span>
-      <span className="uq-tile-foot">
-        <span className={`flat-ic c-${c}`}><Icon width={15} height={15} /></span>
-        <span className="uq-tile-tx">
-          <span className="uq-tile-title">{title}</span>
-          {sub ? <span className="uq-tile-sub">{sub}</span> : null}
-        </span>
-      </span>
-    </button>
-  )
-}
-
 function UtilitiesPage({ onClose, onSpin, onQuiz, lastOrder, bomCount = 0 }) {
   const a11y = useSheetA11y(onClose)
   const [stack, setStack] = useState(['hub'])
@@ -1271,6 +1253,8 @@ function UtilitiesPage({ onClose, onSpin, onQuiz, lastOrder, bomCount = 0 }) {
   const [rPhone, setRPhone] = useState('')
   const [rType, setRType] = useState('Carpenter')
   const [sent, setSent] = useState(false)
+  const [chip, setChip] = useState('All')
+  const [openLearn, setOpenLearn] = useState(null)
   const refer = (e) => {
     sparkle(e)
     setRefs([{ name: rName.trim(), phone: rPhone, type: rType, ts: Date.now() }, ...refs])
@@ -1350,67 +1334,109 @@ function UtilitiesPage({ onClose, onSpin, onQuiz, lastOrder, bomCount = 0 }) {
     )
   }
 
-  // ---------------- hub: home-style image tiles (matches home theme, no golden yellow) ----------------
+  // ---------------- hub: Swiggy-home layout (carousel → circular tools → top rail → chips → vertical feed) ----------------
+  const CIRCLES = [
+    ['Partition BoM', '1558997519-83ea9252edf8', () => push('spscalc')],
+    ['Panel weight', '1595428774223-ef52624120d2', () => push('weightcalc')],
+    ['Hardware calc', '1556911220-bff31c812dba', () => push('calc')],
+    ['Create BOM', '1524758631624-e2822e304c36', () => push('bom')],
+    ['Carpenter', '1565814329452-e1efa11c5b89', () => { setProTab('carpenter'); push('pros') }],
+    ['Architect', '1497366216548-37526070297c', () => { setProTab('designer'); push('pros') }],
+    ['Site visit', '1484154218962-a197022b5858', () => push('site')],
+    ['Display', '1489171078254-c3365d6e359f', () => push('display')],
+    ['Brand', '1503387762-592deb58ef4e', () => push('brand')],
+    ['Claims', '1556228453-efd6c1ff04f6', () => push('claims')],
+  ]
+  const BANNERS = [
+    { ph: '1558997519-83ea9252edf8', kicker: 'FLAGSHIP', title: 'Partition BoM in 60 seconds', sub: 'Linked & Syncro → an instant, priced bill of materials', cta: 'Open calculator', go: () => push('spscalc') },
+    { ph: '1565814329452-e1efa11c5b89', kicker: 'EARN', title: 'Calculate & earn', sub: 'Coins on every BoM & calc · 3-day streak running', cta: 'Spin now', go: onSpin },
+    { ph: '1595428774223-ef52624120d2', kicker: 'NEW', title: 'Panel weight calculator', sub: 'Ply · MDF · HDHMR · glass — instant load', cta: 'Try it', go: () => push('weightcalc') },
+  ]
+  const FEED = [
+    { id: 'f-sps', ph: '1558997519-83ea9252edf8', title: 'Partition BoM Calculator', cat: 'Calculators', rate: '4.9', stat: '2,300+ dealers', tag: 'Instant priced bill of materials', badge: 'FLAGSHIP', go: () => push('spscalc') },
+    { id: 'f-wt', ph: '1595428774223-ef52624120d2', title: 'Panel Weight Calculator', cat: 'Calculators', rate: '4.7', stat: 'New this month', tag: 'Ply · MDF · HDHMR · glass', badge: 'NEW', go: () => push('weightcalc') },
+    { id: 'f-hw', ph: '1556911220-bff31c812dba', title: 'Hardware Calculator', cat: 'Calculators', rate: '4.6', stat: '1,400+ dealers', tag: 'Slides · hinges · closers', go: () => push('calc') },
+    { id: 'f-bom', ph: '1524758631624-e2822e304c36', title: 'Create a customer BOM', cat: 'Quote', rate: '4.8', stat: '480 quotes', tag: 'Branded PDF in your colours', go: () => push('bom') },
+    { id: 'f-carp', ph: '1565814329452-e1efa11c5b89', title: 'Find a Carpenter', cat: 'Hire', rate: '4.8', stat: '142 jobs done', tag: 'Dealer-verified installers near you', go: () => { setProTab('carpenter'); push('pros') } },
+    { id: 'f-arch', ph: '1497366216548-37526070297c', title: 'Find an Architect', cat: 'Hire', rate: '4.7', stat: 'Designers nearby', tag: 'Rated on real projects', go: () => { setProTab('designer'); push('pros') } },
+    { id: 'f-site', ph: '1484154218962-a197022b5858', title: 'Book a Site Visit', cat: 'Services', rate: '', stat: 'Free measurement', tag: 'Our team comes with samples', go: () => push('site') },
+    { id: 'f-disp', ph: '1489171078254-c3365d6e359f', title: 'Display Centre Visit', cat: 'Services', rate: '', stat: 'See it in person', tag: 'Walk a live showroom', go: () => push('display') },
+    { id: 'f-brand', ph: '1503387762-592deb58ef4e', title: 'Brand Support', cat: 'Services', rate: '', stat: 'Ebco · Zipco · Peka', tag: 'Boards, demos & promo stock', go: () => push('brand') },
+    { id: 'f-claim', ph: '1556228453-efd6c1ff04f6', title: 'Claims & Returns', cat: 'Services', rate: '', stat: 'Free pickup', tag: 'Raise or return in a tap', go: () => push('claims') },
+    ...LEARN.map(l => ({ id: l.id, ph: l.ph, title: l.title, cat: 'Learn', rate: '', stat: `${l.mins} min read · ${l.stat}`, tag: l.kicker, learn: l })),
+  ]
+  const CHIPS = ['All', 'Calculators', 'Quote', 'Hire', 'Services', 'Learn']
+  const shownFeed = chip === 'All' ? FEED : FEED.filter(f => f.cat === chip)
+  const topTools = FEED.filter(f => !f.learn).slice(0, 6)
+
   return (
-    <div className="utilpage" role="dialog" aria-modal="true" aria-label="Utilities" tabIndex={-1} ref={a11y}>
-      <div className="uq-head">
-        <Flex align="center" justify="between" className="uq-toprow">
+    <div className="utilpage sw" role="dialog" aria-modal="true" aria-label="Utilities" tabIndex={-1} ref={a11y}>
+      <div className="sw-head">
+        <Flex align="center" justify="between" className="sw-top">
           <button className="uq-iconbtn" onClick={onClose} aria-label="Back"><ArrowLeftIcon width={18} height={18} /></button>
-          <button className="uq-loc" onClick={onClose}>
-            <span className="uq-loc-tag"><span className="uq-live" />DEALER TOOLKIT</span>
-            <span className="uq-loc-name">Everything to quote &amp; sell <ChevronDownIcon width={15} height={15} /></span>
+          <button className="sw-loc" onClick={onClose}>
+            <span className="sw-loc-tag"><span className="uq-live" />DEALER TOOLKIT</span>
+            <span className="sw-loc-name">Everything to quote &amp; sell <ChevronDownIcon width={15} height={15} /></span>
           </button>
-          <Flex align="center" gap="2" className="uq-actions">
+          <Flex align="center" gap="2">
             <button className="uq-iconbtn uq-iconbtn-rel" onClick={() => push('bom')} aria-label="Saved BOMs">
               <BookmarkIcon width={17} height={17} />
               {bomCount > 0 ? <span className="uq-count">{bomCount}</span> : null}
             </button>
-            <button className="uq-iconbtn" onClick={() => push('claims')} aria-label="Claims &amp; returns">
-              <FileTextIcon width={17} height={17} />
-            </button>
+            <button className="uq-iconbtn" onClick={() => push('claims')} aria-label="Claims & returns"><FileTextIcon width={17} height={17} /></button>
           </Flex>
         </Flex>
-        <button className="uq-search" onClick={() => push('spscalc')}>
+        <button className="sw-search" onClick={() => push('spscalc')}>
           <MagnifyingGlassIcon width={18} height={18} />
-          <span className="uq-search-ph">Search tools — ‘Partition BoM’</span>
+          <span className="sw-search-ph">Search tools — ‘Partition BoM’</span>
         </button>
       </div>
 
-      <div className="cp-body uq-body">
-        <UqTile big ph="1558997519-83ea9252edf8" c="green" icon={MixerHorizontalIcon} badge="FLAGSHIP"
-          title="Partition BoM Calculator" sub="Linked &amp; Syncro → an instant, priced bill of materials"
-          onClick={() => push('spscalc')} />
-
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18, marginBottom: 2 }}>CALCULATORS</Text>
-        <div className="uq-grid2">
-          <UqTile ph="1595428774223-ef52624120d2" c="violet" icon={DashboardIcon} badge="NEW" title="Panel weight" sub="Ply · MDF · glass" onClick={() => push('weightcalc')} />
-          <UqTile ph="1556911220-bff31c812dba" c="blue" icon={RulerSquareIcon} title="Hardware calc" sub="Slides · hinges" onClick={() => push('calc')} />
+      <div className="cp-body sw-body">
+        <div className="sw-banners">
+          {BANNERS.map((b, i) => (
+            <button className="sw-banner" key={i} onClick={b.go}>
+              <Img src={img(b.ph, 480)} alt="" />
+              <div className="sw-banner-scrim" />
+              <div className="sw-banner-copy">
+                <span className="sw-banner-kicker">{b.kicker}</span>
+                <Text size="3" weight="bold" as="div" style={{ color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.15 }}>{b.title}</Text>
+                <Text as="div" style={{ fontSize: 11, color: 'rgba(255,255,255,.85)', marginTop: 2, lineHeight: 1.35 }}>{b.sub}</Text>
+                <span className="sw-banner-cta">{b.cta} <ChevronRightIcon width={13} height={13} /></span>
+              </div>
+            </button>
+          ))}
         </div>
 
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18, marginBottom: 2 }}>QUOTE &amp; HIRE</Text>
-        <UqTile big ph="1524758631624-e2822e304c36" c="teal" icon={FileTextIcon} title="BOM"
-          sub={bomCount > 0 ? `${bomCount} saved · create customer quotes` : 'Create & manage customer quotes'}
-          onClick={() => push('bom')} />
-        <div className="uq-grid2" style={{ marginTop: 11 }}>
-          <UqTile ph="1565814329452-e1efa11c5b89" c="orange" icon={PersonIcon} title="Find Carpenter" sub="Verified installers" onClick={() => { setProTab('carpenter'); push('pros') }} />
-          <UqTile ph="1497366216548-37526070297c" c="indigo" icon={IdCardIcon} title="Find Architect" sub="Designers near you" onClick={() => { setProTab('designer'); push('pros') }} />
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ margin: '20px 0 2px' }}>WHAT DO YOU NEED?</Text>
+        <div className="sw-circles">
+          {CIRCLES.map(([label, ph, go]) => (
+            <button className="sw-circle" key={label} onClick={go}>
+              <span className="sw-circle-img"><Img src={img(ph, 200)} alt="" /></span>
+              <span className="sw-circle-l">{label}</span>
+            </button>
+          ))}
         </div>
 
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18, marginBottom: 2 }}>SERVICES</Text>
-        <div className="uq-grid2">
-          <UqTile ph="1484154218962-a197022b5858" c="amber" icon={SewingPinIcon} title="Site visit" sub="Book a measurement" onClick={() => push('site')} />
-          <UqTile ph="1489171078254-c3365d6e359f" c="pink" icon={EyeOpenIcon} title="Display centre" sub="Visit a showroom" onClick={() => push('display')} />
-          <UqTile ph="1503387762-592deb58ef4e" c="blue" icon={SpeakerLoudIcon} title="Brand support" sub="Ebco · Zipco · Peka" onClick={() => push('brand')} />
-          <UqTile ph="1556228453-efd6c1ff04f6" c="red" icon={ExclamationTriangleIcon} title="Claims & returns" sub="Raise or return" onClick={() => push('claims')} />
+        <div className="sw-rule" />
+
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ margin: '2px 0 2px' }}>TOP TOOLS THIS WEEK</Text>
+        <div className="sw-rail">
+          {topTools.map(f => (
+            <button className="sw-rail-card" key={f.id} onClick={f.go}>
+              <span className="sw-rail-img"><Img src={img(f.ph, 240)} alt="" />{f.badge ? <span className="sw-rail-badge">{f.badge}</span> : null}</span>
+              <Text size="1" weight="bold" as="div" className="clamp1" style={{ marginTop: 6 }}>{f.title}</Text>
+              <div className="sw-meta"><span className="sw-rate"><StarFilledIcon width={9} height={9} /> {f.rate || '4.8'}</span><span>{f.cat}</span></div>
+            </button>
+          ))}
         </div>
 
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18, marginBottom: 2 }}>QUOTING REWARDS</Text>
         <button className="uq-rwd" onClick={onSpin}>
           <div className="uq-rwd-head">
             <span className="uq-rwd-ic"><StarFilledIcon width={20} height={20} /></span>
             <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
               <Text size="2" weight="bold" as="div" style={{ color: '#fff', letterSpacing: '-0.2px' }}>Calculate &amp; earn</Text>
-              <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.82)' }}>🔥 3-day streak · coins on every BoM &amp; calc</Text>
+              <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.82)' }}>3-day streak · coins on every BoM &amp; calc</Text>
             </div>
             <span className="uq-rwd-cta">Spin <ChevronRightIcon width={13} height={13} /></span>
           </div>
@@ -1427,7 +1453,44 @@ function UtilitiesPage({ onClose, onSpin, onQuiz, lastOrder, bomCount = 0 }) {
             <span><Text size="1" weight="bold" as="div">Spin &amp; win</Text><Text size="1" color="gray" as="div">Daily reward</Text></span>
           </button>
         </div>
-        <div style={{ height: 10 }} />
+
+        <div className="sw-chips">
+          {CHIPS.map(c => (
+            <button key={c} className={`sw-chip ${chip === c ? 'on' : ''}`} onClick={() => { setChip(c); setOpenLearn(null) }}>{c}</button>
+          ))}
+        </div>
+
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ margin: '4px 0 6px' }}>
+          {chip === 'All' ? 'EVERYTHING FOR DEALERS' : chip === 'Learn' ? 'LEARN & HOW-TO' : chip.toUpperCase() + ' FOR DEALERS'} · {shownFeed.length}
+        </Text>
+        <div className="sw-feed">
+          {shownFeed.map(f => {
+            const open = f.learn && openLearn === f.id
+            const act = f.learn ? () => setOpenLearn(open ? null : f.id) : f.go
+            return (
+              <div className={`sw-card ${open ? 'open' : ''}`} key={f.id}>
+                <button className="sw-card-tap" onClick={act}>
+                  <div className="sw-card-img">
+                    <Img src={img(f.ph, 480)} alt="" />
+                    {f.badge ? <span className="sw-card-badge">{f.badge}</span> : null}
+                    <span className="sw-card-cat">{f.cat}</span>
+                  </div>
+                  <div className="sw-card-body">
+                    <Text size="3" weight="bold" as="div" style={{ letterSpacing: '-0.3px', lineHeight: 1.2 }}>{f.title}</Text>
+                    <div className="sw-meta">
+                      {f.rate ? <span className="sw-rate"><StarFilledIcon width={10} height={10} /> {f.rate}</span> : null}
+                      <span>{f.stat}</span>
+                    </div>
+                    <div className="sw-card-tag">{f.learn ? <span className="sw-tag-learn">{f.tag} · tap to read</span> : f.tag}</div>
+                  </div>
+                </button>
+                {open ? <div className="sw-learn-body"><Text size="2" as="div" style={{ lineHeight: 1.6, color: 'var(--gray-11)' }}>{f.learn.body}</Text></div> : null}
+              </div>
+            )
+          })}
+        </div>
+        <div className="sw-end">You’re all caught up — new tools &amp; guides every week</div>
+        <div style={{ height: 12 }} />
       </div>
     </div>
   )

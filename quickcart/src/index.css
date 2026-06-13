@@ -3365,27 +3365,31 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 }
 .flat-row + .flat-row { border-top: 1px solid var(--gray-3); }
 
-/* glossy "3D" icon tiles for the settings list (and the BOM Settings button) */
+/* flat (basic) icon chips — soft tint + coloured glyph, no 3D gloss (2026 default) */
 .flat-ic {
   width: 29px; height: 29px; border-radius: 50%; flex: none;
-  display: flex; align-items: center; justify-content: center; color: #fff;
-  box-shadow:
-    0 2px 4px rgba(0, 0, 0, .17),
-    inset 0 1px 0 rgba(255, 255, 255, .5),
-    inset 0 -1.5px 1px rgba(0, 0, 0, .13);
+  display: flex; align-items: center; justify-content: center;
 }
-.flat-ic svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .22)); }
 .flat-ic.sm { width: 23px; height: 23px; }
-.flat-ic.c-blue   { background: linear-gradient(155deg, #5AA0F2, #2D6FD6); }
-.flat-ic.c-orange { background: linear-gradient(155deg, #FFB057, #F57C28); }
-.flat-ic.c-teal   { background: linear-gradient(155deg, #34D6B4, #11A488); }
-.flat-ic.c-violet { background: linear-gradient(155deg, #A77CFF, #7B4DE0); }
-.flat-ic.c-pink   { background: linear-gradient(155deg, #FF82AE, #F0427E); }
-.flat-ic.c-green  { background: linear-gradient(155deg, #45D98A, #1FAE5E); }
-.flat-ic.c-indigo { background: linear-gradient(155deg, #6E7CF5, #3F4FD6); }
-.flat-ic.c-amber  { background: linear-gradient(155deg, #FFD45A, #F5A623); }
-.flat-ic.c-slate  { background: linear-gradient(155deg, #9BA5B7, #6B7384); }
-.flat-ic.c-red    { background: linear-gradient(155deg, #FF7B6B, #E5484D); }
+.flat-ic.c-blue   { background: var(--blue-3);   color: var(--blue-11); }
+.flat-ic.c-orange { background: var(--orange-3); color: var(--orange-11); }
+.flat-ic.c-teal   { background: var(--teal-3);   color: var(--teal-11); }
+.flat-ic.c-violet { background: var(--violet-3); color: var(--violet-11); }
+.flat-ic.c-pink   { background: var(--pink-3);   color: var(--pink-11); }
+.flat-ic.c-green  { background: var(--green-3);  color: var(--green-11); }
+.flat-ic.c-indigo { background: var(--indigo-3); color: var(--indigo-11); }
+.flat-ic.c-amber  { background: var(--amber-3);  color: var(--amber-11); }
+.flat-ic.c-slate  { background: var(--slate-3);  color: var(--slate-11); }
+.flat-ic.c-red    { background: var(--red-3);    color: var(--red-11); }
+
+/* the one deliberate 3D accent — the BOM button */
+.ic3d {
+  width: 38px; height: 38px; border-radius: 50%; flex: none; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(155deg, #45D98A, #1FAE5E);
+  box-shadow: 0 2px 5px rgba(15, 122, 63, .3), inset 0 1px 0 rgba(255, 255, 255, .5), inset 0 -1.5px 1px rgba(0, 0, 0, .14);
+}
+.ic3d svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .22)); }
 
 /* ---------- Login v2 (clean white) ---------- */
 .login2 {
@@ -5872,3 +5876,80 @@ button.lg-link {
 }
 .uq-rwd-mini:active { transform: scale(.97); }
 .uq-rwd-mini .flat-ic { width: 32px; height: 32px; }
+
+/* ============ Utilities — Swiggy-home layout ============ */
+.utilpage.sw { background: var(--gray-2); }
+.sw-head {
+  flex: none;
+  background: linear-gradient(168deg, var(--green-9), var(--green-10));
+  padding: calc(12px + env(safe-area-inset-top)) 14px 14px;
+}
+.sw-top { margin-bottom: 12px; }
+.sw-loc { background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 1px; flex: 1; min-width: 0; }
+.sw-loc-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 9.5px; font-weight: 900; letter-spacing: 1px; color: rgba(255,255,255,.85); }
+.sw-loc-name { display: inline-flex; align-items: center; gap: 3px; font-size: 14px; font-weight: 800; color: #fff; letter-spacing: -0.2px; }
+.sw-search {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  background: #fff; border: none; border-radius: 13px; padding: 12px 14px;
+  color: var(--gray-10); font-family: inherit; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.12);
+}
+.sw-search-ph { font-size: 13px; font-weight: 600; }
+
+.sw-body { padding-top: 14px; }
+
+/* banner carousel */
+.sw-banners { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -12px; padding: 0 12px 2px; }
+.sw-banners::-webkit-scrollbar { display: none; }
+.sw-banner { scroll-snap-align: start; position: relative; flex: 0 0 86%; height: 130px; border-radius: 18px; overflow: hidden; border: none; padding: 0; cursor: pointer; }
+.sw-banner img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sw-banner-scrim { position: absolute; inset: 0; background: linear-gradient(92deg, rgba(7,26,18,.92) 0%, rgba(7,26,18,.55) 55%, rgba(7,26,18,.12) 100%); }
+.sw-banner-copy { position: relative; z-index: 1; padding: 14px; max-width: 80%; text-align: left; }
+.sw-banner-kicker { display: inline-block; font-size: 8.5px; font-weight: 900; letter-spacing: .8px; color: var(--gold-9); margin-bottom: 4px; }
+.sw-banner-cta { display: inline-flex; align-items: center; gap: 3px; margin-top: 9px; background: #fff; color: var(--green-11); font-size: 11px; font-weight: 800; border-radius: 999px; padding: 5px 11px; }
+
+/* "what do you need" circular tools */
+.sw-circles { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px 4px; }
+.sw-circles::-webkit-scrollbar { display: none; }
+.sw-circle { flex: 0 0 auto; width: 64px; background: none; border: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.sw-circle-img { width: 64px; height: 64px; border-radius: 999px; overflow: hidden; border: 1px solid var(--gray-4); box-shadow: 0 2px 8px rgba(16,24,40,.08); }
+.sw-circle-img img { width: 100%; height: 100%; object-fit: cover; }
+.sw-circle-l { font-size: 10.5px; font-weight: 700; color: var(--gray-12); line-height: 1.2; text-align: center; }
+
+.sw-rule { height: 1px; background: var(--gray-4); margin: 16px -12px; }
+
+/* top tools rail */
+.sw-rail { display: flex; gap: 11px; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 2px 12px 4px; }
+.sw-rail::-webkit-scrollbar { display: none; }
+.sw-rail-card { flex: 0 0 132px; background: #fff; border: 1px solid var(--gray-4); border-radius: 14px; padding: 8px; cursor: pointer; text-align: left; font-family: inherit; }
+.sw-rail-img { position: relative; display: block; height: 78px; border-radius: 10px; overflow: hidden; }
+.sw-rail-img img { width: 100%; height: 100%; object-fit: cover; }
+.sw-rail-badge { position: absolute; top: 6px; left: 6px; background: var(--gold-9); color: var(--gold-12); font-size: 7.5px; font-weight: 900; letter-spacing: .4px; border-radius: 999px; padding: 2px 6px; }
+
+/* filter chips (sticky) */
+.sw-chips { position: sticky; top: 0; z-index: 3; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 18px -12px 8px; padding: 8px 12px; background: var(--gray-2); }
+.sw-chips::-webkit-scrollbar { display: none; }
+.sw-chip { flex: 0 0 auto; border: 1.5px solid var(--gray-5); background: #fff; color: var(--gray-11); font-family: inherit; font-size: 12.5px; font-weight: 700; border-radius: 999px; padding: 7px 15px; cursor: pointer; }
+.sw-chip.on { background: var(--green-9); border-color: var(--green-9); color: #fff; }
+
+/* vertical feed cards (restaurant-style) */
+.sw-feed { display: flex; flex-direction: column; gap: 16px; }
+.sw-card { background: #fff; border: 1px solid var(--gray-4); border-radius: 18px; overflow: hidden; box-shadow: var(--sh-card); }
+.sw-card-tap { display: block; width: 100%; background: none; border: none; padding: 0; cursor: pointer; text-align: left; font-family: inherit; }
+.sw-card-img { position: relative; aspect-ratio: 16 / 9; }
+.sw-card-img img { width: 100%; height: 100%; object-fit: cover; }
+.sw-card-badge { position: absolute; top: 10px; left: 10px; background: var(--gold-9); color: var(--gold-12); font-size: 9px; font-weight: 900; letter-spacing: .5px; border-radius: 999px; padding: 3px 8px; }
+.sw-card-cat { position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,.94); color: var(--gray-12); font-size: 9.5px; font-weight: 800; letter-spacing: .4px; border-radius: 999px; padding: 3px 9px; text-transform: uppercase; }
+.sw-card-body { padding: 11px 13px 13px; }
+.sw-meta { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 11.5px; font-weight: 600; color: var(--gray-10); }
+.sw-rate { display: inline-flex; align-items: center; gap: 3px; background: var(--green-9); color: #fff; font-weight: 800; border-radius: 5px; padding: 2px 6px; }
+.sw-card-tag { margin-top: 7px; font-size: 12px; font-weight: 700; color: var(--green-11); }
+.sw-tag-learn { color: var(--gray-10); font-weight: 600; }
+.sw-learn-body { padding: 0 13px 14px; border-top: 1px dashed var(--gray-4); margin-top: 2px; padding-top: 12px; animation: stepin .2s cubic-bezier(.22,1,.36,1); }
+.sw-end { text-align: center; font-size: 11.5px; font-weight: 600; color: var(--gray-9); padding: 20px 0 6px; }
+
+/* the one deliberate 3D accent kept on the BOM page's Settings button */
+.bom-settings-pill .flat-ic.c-green {
+  background: linear-gradient(155deg, #45D98A, #1FAE5E); color: #fff;
+  box-shadow: 0 2px 4px rgba(15, 122, 63, .28), inset 0 1px 0 rgba(255, 255, 255, .5), inset 0 -1.5px 1px rgba(0, 0, 0, .14);
+}
+.bom-settings-pill .flat-ic svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .22)); }
