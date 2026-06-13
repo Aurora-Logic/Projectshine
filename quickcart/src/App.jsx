@@ -4146,8 +4146,7 @@ const ACCT_FLAT = [
   ['site', SewingPinIcon, 'Submit site visit'],
   ['display', EyeOpenIcon, 'Display centre visit'],
   ['brand', SpeakerLoudIcon, 'Brand support'],
-  ['boms', FileTextIcon, 'Saved BOMs'],
-  ['estpdf', GearIcon, 'BOM PDF settings'],
+  ['boms', FileTextIcon, 'BOM'],
   ['support', ChatBubbleIcon, 'Support'],
   ['notif', BellIcon, 'Notification preferences'],
   ['privacy', LockClosedIcon, 'Account privacy'],
@@ -4159,7 +4158,7 @@ const ACCT_TITLES = {
   gst: 'GST details', calc: 'Calculators', site: 'Submit site visit',
   display: 'Display centre visit', support: 'Support', claims: 'Claims & returns', brand: 'Brand support', addr: 'Address book',
   notif: 'Notification preferences', privacy: 'Account privacy',
-  estpdf: 'BOM PDF settings', boms: 'Saved BOMs',
+  estpdf: 'BOM PDF settings', boms: 'BOM',
 }
 
 /* Estimate PDF branding: company name, logo upload, text colours */
