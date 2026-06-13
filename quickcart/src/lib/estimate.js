@@ -49,11 +49,8 @@ const EST_BRAND_DEFAULT = {
   showPrices: true,
   showSavings: true,
   gstPct: 0, // 0 = no GST line; else 5/12/18/28
-  signature: false,
   watermark: '', // empty = none; e.g. DRAFT
-  terms: '', // #12 multi-line terms & conditions block (empty = hidden)
-  qr: '', // #12 QR target — a UPI string (upi://…) or website URL (empty = no QR)
-  bank: { name: '', acc: '', ifsc: '', upi: '' }, // #12 payment details block
+  terms: '', // multi-line terms & conditions block (empty = hidden)
   dealer: {
     addr1: '304 Maple Heights, HSR Layout',
     addr2: 'Bengaluru 560102',
@@ -152,14 +149,6 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT, 
   const ACCENT = hexToRgb(brand.accent || EST_BRAND_DEFAULT.accent)
   const FOOT = hexToRgb(brand.footer), SIDE = hexToRgb(brand.side), WORD = hexToRgb(brand.wordmark || '#1A1C1F')
   const inr = (n) => '₹' + n.toLocaleString('en-IN')
-  // #12 QR (UPI / website) — lazy, on the paper tone so it blends; a failure never breaks the PDF
-  let qrData = null
-  if ((brand.qr || '').trim()) {
-    try {
-      const QR = (await import('qrcode')).default
-      qrData = await QR.toDataURL(String(brand.qr).trim(), { margin: 0, width: 240, color: { dark: '#1A1C1F', light: brand.paper || EST_BRAND_DEFAULT.paper } })
-    } catch { qrData = null }
-  }
   const no = meta.no || `BOM-${String(Date.now()).slice(-6)}`
   const d = meta.date ? new Date(meta.date) : new Date()
   const today = [String(d.getDate()).padStart(2, '0'), String(d.getMonth() + 1).padStart(2, '0'), d.getFullYear()].join('.')
@@ -302,54 +291,17 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT, 
     return y
   }
 
-  /* optional signature block; returns the y it ended at */
-  const signature = (y, limit) => {
-    if (!brand.signature) return y
-    if (y + 30 > limit) { doc.addPage(); paper(); y = 36 }
-    const sx = W - M - 62
-    doc.setDrawColor(...INK).setLineWidth(0.3).line(sx, y + 20, W - M, y + 20)
-    doc.setFont('DOC', 'normal').setFontSize(7.5).setTextColor(...GRAY)
-    doc.text('Authorised signatory', sx, y + 24.5)
-    doc.setFont('DOC', 'bold').setFontSize(8).setTextColor(...INK)
-    doc.text(brand.name, sx, y + 28.5)
-    return y + 30
-  }
-
-  /* #12 left-column panel: QR + bank/payment details + terms & conditions.
-     Lives in the empty space under the table; returns the y it ended at. */
-  const bank = brand.bank || {}
-  const hasBank = !!(bank.acc || bank.upi || bank.name || bank.ifsc)
+  /* left-column panel: terms & conditions only. Lives in the empty space
+     under the table; returns the y it ended at. (Name kept for its 3 callers.) */
   const terms0 = (brand.terms || '').trim()
   const payBlock = (x, y, maxW, limit) => {
-    if (!qrData && !hasBank && !terms0) return y
-    const need = (qrData || hasBank ? 24 : 0) + (terms0 ? 16 : 0)
-    if (y + need > limit) { doc.addPage(); paper(); y = 30 }
+    if (!terms0) return y
     let cy = y
-    if (qrData || hasBank) {
-      const qs = 19
-      if (qrData) doc.addImage(qrData, 'PNG', x, cy, qs, qs)
-      const bx = qrData ? x + qs + 4 : x
-      let by = cy + 3
-      doc.setFont('DOC', 'bold').setFontSize(7).setTextColor(...GRAY).setCharSpace(0.5)
-      doc.text(hasBank ? 'BANK · PAYMENT' : 'SCAN TO PAY', bx, by)
-      doc.setCharSpace(0)
-      by += 4.4
-      doc.setFont('DOC', 'normal').setFontSize(7.5).setTextColor(...INK)
-      const bl = []
-      if (bank.name) bl.push(bank.name)
-      if (bank.acc) bl.push('A/c  ' + bank.acc)
-      if (bank.ifsc) bl.push('IFSC  ' + bank.ifsc)
-      if (bank.upi) bl.push('UPI  ' + bank.upi)
-      if (!hasBank && qrData) bl.push('Scan to pay or visit')
-      for (const line of bl) { doc.text(line, bx, by); by += 3.9 }
-      cy = Math.max(cy + (qrData ? qs : 0), by) + 3
-    }
-    if (terms0) {
-      doc.setFont('DOC', 'bold').setFontSize(7).setTextColor(...GRAY).setCharSpace(0.5)
-      doc.text('TERMS & CONDITIONS', x, cy + 3)
-      doc.setCharSpace(0)
-      cy = drawRich(doc, terms0, x, cy + 7.4, maxW, { size: 7, lh: 3.4, color: GRAY })
-    }
+    if (y + 16 > limit) { doc.addPage(); paper(); y = 30; cy = y }
+    doc.setFont('DOC', 'bold').setFontSize(7).setTextColor(...GRAY).setCharSpace(0.5)
+    doc.text('TERMS & CONDITIONS', x, cy + 3)
+    doc.setCharSpace(0)
+    cy = drawRich(doc, terms0, x, cy + 7.4, maxW, { size: 7, lh: 3.4, color: GRAY })
     return cy
   }
 
@@ -396,7 +348,6 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT, 
     doc.setFont('DOC', 'normal').setFontSize(7.5).setTextColor(...GRAY)
     doc.text(`Valid ${validDays} days from the date above.`, 118, y + 4.5)
     doc.text(`Prepared by ${preparedBy}.`, 118, y + 8.5)
-    signature(y + 12, H - (logosTop ? 26 : 44))
 
     const pages = doc.getNumberOfPages()
     for (let i = 1; i <= pages; i++) {
@@ -435,8 +386,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT, 
     const fin = itemsTable({ startY: 60, bottom: 48, headFill: PAPER.map(c => Math.max(0, c - 14)), big: false })
     let y = totalsBlock(fin + 8, H - 52)
     const ny = drawRich(doc, note, M, y + 2, 92, { size: 8 })
-    const py = payBlock(M, ny + 6, 92, H - 44)
-    signature(Math.max(y, ny, py) + 4, H - 44)
+    payBlock(M, ny + 6, 92, H - 44)
 
     const pages = doc.getNumberOfPages()
     for (let i = 1; i <= pages; i++) {
@@ -504,8 +454,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT, 
       doc.text(words, W - M, wy, { align: 'right' })
       wy += words.length * 3.6 + 4
     }
-    const sy = drawRich(doc, note, 118, wy, W - M - 118, { size: 7.5, lh: 3.9, color: GRAY })
-    signature(sy + 4, H - 46)
+    drawRich(doc, note, 118, wy, W - M - 118, { size: 7.5, lh: 3.9, color: GRAY })
 
     const pages = doc.getNumberOfPages()
     for (let i = 1; i <= pages; i++) {
