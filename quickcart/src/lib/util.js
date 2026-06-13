@@ -57,9 +57,11 @@ const scrollToId = (id) =>
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
 function dealSecsLeft() {
-  const left = Math.floor((Number(localStorage.getItem('qc-deal-end')) - Date.now()) / 1000)
-  if (left > 0) return left
-  localStorage.setItem('qc-deal-end', String(Date.now() + 30 * 60 * 1000))
+  try {
+    const left = Math.floor((Number(localStorage.getItem('qc-deal-end')) - Date.now()) / 1000)
+    if (left > 0) return left
+    localStorage.setItem('qc-deal-end', String(Date.now() + 30 * 60 * 1000))
+  } catch { /* storage blocked — fall through to the default window */ }
   return 30 * 60
 }
 

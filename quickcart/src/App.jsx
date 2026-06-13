@@ -20,6 +20,7 @@ import {
 } from './data.js'
 import { generateEstimate, EST_BRAND_DEFAULT, EST_FONTS, EST_SWATCHES, EST_PAPERS } from './lib/estimate.js'
 import { img, DAY, daypart, condition, sparkle, bulkNudge, scrollToId, dealSecsLeft } from './lib/util.js'
+import { usePersisted, safeGet, safeSet, safeRemove } from './lib/storage.js'
 import { bulkTier, unitPriceFor, lineTotal } from './money.js'
 import './App.css'
 
@@ -37,7 +38,7 @@ function useSkyTheme() {
   useEffect(() => {
     if (window.location.hash.startsWith('#theme-')) return
     // explicit opt-in only (qc-geo) — never a permission prompt on first paint
-    if (localStorage.getItem('qc-geo') !== '1') return
+    if (safeGet('qc-geo') !== '1') return
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
@@ -119,7 +120,7 @@ const BRAND_NAMES = { ebco: 'Ebco', zipco: 'Zipco', peka: 'Peka', worksmart: 'Wo
 
 /* one coupon slot — written by wheel/quiz/streak, consumed at checkout */
 const saveCoupon = (c) => {
-  try { localStorage.setItem('qc-coupon', JSON.stringify(c)) } catch { /* storage off */ }
+  try { safeSet('qc-coupon', JSON.stringify(c)) } catch { /* storage off */ }
 }
 const couponFromWheel = (label) => {
   if (label === 'TRY AGAIN') return null
@@ -132,8 +133,8 @@ const couponFromWheel = (label) => {
 function creditState() {
   let paid = []
   let extra = []
-  try { paid = JSON.parse(localStorage.getItem('qc-paid') || '[]') } catch { /* none */ }
-  try { extra = JSON.parse(localStorage.getItem('qc-bills') || '[]') } catch { /* none */ }
+  try { paid = JSON.parse(safeGet('qc-paid') || '[]') } catch { /* none */ }
+  try { extra = JSON.parse(safeGet('qc-bills') || '[]') } catch { /* none */ }
   const all = [
     ...CREDIT.bills,
     ...extra.map(b => ({ ...b, days: Math.ceil((b.due - Date.now()) / 864e5) })),
@@ -1999,7 +2000,7 @@ function GameRow({ onSpin }) {
 /* streak derives from stored check-in days; day 7 issues a real coupon */
 function streakDays() {
   try {
-    const a = JSON.parse(localStorage.getItem('qc-streak-days') || '[]')
+    const a = JSON.parse(safeGet('qc-streak-days') || '[]')
     return Array.isArray(a) ? a : []
   } catch { return [] }
 }
@@ -2027,10 +2028,10 @@ function StreakCard() {
     if (c >= 7) {
       saveCoupon({ label: 'STREAK ₹100 OFF', kind: 'amt', value: 100 })
       setDays([DAY]) // run banked as a coupon; streak restarts
-      try { localStorage.setItem('qc-streak-days', JSON.stringify([DAY])) } catch { /* storage off */ }
+      try { safeSet('qc-streak-days', JSON.stringify([DAY])) } catch { /* storage off */ }
     } else {
       setDays(next)
-      try { localStorage.setItem('qc-streak-days', JSON.stringify(next)) } catch { /* storage off */ }
+      try { safeSet('qc-streak-days', JSON.stringify(next)) } catch { /* storage off */ }
     }
     sparkle(e)
   }
@@ -2061,7 +2062,7 @@ function StreakCard() {
 function SpinDialog({ open, onOpenChange }) {
   const [rot, setRot] = useState(0)
   const [state, setState] = useState(() =>
-    localStorage.getItem('qc-spin-day') === DAY ? 'used' : 'ready') // ready | spinning | done | used
+    safeGet('qc-spin-day') === DAY ? 'used' : 'ready') // ready | spinning | done | used
   const [prize, setPrize] = useState(null)
   const segs = 360 / WHEEL.length
 
@@ -2070,7 +2071,7 @@ function SpinDialog({ open, onOpenChange }) {
     const k = Math.floor(Math.random() * WHEEL.length)
     setRot(360 * 5 + (360 - (k * segs + segs / 2)))
     setState('spinning')
-    localStorage.setItem('qc-spin-day', DAY)
+    safeSet('qc-spin-day', DAY)
     setTimeout(() => {
       setPrize(WHEEL[k])
       const c = couponFromWheel(WHEEL[k].label)
@@ -2582,12 +2583,12 @@ const LIST_SEED = [
 
 function loadLists() {
   try {
-    const s = JSON.parse(localStorage.getItem('qc-lists') || 'null')
+    const s = JSON.parse(safeGet('qc-lists') || 'null')
     if (Array.isArray(s)) return s
   } catch { /* seed below */ }
   return LIST_SEED
 }
-const saveLists = (l) => localStorage.setItem('qc-lists', JSON.stringify(l))
+const saveLists = (l) => safeSet('qc-lists', JSON.stringify(l))
 
 /* Structured Indian address form: line 1/2, landmark, city, pincode */
 function AddrFields({ onSave, cta = 'Save address' }) {
@@ -2826,7 +2827,7 @@ function AcctLists({ onChange, onGoKit }) {
 /* GST invoice generated on-device (restored; Sprint-1 reworks to bill snapshot) */
 function downloadInvoice(o) {
   let gst = { gstin: '29ABCDE1234F1Z5', name: 'Bora Hardware & Plywood' }
-  try { gst = { ...gst, ...(JSON.parse(localStorage.getItem('qc-gst') || 'null') || {}) } } catch { /* defaults */ }
+  try { gst = { ...gst, ...(JSON.parse(safeGet('qc-gst') || 'null') || {}) } } catch { /* defaults */ }
   const bill = o.bill || null
   const total = bill ? bill.toPay
     : o.items.reduce((s, it) => s + (it.unit ?? unitPriceFor(it.p, it.n)) * it.n, 0)
@@ -2871,7 +2872,7 @@ function downloadInvoice(o) {
 
 function downloadLedger() {
   let paid = []
-  try { paid = JSON.parse(localStorage.getItem('qc-paid') || '[]') } catch { /* none */ }
+  try { paid = JSON.parse(safeGet('qc-paid') || '[]') } catch { /* none */ }
   let bal = 0
   const rows = CREDIT.bills.map(b => {
     const isPaid = paid.includes(b.id)
@@ -3163,17 +3164,6 @@ function Toggle({ on, onToggle }) {
       <span />
     </button>
   )
-}
-
-function usePersisted(key, initial) {
-  const [v, setV] = useState(() => {
-    try { const s = JSON.parse(localStorage.getItem(key) || 'null'); return s ?? initial } catch { return initial }
-  })
-  const set = (next) => {
-    setV(next)
-    localStorage.setItem(key, JSON.stringify(next))
-  }
-  return [v, set]
 }
 
 /* interactive monthly bar chart: tap a bar to inspect it */
@@ -3819,14 +3809,14 @@ function AcctAddr() {
   const addNew = (a) => {
     const next = [...addrs, a]
     setAddrs(next)
-    localStorage.setItem('qc-addr', JSON.stringify(next))
+    safeSet('qc-addr', JSON.stringify(next))
     setSel(a.id)
     setAdding(false)
   }
   const remove = (id) => {
     const next = addrs.filter(a => a.id !== id)
     setAddrs(next)
-    localStorage.setItem('qc-addr', JSON.stringify(next))
+    safeSet('qc-addr', JSON.stringify(next))
     if (sel === id && next[0]) setSel(next[0].id)
   }
   return (
@@ -5685,7 +5675,7 @@ function OrderCard({ order, onDismiss, onReorder, onAddMore }) {
       : si === 1 ? 'Packed at depot — rider assigning' : 'Confirmed at depot'
   const rate = (n) => {
     setRated(n)
-    localStorage.setItem('qc-order', JSON.stringify({ ...order, rated: n }))
+    safeSet('qc-order', JSON.stringify({ ...order, rated: n }))
   }
   return (
     <Box px="4" pt="4">
@@ -5753,7 +5743,7 @@ function OrderCard({ order, onDismiss, onReorder, onAddMore }) {
 
 function loadAddrs() {
   try {
-    const s = JSON.parse(localStorage.getItem('qc-addr') || 'null')
+    const s = JSON.parse(safeGet('qc-addr') || 'null')
     if (Array.isArray(s) && s.length) return s
   } catch { /* fall through to defaults */ }
   return ADDRESSES
@@ -5835,20 +5825,20 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
   const openQty = useContext(QtyCtx)
   const items = Object.values(cart.items)
   const [addrs, setAddrs] = useState(loadAddrs)
-  const [sel, setSel] = useState(() => localStorage.getItem('qc-addr-sel') || loadAddrs()[0].id)
+  const [sel, setSel] = useState(() => safeGet('qc-addr-sel') || loadAddrs()[0].id)
   const [addrSheet, setAddrSheet] = useState(false)
   const [estSheet, setEstSheet] = useState(false)
-  const [note, setNote] = useState(() => localStorage.getItem('qc-note') || '')
+  const [note, setNote] = useState(() => safeGet('qc-note') || '')
   const [placed, setPlaced] = useState(null)
   const [express, setExpress] = useState(false)
-  const pickAddr = (id) => { setSel(id); localStorage.setItem('qc-addr-sel', id) }
+  const pickAddr = (id) => { setSel(id); safeSet('qc-addr-sel', id) }
   const addAddr = (a) => {
     const next = [...addrs, a]
     setAddrs(next)
-    localStorage.setItem('qc-addr', JSON.stringify(next))
+    safeSet('qc-addr', JSON.stringify(next))
     pickAddr(a.id)
   }
-  const saveNote = (v) => { setNote(v); localStorage.setItem('qc-note', v) }
+  const saveNote = (v) => { setNote(v); safeSet('qc-note', v) }
 
   const [coupon, setCoupon] = usePersisted('qc-coupon', null)
   const couponOff = coupon
@@ -6541,10 +6531,10 @@ export default function App() {
   const [quizOpen, setQuizOpen] = useState(false)
   const [wheelOpen, setWheelOpen] = useState(window.location.hash === '#wheel')
   const [glow, setGlow] = useState(null)
-  const playedRef = useRef(localStorage.getItem('qc-quiz-day') === DAY)
+  const playedRef = useRef(safeGet('qc-quiz-day') === DAY)
   const markPlayed = () => {
     playedRef.current = true
-    localStorage.setItem('qc-quiz-day', DAY)
+    safeSet('qc-quiz-day', DAY)
   }
   const fetchedSky = useSkyTheme()
   const [sim, setSim] = useState(null)
@@ -6556,8 +6546,8 @@ export default function App() {
     const m = window.location.hash.match(/^#fest-([a-e])$/)
     if (m) return m[1]
     const L = ['a', 'b']
-    const i = (Number(localStorage.getItem('qc-fest-idx') || -1) + 1) % L.length
-    localStorage.setItem('qc-fest-idx', String(i))
+    const i = (Number(safeGet('qc-fest-idx') || -1) + 1) % L.length
+    safeSet('qc-fest-idx', String(i))
     return L[i]
   })
   const [heroPal, setHeroPal] = useState(() => {
@@ -6565,8 +6555,8 @@ export default function App() {
     const hit = m && HERO_PALETTES.find(p => p.name.toLowerCase() === m[1].toLowerCase())
     if (hit) return hit
     // rotate through palette combinations on every app open (until client finalizes one)
-    const idx = (Number(localStorage.getItem('qc-hero-idx') || -1) + 1) % HERO_PALETTES.length
-    localStorage.setItem('qc-hero-idx', String(idx))
+    const idx = (Number(safeGet('qc-hero-idx') || -1) + 1) % HERO_PALETTES.length
+    safeSet('qc-hero-idx', String(idx))
     return HERO_PALETTES[idx]
   })
   const sky = sim ?? fetchedSky
@@ -6599,7 +6589,7 @@ export default function App() {
   const [authed, setAuthed] = useState(() => {
     if (window.location.hash === '#login') return false
     if (window.location.hash) return true
-    return localStorage.getItem('qc-auth') === '1'
+    return safeGet('qc-auth') === '1'
   })
   const [order, setOrder] = useState(() => {
     if (window.location.hash === '#order') {
@@ -6609,9 +6599,9 @@ export default function App() {
         items: [{ p: BUY_AGAIN[0], n: 12 }, { p: DEALS[0], n: 2 }],
       }
     }
-    try { return JSON.parse(localStorage.getItem('qc-order') || 'null') } catch { return null }
+    try { return JSON.parse(safeGet('qc-order') || 'null') } catch { return null }
   })
-  const dismissOrder = () => { setOrder(null); localStorage.removeItem('qc-order') }
+  const dismissOrder = () => { setOrder(null); safeRemove('qc-order') }
   const reorder = () => {
     order?.items?.forEach(({ p, n }) => changeCart(n, p, { noReco: true }))
     setCartOpen(true)
@@ -7131,11 +7121,11 @@ export default function App() {
             cart={cart} onClose={closeCart} onChange={changeCart}
             onPlaced={(rec) => {
               setOrder(rec)
-              localStorage.setItem('qc-order', JSON.stringify(rec))
+              safeSet('qc-order', JSON.stringify(rec))
               try {
-                const bills = JSON.parse(localStorage.getItem('qc-bills') || '[]')
+                const bills = JSON.parse(safeGet('qc-bills') || '[]')
                 bills.push({ id: rec.id, amt: rec.bill?.toPay ?? rec.amt, due: rec.dueTs })
-                localStorage.setItem('qc-bills', JSON.stringify(bills))
+                safeSet('qc-bills', JSON.stringify(bills))
               } catch { /* storage off */ }
               setCartItems({})
               // land on home with the tracking card in view, whatever the stack was
@@ -7153,7 +7143,7 @@ export default function App() {
         </PageExit>
 
         {!authed && (
-          <LoginGate onDone={() => { localStorage.setItem('qc-auth', '1'); setAuthed(true) }} />
+          <LoginGate onDone={() => { safeSet('qc-auth', '1'); setAuthed(true) }} />
         )}
 
         <div className="footer">
