@@ -23,6 +23,7 @@ import { img, DAY, daypart, condition, sparkle, bulkNudge, scrollToId, dealSecsL
 import { usePersisted, safeGet, safeSet, safeRemove } from './lib/storage.js'
 import { useSkyTheme, useNextFrame, useSheetA11y, useCountUp } from './hooks.js'
 import { QtyCtx, PdpCtx, CartCtx, CartItemsCtx } from './contexts.js'
+import { Img } from './components/Img.jsx'
 import { bulkTier, unitPriceFor, lineTotal } from './money.js'
 import './App.css'
 
@@ -129,25 +130,6 @@ function PageExit({ open, children, variant = 'page', dur = 300 }) {
 /* Image with blur-up fade-in (gray well → photo) */
 // neutral packshot placeholder shown when a product image fails to load
 // (Unsplash rate-limit, offline, hotlink block) instead of an invisible gray box
-const IMG_FALLBACK = 'data:image/svg+xml,' + encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="#E9E9E6"/>' +
-  '<g fill="none" stroke="#B6B6B0" stroke-width="3.5" stroke-linejoin="round"><rect x="38" y="40" width="44" height="40" rx="2"/>' +
-  '<path d="M38 54h44M60 40v40"/></g></svg>')
-const Img = memo(function Img(props) {
-  const [loaded, setLoaded] = useState(false)
-  const ref = useRef(null)
-  useEffect(() => { if (ref.current?.complete && ref.current.naturalWidth) setLoaded(true) }, [])
-  return (
-    <img
-      decoding="async"
-      {...props} ref={ref}
-      onLoad={() => setLoaded(true)}
-      onError={(e) => { if (e.currentTarget.src !== IMG_FALLBACK) { e.currentTarget.src = IMG_FALLBACK } setLoaded(true) }}
-      className={`${props.className || ''} fadeimg ${loaded ? 'in' : ''}`}
-    />
-  )
-})
-
 const BRAND_KEYS = ['ALL', 'ebco', 'zipco', 'peka', 'worksmart', 'livsmart']
 
 /* ---------------- Header (seasonal monsoon skin) ---------------- */
