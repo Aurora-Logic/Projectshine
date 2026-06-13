@@ -5929,14 +5929,14 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
               />
             </div>
 
-            <div className="cp-card">
+            <div className="cp-card cp-credit">
               <Flex align="center" justify="between">
                 <Text size="1" weight="bold" className="u-seclabel">
                   PAYMENT
                 </Text>
                 <span className="st-chip ok">30-DAY CREDIT</span>
               </Flex>
-              <Text size="2" weight="bold" as="div" mt="2">
+              <Text size="2" weight="bold" as="div" mt="2" style={{ color: 'var(--green-11)' }}>
                 ₹{toPay.toLocaleString('en-IN')} on credit · due {dueLabel}
               </Text>
               <Text size="1" color="gray" as="div" mt="1">

@@ -5099,3 +5099,11 @@ button.lg-link {
   .skel { animation: none; }
   .wheel { transition-duration: .01s; }
 }
+
+/* #9 · credit-at-checkout card — highlighted as the payment hero */
+.cp-credit {
+  background: linear-gradient(180deg, var(--green-2), #fff 70%);
+  border: 1px solid var(--green-5);
+  box-shadow: 0 2px 10px rgba(20, 99, 63, .08);
+}
+.cp-credit .st-chip.ok { background: var(--green-9); color: #fff; }
