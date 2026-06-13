@@ -6217,9 +6217,6 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   const renderStudio = () => {
     const mw = Math.min(30, (mark.w / mark.h) * 13)
     doc.addImage(mark.data, 'PNG', M, 8, mw, 13)
-    doc.setFont('DOC', 'bold').setFontSize(7).setTextColor(...INK).setCharSpace(1)
-    doc.text(doc.splitTextToSize('THANK YOU FOR YOUR ENQUIRY. THIS DOCUMENT IS A BILL OF MATERIALS.', 60), M + mw + 8, 12)
-    doc.setCharSpace(0)
 
     const metaRows = [
       ['TO', cust.name.toUpperCase()],
