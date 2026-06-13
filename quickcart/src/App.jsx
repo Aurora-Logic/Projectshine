@@ -1244,13 +1244,16 @@ function WeightCalc({ onBack }) {
 function UqTile({ ph, c, icon: Icon, title, sub, onClick, badge, big }) {
   return (
     <button className={`uq-tile ${big ? 'uq-tile-big' : ''}`} onClick={onClick}>
-      <Img className="uq-tile-img" src={img(ph, big ? 560 : 320)} alt="" loading="lazy" />
-      <span className="uq-tile-shade" aria-hidden="true" />
-      {badge ? <span className="uq-tile-badge">{badge}</span> : null}
-      <span className={`flat-ic c-${c} uq-tile-ic`}><Icon width={big ? 18 : 16} height={big ? 18 : 16} /></span>
-      <span className="uq-tile-tx">
-        <span className="uq-tile-title">{title}</span>
-        {sub ? <span className="uq-tile-sub">{sub}</span> : null}
+      <span className="uq-tile-img">
+        <Img src={img(ph, big ? 640 : 360)} alt="" loading="lazy" />
+        {badge ? <span className="uq-tile-badge">{badge}</span> : null}
+      </span>
+      <span className="uq-tile-foot">
+        <span className={`flat-ic c-${c}`}><Icon width={15} height={15} /></span>
+        <span className="uq-tile-tx">
+          <span className="uq-tile-title">{title}</span>
+          {sub ? <span className="uq-tile-sub">{sub}</span> : null}
+        </span>
       </span>
     </button>
   )

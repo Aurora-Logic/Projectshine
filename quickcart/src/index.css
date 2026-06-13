@@ -5818,38 +5818,30 @@ button.lg-link {
 
 /* === Utilities image tiles (home FestHero style) + engaging quoting rewards === */
 .uq-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+/* bright home-style card: photo on top, clean white footer with 3D icon + label */
 .uq-tile {
-  position: relative; overflow: hidden; border: none; cursor: pointer; padding: 0;
-  border-radius: 16px; min-height: 132px; background: var(--gray-4);
-  display: flex; flex-direction: column; justify-content: flex-end;
-  -webkit-tap-highlight-color: transparent; transition: transform .14s ease;
+  display: flex; flex-direction: column; cursor: pointer; font-family: inherit; text-align: left;
+  background: #fff; border: 1px solid var(--gray-3); border-radius: 16px; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+  -webkit-tap-highlight-color: transparent; transition: transform .12s ease, box-shadow .12s ease;
 }
 .uq-tile:active { transform: scale(.97); }
-.uq-tile-big { min-height: 152px; }
-.uq-tile-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.uq-tile-shade {
-  position: absolute; inset: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, .76) 0%, rgba(0, 0, 0, .36) 42%, rgba(0, 0, 0, .06) 72%, rgba(0, 0, 0, .04) 100%);
-}
-.uq-tile-ic { position: absolute; top: 10px; left: 10px; z-index: 2; width: 34px; height: 34px; }
-.uq-tile-big .uq-tile-ic { width: 40px; height: 40px; }
+.uq-tile-img { position: relative; display: block; height: 96px; background: var(--gray-3); }
+.uq-tile-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.uq-tile-big .uq-tile-img { height: 128px; }
 .uq-tile-badge {
-  position: absolute; top: 12px; right: 12px; z-index: 2;
-  font-size: 8.5px; font-weight: 800; letter-spacing: .4px;
-  color: var(--gray-12); background: rgba(255, 255, 255, .95); padding: 3px 8px; border-radius: 999px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+  position: absolute; top: 8px; left: 8px; z-index: 2;
+  font-size: 8.5px; font-weight: 800; letter-spacing: .4px; color: var(--gray-12);
+  background: rgba(255, 255, 255, .96); padding: 3px 8px; border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .16);
 }
-.uq-tile-tx { position: relative; z-index: 2; padding: 12px; }
-.uq-tile-title {
-  display: block; color: #fff; font-size: 14px; font-weight: 800; letter-spacing: -.2px;
-  line-height: 1.18; text-shadow: 0 1px 4px rgba(0, 0, 0, .5);
-}
-.uq-tile-big .uq-tile-title { font-size: 17px; }
-.uq-tile-sub {
-  display: block; color: rgba(255, 255, 255, .88); font-size: 10.5px; font-weight: 600;
-  margin-top: 2px; text-shadow: 0 1px 3px rgba(0, 0, 0, .5);
-}
-.uq-tile-big .uq-tile-sub { font-size: 12px; }
+.uq-tile-foot { display: flex; align-items: center; gap: 9px; padding: 11px; }
+.uq-tile-foot .flat-ic { width: 32px; height: 32px; flex: none; }
+.uq-tile-big .uq-tile-foot .flat-ic { width: 38px; height: 38px; }
+.uq-tile-tx { min-width: 0; }
+.uq-tile-title { display: block; color: var(--gray-12); font-size: 13px; font-weight: 800; letter-spacing: -.2px; line-height: 1.2; }
+.uq-tile-big .uq-tile-title { font-size: 15px; }
+.uq-tile-sub { display: block; color: var(--gray-10); font-size: 10.5px; font-weight: 600; margin-top: 1px; }
 
 .uq-rwd {
   display: block; width: 100%; text-align: left; cursor: pointer; font-family: inherit; border: none;
