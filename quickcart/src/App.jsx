@@ -20,6 +20,7 @@ import {
   tierSwap, tierSwapCount,
 } from './data.js'
 import { generateEstimate, EST_BRAND_DEFAULT, EST_FONTS, EST_PAPERS } from './lib/estimate.js'
+import { calculateBoM } from './lib/spsBom.js'
 import { img, DAY, daypart, condition, sparkle, bulkNudge, scrollToId, dealSecsLeft } from './lib/util.js'
 import { usePersisted, safeGet, safeSet, safeRemove, getJSON, setJSON } from './lib/storage.js'
 import { useSkyTheme, useNextFrame, useSheetA11y, useCountUp } from './hooks.js'
@@ -1038,98 +1039,269 @@ function ProCard({ pro, i }) {
   )
 }
 
-function ProsPage({ onClose, onGoCalc, onGoVisit }) {
-  useSheetA11y(onClose)
-  const [tab, setTab] = useState('carpenter')
+/* ---------------- Utilities hub + flagship calculator (replaces the old Find-a-Pro page) ---------------- */
+
+function Stepper({ value, set, min = 0, max = 16, suffix }) {
+  return (
+    <div className="sc-step">
+      <button className="sc-step-b" onClick={() => set(Math.max(min, value - 1))} disabled={value <= min} aria-label="Decrease"><MinusIcon width={15} height={15} /></button>
+      <span className="sc-step-v">{value}{suffix ? <i>{suffix}</i> : null}</span>
+      <button className="sc-step-b" onClick={() => set(Math.min(max, value + 1))} disabled={value >= max} aria-label="Increase"><PlusIcon width={15} height={15} /></button>
+    </div>
+  )
+}
+
+/* LSPS / SSPS sliding-partition BoM calculator — the flagship "3D" tool */
+function SpsCalc({ onBack }) {
+  const a11y = useSheetA11y(onBack)
+  const [material, setMaterial] = useState('P')
+  const [widthFt, setWidthFt] = useState(12)
+  const [heightFt, setHeightFt] = useState(9)
+  const [lF, setLF] = useState(1)
+  const [lM, setLM] = useState(3)
+  const [sF, setSF] = useState(2)
+  const [sM, setSM] = useState(2)
+  const [sys, setSys] = useState('lsps')
+  const inr = (n) => '₹' + n.toLocaleString('en-IN')
+
+  const res = useMemo(() => {
+    try { return { data: calculateBoM({ lspsFixedDoors: lF, lspsMovableDoors: lM, sspsFixedDoors: sF, sspsMovableDoors: sM, heightFt, widthFt, material }), err: null } }
+    catch (e) { return { data: null, err: e.message } }
+  }, [material, widthFt, heightFt, lF, lM, sF, sM])
+
+  const data = res.data
+  const items = data ? (sys === 'lsps' ? data.lsps : data.ssps) : []
+  const total = data ? (sys === 'lsps' ? data.lspsTotal : data.sspsTotal) : 0
+
+  return (
+    <div className="sc-page" role="dialog" aria-modal="true" aria-label="Partition BoM Calculator" tabIndex={-1} ref={a11y}>
+      <div className="pdp-head">
+        <button className="sheet-back" onClick={onBack} aria-label="Back"><ArrowLeftIcon /></button>
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Partition BoM Calculator</Heading>
+          <Text size="1" color="gray" as="div">Linked & 2-Way Syncro sliding systems</Text>
+        </Box>
+      </div>
+      <div className="cp-body">
+        <div className="sc-card">
+          <Text size="1" weight="bold" className="u-seclabel" as="div">MATERIAL</Text>
+          <div className="sc-mat">
+            {[['P', 'Aluminium', 'Profile frame'], ['W', 'Wood', 'Wooden doors']].map(([k, t, s]) => (
+              <button key={k} className={`sc-mat-b ${material === k ? 'on' : ''}`} onClick={() => setMaterial(k)}>
+                <Text size="2" weight="bold" as="div">{t}</Text>
+                <Text size="1" color="gray" as="div">{s}</Text>
+              </button>
+            ))}
+          </div>
+          <div className="sc-grid" style={{ marginTop: 14 }}>
+            <div className="sc-field">
+              <Text size="1" color="gray" as="div" mb="1">Total width</Text>
+              <Stepper value={widthFt} set={setWidthFt} min={1} max={16} suffix="ft" />
+            </div>
+            <div className="sc-field">
+              <Text size="1" color="gray" as="div" mb="1">Height</Text>
+              <Stepper value={heightFt} set={setHeightFt} min={1} max={10} suffix="ft" />
+            </div>
+          </div>
+        </div>
+
+        <div className="sc-card">
+          <Flex justify="between" align="center">
+            <Text size="1" weight="bold" className="u-seclabel" as="div">LSPS · LINKED DOORS</Text>
+            <span className="sc-badge l">{data ? inr(data.lspsTotal) : '—'}</span>
+          </Flex>
+          <div className="sc-grid" style={{ marginTop: 10 }}>
+            <div className="sc-field"><Text size="1" color="gray" as="div" mb="1">Fixed</Text><Stepper value={lF} set={setLF} min={0} max={6} /></div>
+            <div className="sc-field"><Text size="1" color="gray" as="div" mb="1">Movable</Text><Stepper value={lM} set={setLM} min={0} max={6} /></div>
+          </div>
+        </div>
+
+        <div className="sc-card">
+          <Flex justify="between" align="center">
+            <Text size="1" weight="bold" className="u-seclabel" as="div">SSPS · SYNCRO DOORS</Text>
+            <span className="sc-badge s">{data ? inr(data.sspsTotal) : '—'}</span>
+          </Flex>
+          <div className="sc-grid" style={{ marginTop: 10 }}>
+            <div className="sc-field"><Text size="1" color="gray" as="div" mb="1">Fixed</Text><Stepper value={sF} set={setSF} min={0} max={6} /></div>
+            <div className="sc-field"><Text size="1" color="gray" as="div" mb="1">Movable</Text><Stepper value={sM} set={setSM} min={0} max={6} /></div>
+          </div>
+        </div>
+
+        {res.err && <div className="sc-warn err"><ExclamationTriangleIcon width={13} height={13} /> <span>{res.err}</span></div>}
+        {data && data.warnings.length > 0 && (
+          <div className="sc-warn">
+            {data.warnings.map((w, i) => <div key={i} className="sc-warn-row"><ExclamationTriangleIcon width={13} height={13} style={{ flex: 'none', marginTop: 1 }} /> <span>{w}</span></div>)}
+          </div>
+        )}
+
+        <div className="seg sc-seg">
+          <button className={`seg-b ${sys === 'lsps' ? 'on' : ''}`} onClick={() => setSys('lsps')}>LSPS · {data ? inr(data.lspsTotal) : '—'}</button>
+          <button className={`seg-b ${sys === 'ssps' ? 'on' : ''}`} onClick={() => setSys('ssps')}>SSPS · {data ? inr(data.sspsTotal) : '—'}</button>
+        </div>
+
+        <div className="sc-bom">
+          {items.length === 0 ? (
+            <Text size="2" color="gray" as="div" style={{ textAlign: 'center', padding: '24px 0' }}>No items for this configuration.</Text>
+          ) : items.map(it => (
+            <div key={it.code} className="sc-line">
+              <span className="sc-line-sr">{it.sr}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Text size="2" weight="bold" as="div" style={{ lineHeight: 1.25 }}>{it.name}</Text>
+                <Text size="1" color="gray" as="div">{it.code} · {it.finish} · MRP {inr(it.mrp)}</Text>
+              </div>
+              <div className="sc-line-amt">
+                <span className="sc-qty">× {it.qty}</span>
+                <Text size="2" weight="bold" as="div">{inr(it.amount)}</Text>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="sc-total">
+          <div>
+            <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.82)', fontWeight: 700 }}>{sys === 'lsps' ? 'LSPS' : 'SSPS'} grand total</Text>
+            <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.62)' }}>{items.length} line item{items.length === 1 ? '' : 's'}</Text>
+          </div>
+          <Heading as="div" size="6" style={{ color: '#fff', letterSpacing: '-0.6px' }}>{inr(total)}</Heading>
+        </div>
+        <Text size="1" color="gray" as="div" style={{ textAlign: 'center', marginTop: 10 }}>Indicative MRP — verify before quoting. Height is kept for records but does not change quantities.</Text>
+      </div>
+    </div>
+  )
+}
+
+function UtilTile({ c, icon: Icon, title, sub, onClick, badge }) {
+  return (
+    <button className="util-tile2" onClick={onClick}>
+      {badge ? <span className="util-tile-badge">{badge}</span> : null}
+      <span className={`flat-ic c-${c}`}><Icon width={16} height={16} /></span>
+      <Text size="2" weight="bold" as="div" style={{ marginTop: 9, letterSpacing: '-0.2px' }}>{title}</Text>
+      <Text size="1" color="gray" as="div">{sub}</Text>
+    </button>
+  )
+}
+
+function UtilitiesPage({ onClose, onGoBom, onGoClaims, onGoCalc, onGoVisit, onSpin, onQuiz, bomCount = 0 }) {
+  const a11y = useSheetA11y(onClose)
+  const [view, setView] = useState('hub')      // 'hub' | 'spscalc' | 'pros'
+  const [proTab, setProTab] = useState('carpenter')
   const [refs, setRefs] = usePersisted('qc-refs', [])
   const [rName, setRName] = useState('')
   const [rPhone, setRPhone] = useState('')
   const [rType, setRType] = useState('Carpenter')
   const [sent, setSent] = useState(false)
-  const pros = PROS[tab]
   const refer = (e) => {
     sparkle(e)
     setRefs([{ name: rName.trim(), phone: rPhone, type: rType, ts: Date.now() }, ...refs])
-    setSent(true)
-    setRName('')
-    setRPhone('')
+    setSent(true); setRName(''); setRPhone('')
   }
+
+  if (view === 'spscalc') return <SpsCalc onBack={() => setView('hub')} />
+
+  if (view === 'pros') {
+    const pros = PROS[proTab]
+    return (
+      <div className="prospage" role="dialog" aria-modal="true" aria-label="Find a Pro" tabIndex={-1}>
+        <div className="pdp-head">
+          <button className="sheet-back" onClick={() => setView('hub')} aria-label="Back"><ArrowLeftIcon /></button>
+          <Box style={{ flex: 1, minWidth: 0 }}>
+            <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>{proTab === 'carpenter' ? 'Find a Carpenter' : 'Find an Architect'}</Heading>
+            <Text size="1" color="gray" as="div">Dealer-verified, rated on real jobs</Text>
+          </Box>
+        </div>
+        <div className="cp-body">
+          <div className="sub-hero green-line">
+            <span className="oc-pulse" />
+            <Text size="1" weight="bold">Every pro is verified on real installed jobs</Text>
+            <Text size="1" color="gray" style={{ marginLeft: 'auto', flex: 'none' }}>avg reply ~2 hrs</Text>
+          </div>
+          <div className="seg" style={{ marginTop: 0, marginBottom: 12 }}>
+            <button className={`seg-b ${proTab === 'carpenter' ? 'on' : ''}`} onClick={() => setProTab('carpenter')}>Carpenters</button>
+            <button className={`seg-b ${proTab === 'designer' ? 'on' : ''}`} onClick={() => setProTab('designer')}>Architects & designers</button>
+          </div>
+          {pros.map((pro, i) => <ProCard key={pro.id} pro={pro} i={i} />)}
+          <div className="cp-card" style={{ marginTop: 16 }}>
+            <Text size="1" weight="bold" as="div" className="u-seclabel">REFER A PRO</Text>
+            <Text size="1" color="gray" as="div" mt="1">Know a good {rType === 'Carpenter' ? 'carpenter' : 'designer'}? Referrals count toward your partner standing.</Text>
+            {sent ? (
+              <Flex align="center" gap="2" mt="3">
+                <CheckIcon width={14} height={14} color="var(--green-11)" />
+                <Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>Referral received — we'll verify and onboard them</Text>
+              </Flex>
+            ) : (
+              <>
+                <div className="seg" style={{ margin: '10px 0 0' }}>
+                  {['Carpenter', 'Designer'].map(t => (
+                    <button key={t} className={`seg-b ${rType === t ? 'on' : ''}`} onClick={() => setRType(t)}>{t}</button>
+                  ))}
+                </div>
+                <input className="cp-input" style={{ marginTop: 8 }} placeholder="Their name / firm" value={rName} onChange={(e) => setRName(e.target.value)} />
+                <input className="cp-input" style={{ marginTop: 8 }} type="tel" autoComplete="off" inputMode="numeric" maxLength={10} placeholder="Their phone" value={rPhone} onChange={(e) => setRPhone(e.target.value.replace(/\D/g, ''))} />
+                <Button mt="3" size="2" color="green" style={{ fontWeight: 800, width: '100%' }} disabled={!rName.trim() || rPhone.length !== 10} onClick={refer}>Send referral</Button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="prospage" role="dialog" aria-modal="true" aria-label="Find a Pro" tabIndex={-1}>
-      <div className="pdp-head">
-        <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
-        <Box style={{ flex: 1, minWidth: 0 }}>
-          <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Find a Pro</Heading>
-          <Text size="1" color="gray" as="div">Dealer-verified installers & designers</Text>
-        </Box>
+    <div className="utilpage" role="dialog" aria-modal="true" aria-label="Utilities" tabIndex={-1} ref={a11y}>
+      <div className="util-head">
+        <button className="sheet-back" onClick={onClose} aria-label="Back" style={{ background: 'rgba(255,255,255,.7)' }}><ArrowLeftIcon /></button>
+        <Heading as="h2" mt="3" style={{ fontSize: 26, letterSpacing: '-0.7px' }}>Utilities</Heading>
+        <Text size="2" color="gray" as="div" mt="1">Your counter's toolkit — calculators, BoM, pros & rewards</Text>
       </div>
       <div className="cp-body">
-        <div className="util-row">
-          <button className="util-tile" onClick={onGoCalc}>
-            <span className="mrow-ic"><RulerSquareIcon width={15} height={15} /></span>
-            <span>
-              <Text size="2" weight="bold" as="div">Calculators</Text>
-              <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>Slides · hinges · closers</Text>
-            </span>
-          </button>
-          <button className="util-tile" onClick={onGoVisit}>
-            <span className="mrow-ic"><CalendarIcon width={15} height={15} /></span>
-            <span>
-              <Text size="2" weight="bold" as="div">Site visit</Text>
-              <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>Book a measurement</Text>
-            </span>
-          </button>
-        </div>
-        <div className="sub-hero green-line" style={{ marginTop: 12 }}>
-          <span className="oc-pulse" />
-          <Text size="1" weight="bold">Every pro is verified on real installed jobs</Text>
-          <Text size="1" color="gray" style={{ marginLeft: 'auto', flex: 'none' }}>avg reply ~2 hrs</Text>
-        </div>
-        <div className="seg" style={{ marginTop: 0, marginBottom: 12 }}>
-          <button className={`seg-b ${tab === 'carpenter' ? 'on' : ''}`} onClick={() => setTab('carpenter')}>Carpenters</button>
-          <button className={`seg-b ${tab === 'designer' ? 'on' : ''}`} onClick={() => setTab('designer')}>Architects & designers</button>
-        </div>
-        {pros.map((pro, i) => <ProCard key={pro.id} pro={pro} i={i} />)}
+        <button className="util-feat" onClick={() => setView('spscalc')}>
+          <span className="util-feat-ic"><MixerHorizontalIcon width={24} height={24} /></span>
+          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+            <span className="util-feat-tag">NEW · CALCULATOR</span>
+            <Text size="3" weight="bold" as="div" style={{ color: '#fff', letterSpacing: '-0.3px', marginTop: 3 }}>Partition BoM Calculator</Text>
+            <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.85)', marginTop: 1 }}>Linked & Syncro sliding systems → an instant, priced bill of materials</Text>
+          </div>
+          <ChevronRightIcon width={20} height={20} color="#fff" style={{ flex: 'none' }} />
+        </button>
 
-        <div className="cp-card" style={{ marginTop: 16 }}>
-          <Text size="1" weight="bold" as="div" className="u-seclabel">
-            REFER A PRO
-          </Text>
-          <Text size="1" color="gray" as="div" mt="1">
-            Know a good {rType === 'Carpenter' ? 'carpenter' : 'designer'}? Referrals count toward your partner standing.
-          </Text>
-          {sent ? (
-            <Flex align="center" gap="2" mt="3">
-              <CheckIcon width={14} height={14} color="var(--green-11)" />
-              <Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>
-                Referral received — we'll verify and onboard them
-              </Text>
-            </Flex>
-          ) : (
-            <>
-              <div className="seg" style={{ margin: '10px 0 0' }}>
-                {['Carpenter', 'Designer'].map(t => (
-                  <button key={t} className={`seg-b ${rType === t ? 'on' : ''}`} onClick={() => setRType(t)}>{t}</button>
-                ))}
-              </div>
-              <input
-                className="cp-input" style={{ marginTop: 8 }} placeholder="Their name / firm"
-                value={rName} onChange={(e) => setRName(e.target.value)}
-              />
-              <input
-                className="cp-input" style={{ marginTop: 8 }} type="tel" autoComplete="off" inputMode="numeric"
-                maxLength={10} placeholder="Their phone"
-                value={rPhone} onChange={(e) => setRPhone(e.target.value.replace(/\D/g, ''))}
-              />
-              <Button
-                mt="3" size="2" color="green" style={{ fontWeight: 800, width: '100%' }}
-                disabled={!rName.trim() || rPhone.length !== 10} onClick={refer}
-              >
-                Send referral
-              </Button>
-            </>
-          )}
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 20 }}>CALCULATORS</Text>
+        <div className="util-tiles">
+          <UtilTile c="violet" icon={MixerHorizontalIcon} title="Partition BoM" sub="LSPS & SSPS systems" onClick={() => setView('spscalc')} badge="NEW" />
+          <UtilTile c="blue" icon={RulerSquareIcon} title="Hardware calc" sub="Slides · hinges · closers" onClick={onGoCalc} />
         </div>
+
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>QUOTES</Text>
+        <button className="util-row-card" onClick={onGoBom}>
+          <span className="flat-ic c-green"><FileTextIcon width={16} height={16} /></span>
+          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+            <Text size="2" weight="bold" as="div">BOM</Text>
+            <Text size="1" color="gray" as="div">Create & manage customer bills of materials{bomCount > 0 ? ` · ${bomCount} saved` : ''}</Text>
+          </div>
+          <ChevronRightIcon width={16} height={16} color="var(--gray-8)" style={{ flex: 'none' }} />
+        </button>
+
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>FIND A PRO</Text>
+        <div className="util-tiles">
+          <UtilTile c="orange" icon={PersonIcon} title="Find Carpenter" sub="Verified installers" onClick={() => { setProTab('carpenter'); setView('pros') }} />
+          <UtilTile c="indigo" icon={IdCardIcon} title="Find Architect" sub="Designers near you" onClick={() => { setProTab('designer'); setView('pros') }} />
+        </div>
+
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>PLAY &amp; EARN</Text>
+        <div className="util-tiles">
+          <UtilTile c="pink" icon={RocketIcon} title="Spin &amp; Win" sub="Daily reward" onClick={onSpin} />
+          <UtilTile c="amber" icon={LightningBoltIcon} title="Daily Quiz" sub="Earn coins" onClick={onQuiz} />
+        </div>
+
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>SUPPORT</Text>
+        <button className="util-row-card" onClick={onGoClaims}>
+          <span className="flat-ic c-red"><ExclamationTriangleIcon width={16} height={16} /></span>
+          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+            <Text size="2" weight="bold" as="div">Claims &amp; returns</Text>
+            <Text size="1" color="gray" as="div">Raise a claim or return a delivered item</Text>
+          </div>
+          <ChevronRightIcon width={16} height={16} color="var(--gray-8)" style={{ flex: 'none' }} />
+        </button>
+        <div style={{ height: 8 }} />
       </div>
     </div>
   )
@@ -6730,10 +6902,15 @@ export default function App() {
 
         <PageExit open={prosOpen}>
           {prosOpen && (
-            <ProsPage
+            <UtilitiesPage
               onClose={closePros}
               onGoCalc={() => { setProsOpen(false); acctInitSub.current = 'calc'; setAcctOpen(true) }}
               onGoVisit={() => { setProsOpen(false); acctInitSub.current = 'site'; setAcctOpen(true) }}
+              onGoBom={() => { setProsOpen(false); acctInitSub.current = 'boms'; setAcctOpen(true) }}
+              onGoClaims={() => { setProsOpen(false); acctInitSub.current = 'claims'; setAcctOpen(true) }}
+              onSpin={() => setWheelOpen(true)}
+              onQuiz={() => setQuizOpen(true)}
+              bomCount={loadBoms().length}
             />
           )}
         </PageExit>
