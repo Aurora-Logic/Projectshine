@@ -2492,8 +2492,8 @@ function AcctCredit() {
 
 /* ---------------- Dealer login (demo gate, Instacart-style) ---------------- */
 
-const WaMark = () => (
-  <svg width="19" height="19" viewBox="0 0 32 32" aria-hidden="true">
+const WaMark = ({ s = 19 }) => (
+  <svg width={s} height={s} viewBox="0 0 32 32" aria-hidden="true">
     <circle cx="16" cy="16" r="16" fill="#25D366"/>
     <path fill="#fff" d="M16 6.5c-5.2 0-9.4 4.2-9.4 9.4 0 1.8.5 3.5 1.4 5L6.5 25.5l4.7-1.5c1.4.8 3.1 1.3 4.8 1.3 5.2 0 9.4-4.2 9.4-9.4S21.2 6.5 16 6.5zm5.5 13.3c-.2.7-1.4 1.3-1.9 1.4-.5.1-1.1.1-1.8-.1-.4-.1-.9-.3-1.6-.6-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 .9-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4.2.5.7 1.9.8 2 .1.1.1.3 0 .5-.1.2-.1.3-.3.5l-.4.5c-.1.1-.3.3-.1.6.2.3.7 1.2 1.6 1.9 1.1.9 2 1.2 2.3 1.4.3.1.5.1.6-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.6-.1.3.1 1.7.8 2 1 .3.1.5.2.5.3.1.2.1.7-.1 1.2z"/>
   </svg>
@@ -5316,6 +5316,8 @@ const BOM_TPL = {
 }
 function AcctBoms({ onSettings }) {
   const [boms, setBoms] = usePersisted('qc-boms', [])
+  const [q, setQ] = useState('')
+  const [delRec, setDelRec] = useState(null)
   const del = (no) => setBoms(boms.filter(b => b.no !== no))
   const settingsBtn = onSettings && (
     <button className="bom-settings-pill" onClick={onSettings}>
@@ -5324,7 +5326,7 @@ function AcctBoms({ onSettings }) {
   )
   if (!boms.length) {
     return (
-      <Box px="4" pt="3">
+      <div className="bom-wrap">
         <div className="bom-empty">
           <div className="bom-empty-ico"><FileTextIcon width={26} height={26} /></div>
           <Text size="3" weight="bold" as="div" mt="3">No saved BOMs yet</Text>
@@ -5336,12 +5338,16 @@ function AcctBoms({ onSettings }) {
           )}
           <Flex justify="center">{settingsBtn}</Flex>
         </div>
-      </Box>
+      </div>
     )
   }
   const totalVal = boms.reduce((s, b) => s + (b.total || 0), 0)
+  const ql = q.trim().toLowerCase()
+  const filtered = ql
+    ? boms.filter(b => (b.cust.name || '').toLowerCase().includes(ql) || (b.no || '').toLowerCase().includes(ql))
+    : boms
   return (
-    <Box px="4" pt="2" pb="4">
+    <div className="bom-wrap">
       <div className="bom-head">
         <div style={{ minWidth: 0 }}>
           <Text size="3" weight="bold" as="div" style={{ letterSpacing: '-0.3px' }}>{boms.length} saved BOM{boms.length === 1 ? '' : 's'}</Text>
@@ -5349,7 +5355,24 @@ function AcctBoms({ onSettings }) {
         </div>
         {settingsBtn}
       </div>
-      {boms.map(rec => {
+
+      {boms.length >= 3 && (
+        <div className="bom-search">
+          <MagnifyingGlassIcon width={16} height={16} />
+          <input
+            value={q} onChange={(e) => setQ(e.target.value)}
+            placeholder="Search by customer or BOM number" style={{ fontSize: 16 }}
+            aria-label="Search saved BOMs"
+          />
+          {q && <button className="bom-search-x" onClick={() => setQ('')} aria-label="Clear search"><Cross2Icon width={15} height={15} /></button>}
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
+        <Text size="2" color="gray" as="div" style={{ textAlign: 'center', padding: '28px 0' }}>
+          No BOMs match “{q}”.
+        </Text>
+      ) : filtered.map(rec => {
         const tpl = BOM_TPL[rec.template] || BOM_TPL.classic
         return (
           <div key={rec.no} className="bom-card">
@@ -5373,14 +5396,31 @@ function AcctBoms({ onSettings }) {
               <button className="bom-act" onClick={() => regenBom(rec, 'save')}><DownloadIcon width={14} height={14} /> Download</button>
             </div>
             <div className="bom-actions2">
-              <button className="bom-ic" onClick={() => waBom(rec)} aria-label="Share on WhatsApp"><ChatBubbleIcon width={15} height={15} /> WhatsApp</button>
+              <button className="bom-ic" onClick={() => waBom(rec)} aria-label="Share on WhatsApp"><WaMark s={16} /> WhatsApp</button>
               <button className="bom-ic" onClick={() => mailBom(rec)} aria-label="Send by email"><EnvelopeClosedIcon width={15} height={15} /> Email</button>
-              <button className="bom-ic del" onClick={() => del(rec.no)} aria-label="Delete BOM" style={{ marginLeft: 'auto' }}><TrashIcon width={15} height={15} /></button>
+              <button className="bom-ic del" onClick={() => setDelRec(rec)} aria-label="Delete BOM" style={{ marginLeft: 'auto' }}><TrashIcon width={15} height={15} /></button>
             </div>
           </div>
         )
       })}
-    </Box>
+
+      {delRec && (
+        <div className="order-done" onClick={() => setDelRec(null)}>
+          <div className="od-card" onClick={(e) => e.stopPropagation()}>
+            <div className="od-ico-red"><TrashIcon width={24} height={24} /></div>
+            <Heading as="h2" size="5" mt="3" style={{ letterSpacing: '-0.3px' }}>Delete this BOM?</Heading>
+            <Text size="2" color="gray" as="div" mt="2">
+              <Text weight="bold" style={{ color: 'var(--gray-12)' }}>{delRec.cust.name || 'Customer'}</Text> · {delRec.no}
+            </Text>
+            <Text size="1" color="gray" as="div" mt="1">Removes it from this device — this can’t be undone.</Text>
+            <Flex gap="2" mt="4">
+              <Button size="3" variant="soft" color="gray" radius="full" style={{ fontWeight: 800, flex: 1 }} onClick={() => setDelRec(null)}>Cancel</Button>
+              <Button size="3" color="red" radius="full" style={{ fontWeight: 800, flex: 1 }} onClick={() => { del(delRec.no); setDelRec(null) }}>Delete</Button>
+            </Flex>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 

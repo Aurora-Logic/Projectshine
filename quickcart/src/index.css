@@ -5216,6 +5216,33 @@ button.lg-link {
   background: var(--green-3); color: var(--green-11);
 }
 
+/* outer wrapper — no extra side padding (the cp-body already pads 14px) */
+.bom-wrap { padding: 2px 0 24px; }
+
+.bom-search {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--gray-2); border: 1px solid var(--gray-4);
+  border-radius: 13px; padding: 0 12px; margin-bottom: 13px;
+  color: var(--gray-9);
+}
+.bom-search input {
+  flex: 1; min-width: 0; border: none; background: none; outline: none;
+  font-family: inherit; font-weight: 600; color: var(--gray-12); padding: 11px 0;
+}
+.bom-search input::placeholder { color: var(--gray-9); font-weight: 500; }
+.bom-search-x {
+  flex: none; border: none; background: none; color: var(--gray-10);
+  cursor: pointer; display: flex; padding: 3px; border-radius: 50%;
+  -webkit-tap-highlight-color: transparent;
+}
+.bom-search-x:active { transform: scale(.9); }
+
+.od-ico-red {
+  width: 56px; height: 56px; border-radius: 50%; margin: 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--red-3); color: var(--red-11);
+}
+
 /* #13 · dealer quote-tier swap (cart, dealer-only) */
 .cp-tier { border: 1px dashed var(--gray-6); background: var(--gray-1); }
 .tier-hint { font-size: 9px; font-weight: 800; letter-spacing: .3px; color: var(--gray-9); text-transform: uppercase; }
