@@ -4152,6 +4152,12 @@ const ACCT_FLAT = [
   ['privacy', LockClosedIcon, 'Account privacy'],
 ]
 
+// per-row accent for the glossy 3D icon tiles
+const ACCT_ICO = {
+  calc: 'blue', claims: 'orange', site: 'teal', display: 'violet',
+  brand: 'pink', boms: 'green', support: 'indigo', notif: 'amber', privacy: 'slate',
+}
+
 const ACCT_TITLES = {
   dash: 'Performance dashboard', orders: 'My orders', credit: 'Credit ledger',
   lists: 'Project lists', schemes: 'Schemes & discounts',
@@ -4450,27 +4456,36 @@ function AcctEstPdf() {
 }
 
 function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCategory, onGoReorder, onGoKit }) {
-  const [sub, setSub] = useState(() => {
+  // a stack so back goes up ONE level (e.g. estpdf -> boms) instead of exiting outright
+  const [subStack, setSubStack] = useState(() => {
     const h = window.location.hash
-    if (h === '#dash') return 'dash'
-    if (h === '#credit') return 'credit'
-    if (h === '#lists') return 'lists'
-    if (h === '#orders' || h === '#ordpg') return 'orders'
-    if (h === '#claims') return 'claims'
-    if (h === '#brand') return 'brand'
-    if (h === '#site') return 'site'
-    return initialSub || null
+    let init = null
+    if (h === '#dash') init = 'dash'
+    else if (h === '#credit') init = 'credit'
+    else if (h === '#lists') init = 'lists'
+    else if (h === '#orders' || h === '#ordpg') init = 'orders'
+    else if (h === '#claims') init = 'claims'
+    else if (h === '#brand') init = 'brand'
+    else if (h === '#site') init = 'site'
+    else init = initialSub || null
+    return init ? [init] : []
   })
+  const sub = subStack.length ? subStack[subStack.length - 1] : null
+  const setSub = (s) => setSubStack(s ? [s] : [])        // open from the account root / exit
+  const pushSub = (s) => {                               // go one level deeper, keeping the back trail
+    window.history.pushState({ qcAcctSub: true }, '')
+    setSubStack(st => [...st, s])
+  }
   const [lo, setLo] = useState(null) // null | 'confirm' | 'out'
   subRef.current = sub !== null
   const backSub = () => {
     if (window.history.state?.qcAcctSub) window.history.back()
-    else setSub(null)
+    else setSubStack(st => (st.length > 1 ? st.slice(0, -1) : []))
   }
   useEffect(() => {
     if (!sub) return
     if (!window.history.state?.qcAcctSub) window.history.pushState({ qcAcctSub: true }, '')
-    const onPop = () => { if (!ordPgRef.current) setSub(null) }
+    const onPop = () => { if (!ordPgRef.current) setSubStack(st => st.slice(0, -1)) }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [sub !== null]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -4492,7 +4507,7 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
       case 'notif': return <AcctNotif />
       case 'privacy': return <AcctPrivacy />
       case 'estpdf': return <AcctEstPdf />
-      case 'boms': return <AcctBoms onSettings={() => setSub('estpdf')} />
+      case 'boms': return <AcctBoms onSettings={() => pushSub('estpdf')} />
       default: return null
     }
   }
@@ -4576,7 +4591,7 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
         <div className="cp-card" style={{ padding: '2px 16px' }}>
           {ACCT_FLAT.map(([key, Icon, t]) => (
             <button key={key} className="flat-row" onClick={() => setSub(key)}>
-              <Icon width={17} height={17} />
+              <span className={`flat-ic c-${ACCT_ICO[key] || 'slate'}`}><Icon width={15} height={15} /></span>
               <Text size="2" weight="medium" style={{ flex: 1, textAlign: 'left' }}>{t}</Text>
               <ChevronRightIcon width={15} height={15} color="var(--gray-8)" />
             </button>
@@ -4585,7 +4600,7 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
 
         <div className="cp-card" style={{ padding: '2px 16px' }}>
           <button className="flat-row" onClick={() => setLo('confirm')}>
-            <ExitIcon width={16} height={16} color="var(--red-11)" />
+            <span className="flat-ic c-red"><ExitIcon width={15} height={15} /></span>
             <Text size="2" weight="bold" style={{ flex: 1, textAlign: 'left', color: 'var(--red-11)' }}>Log out</Text>
           </button>
         </div>
@@ -5301,7 +5316,7 @@ function AcctBoms({ onSettings }) {
   const del = (no) => setBoms(boms.filter(b => b.no !== no))
   const settingsBtn = onSettings && (
     <button className="bom-settings-pill" onClick={onSettings}>
-      <GearIcon width={14} height={14} /> Settings
+      <span className="flat-ic c-green sm"><GearIcon width={13} height={13} /></span> Settings
     </button>
   )
   if (!boms.length) {

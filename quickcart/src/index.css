@@ -3364,6 +3364,28 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 }
 .flat-row + .flat-row { border-top: 1px solid var(--gray-3); }
 
+/* glossy "3D" icon tiles for the settings list (and the BOM Settings button) */
+.flat-ic {
+  width: 29px; height: 29px; border-radius: 8px; flex: none;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, .17),
+    inset 0 1px 0 rgba(255, 255, 255, .5),
+    inset 0 -1.5px 1px rgba(0, 0, 0, .13);
+}
+.flat-ic svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .22)); }
+.flat-ic.sm { width: 23px; height: 23px; border-radius: 7px; }
+.flat-ic.c-blue   { background: linear-gradient(155deg, #5AA0F2, #2D6FD6); }
+.flat-ic.c-orange { background: linear-gradient(155deg, #FFB057, #F57C28); }
+.flat-ic.c-teal   { background: linear-gradient(155deg, #34D6B4, #11A488); }
+.flat-ic.c-violet { background: linear-gradient(155deg, #A77CFF, #7B4DE0); }
+.flat-ic.c-pink   { background: linear-gradient(155deg, #FF82AE, #F0427E); }
+.flat-ic.c-green  { background: linear-gradient(155deg, #45D98A, #1FAE5E); }
+.flat-ic.c-indigo { background: linear-gradient(155deg, #6E7CF5, #3F4FD6); }
+.flat-ic.c-amber  { background: linear-gradient(155deg, #FFD45A, #F5A623); }
+.flat-ic.c-slate  { background: linear-gradient(155deg, #9BA5B7, #6B7384); }
+.flat-ic.c-red    { background: linear-gradient(155deg, #FF7B6B, #E5484D); }
+
 /* ---------- Login v2 (clean white) ---------- */
 .login2 {
   z-index: 200;
@@ -5164,14 +5186,16 @@ button.lg-link {
   margin: 2px 2px 14px;
 }
 .bom-settings-pill {
-  display: inline-flex; align-items: center; gap: 6px; flex: none;
-  border: 1px solid var(--green-5); background: var(--green-2); color: var(--green-11);
+  display: inline-flex; align-items: center; gap: 8px; flex: none;
+  border: 1px solid var(--gray-4); color: var(--gray-12); background: #fff;
   font-family: inherit; font-size: 12.5px; font-weight: 800;
-  padding: 8px 14px; border-radius: 999px; cursor: pointer;
-  -webkit-tap-highlight-color: transparent; transition: transform .12s ease, background .15s ease;
+  padding: 5px 14px 5px 5px; border-radius: 999px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+  transition: transform .12s ease, background .15s ease;
 }
-.bom-settings-pill:hover { background: var(--green-3); }
-.bom-settings-pill:active { transform: scale(.95); }
+.bom-settings-pill:hover { background: var(--gray-1); }
+.bom-settings-pill:active { transform: scale(.96); }
 
 .bom-card {
   background: #fff; border: 1px solid var(--gray-3); border-radius: 18px;
@@ -5269,8 +5293,8 @@ button.lg-link {
   align-items: center;
   gap: 5px;
   flex: none;
-  border: 1px solid var(--gray-5);
-  background: #fff;
+  border: 1px solid var(--gray-6);
+  background: linear-gradient(180deg, #fff 0%, var(--gray-3) 100%);
   color: var(--gray-11);
   font-family: inherit;
   font-size: 12px;
@@ -5279,6 +5303,14 @@ button.lg-link {
   border-radius: 999px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform .12s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .12), 0 1px 0 rgba(0, 0, 0, .04), inset 0 1px 0 rgba(255, 255, 255, .9);
+  transition: transform .12s ease, background .15s ease, box-shadow .12s ease;
 }
-.bom-set-btn:active { transform: scale(.94); }
+.bom-set-btn:hover {
+  background: linear-gradient(180deg, #fff 0%, var(--gray-4) 100%);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, .15), 0 1px 0 rgba(0, 0, 0, .04), inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+.bom-set-btn:active {
+  transform: translateY(1px) scale(.96);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .1), inset 0 2px 4px rgba(0, 0, 0, .16);
+}
