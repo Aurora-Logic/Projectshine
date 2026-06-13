@@ -4206,15 +4206,17 @@ function AcctEstPdf() {
     } catch (e) { console.error('[QuickCart] sample preview failed', e) }
     finally { setBusy(false) }
   }
-  const tplName = { classic: 'Classic', bold: 'Bold', studio: 'Studio', japan: 'Japan' }[brand.template || 'classic']
+  // normalise stale/removed template ids (e.g. a previously-saved 'japan') to a live one
+  const tpl = ['classic', 'bold', 'studio'].includes(brand.template) ? brand.template : 'classic'
+  const tplName = { classic: 'Classic', bold: 'Bold', studio: 'Studio' }[tpl]
   const fontName = (EST_FONTS[brand.font || 'pjs'] || [])[2] || 'Plus Jakarta Sans'
-  const tplMeta = (brand.template || 'classic') === 'classic' ? `logos ${brand.logosPos || 'top'}` : '4 brand logos'
+  const tplMeta = tpl === 'classic' ? `logos ${brand.logosPos || 'top'}` : '4 brand logos'
   return (
     <>
       <div className="cp-card est-hero">
         <div className="est-hero-prev">
           <TplCard
-            k={brand.template || 'classic'} label={`Preview ${tplName} sample`}
+            k={tpl} label={`Preview ${tplName} sample`}
             active={false} paper={brand.paper || '#F8F5ED'} accent={brand.accent || '#CDE76D'}
             onClick={previewSample}
           />
@@ -4261,17 +4263,17 @@ function AcctEstPdf() {
           TEMPLATE
         </Text>
         <div className="tpl-grid">
-          {[['classic', 'Classic'], ['bold', 'Bold'], ['studio', 'Studio'], ['japan', 'Japan']].map(([k, l]) => (
+          {[['classic', 'Classic'], ['bold', 'Bold'], ['studio', 'Studio']].map(([k, l]) => (
             <TplCard
               key={k} k={k} label={l}
-              active={(brand.template || 'classic') === k}
+              active={tpl === k}
               paper={brand.paper || '#F8F5ED'} accent={brand.accent || '#CDE76D'}
               onClick={() => set('template', k)}
             />
           ))}
         </div>
         <Text size="1" color="gray" as="div" mt="2">
-          Classic — hairlines, logos on top. Bold — colour bands, logos below. Studio — editorial caps, amount in words. Japan — minimal, hinomaru-red accent, lots of air.
+          Classic — hairlines, logos on top. Bold — colour bands, logos below. Studio — editorial caps, amount in words.
         </Text>
         <Text size="1" weight="bold" as="div" mt="3" className="u-seclabel">
           FONT
