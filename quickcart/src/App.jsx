@@ -5958,6 +5958,21 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   doc.addFileToVFS(fontBoldFile, fontB)
   doc.addFont(fontBoldFile, 'DOC', 'bold')
 
+  // Helvetica = uppercase everything (the "grid/typewriter" look) EXCEPT the
+  // product description. capsSkip is flipped on while the description cell draws.
+  const CAPS = brand.font === 'helvetica'
+  let capsSkip = false
+  if (CAPS) {
+    const baseText = doc.text.bind(doc)
+    doc.text = (txt, ...rest) => {
+      if (!capsSkip) {
+        if (typeof txt === 'string') txt = txt.toUpperCase()
+        else if (Array.isArray(txt)) txt = txt.map(t => (typeof t === 'string' ? t.toUpperCase() : t))
+      }
+      return baseText(txt, ...rest)
+    }
+  }
+
   const W = 210, H = 297, M = 14 // 14mm sides, ~6mm top
   const INK = [26, 28, 31], GRAY = [105, 110, 116]
   const PAPER = hexToRgb(brand.paper || EST_BRAND_DEFAULT.paper)
@@ -5969,7 +5984,9 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   const d = new Date()
   const today = [String(d.getDate()).padStart(2, '0'), String(d.getMonth() + 1).padStart(2, '0'), d.getFullYear()].join('.')
   const validDays = brand.validDays || 7
-  const note = brand.note || EST_BRAND_DEFAULT.note
+  const note0 = brand.note || EST_BRAND_DEFAULT.note
+  // pre-uppercase wrapped text under CAPS so width measurement matches the draw
+  const note = CAPS ? note0.toUpperCase() : note0
   const dealer = { ...EST_BRAND_DEFAULT.dealer, ...(brand.dealer || {}) }
   const docTitle = (brand.docTitle || 'Bill of Materials').trim() || 'Bill of Materials'
   const showPrices = brand.showPrices !== false
@@ -5994,7 +6011,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   const dealerLines = [`${preparedBy} — ${brand.name}`, dealer.addr1, `${dealer.addr2} · ${dealer.phone}`]
   const custLines = [
     cust.name, cust.phone,
-    ...(cust.site ? doc.splitTextToSize(cust.site, 80) : []),
+    ...(cust.site ? doc.splitTextToSize(CAPS ? cust.site.toUpperCase() : cust.site, 80) : []),
     cust.refBy ? `Ref. by — ${cust.refBy}` : null,
   ].filter(Boolean)
   const netItems = bill.itemTotal - bill.bulkSave - bill.schemeOff
@@ -6052,7 +6069,12 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
       didParseCell: (data) => {
         if (data.section === 'head' && cols[data.column.index] && cols[data.column.index].right) data.cell.styles.halign = 'right'
       },
+      willDrawCell: (data) => {
+        // keep the product description in normal case even under Helvetica caps
+        capsSkip = CAPS && data.section === 'body' && cols[data.column.index] && cols[data.column.index].h === 'Description'
+      },
       didDrawCell: (data) => {
+        capsSkip = false
         if (imgCol < 0 || data.section !== 'body' || data.column.index !== imgCol) return
         const t = thumbs[data.row.index]
         const s = big ? 12 : 9, ix = data.cell.x, iy = data.cell.y + (data.cell.height - s) / 2
