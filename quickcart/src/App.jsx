@@ -129,7 +129,7 @@ function sparkle(e) {
   for (let i = 0; i < 6; i++) {
     const s = document.createElement('span')
     s.className = 'spark'
-    s.style.background = ['#30A46C', '#FFD43B', '#A2DEB7'][i % 3]
+    s.style.background = ['#30A46C', 'var(--gold-9)', '#A2DEB7'][i % 3]
     s.style.left = `${e.clientX}px`
     s.style.top = `${e.clientY}px`
     s.style.setProperty('--dx', `${Math.random() * 90 - 45}px`)
@@ -226,14 +226,22 @@ function useNextFrame() {
 }
 
 /* Image with blur-up fade-in (gray well → photo) */
+// neutral packshot placeholder shown when a product image fails to load
+// (Unsplash rate-limit, offline, hotlink block) instead of an invisible gray box
+const IMG_FALLBACK = 'data:image/svg+xml,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="#E9E9E6"/>' +
+  '<g fill="none" stroke="#B6B6B0" stroke-width="3.5" stroke-linejoin="round"><rect x="38" y="40" width="44" height="40" rx="2"/>' +
+  '<path d="M38 54h44M60 40v40"/></g></svg>')
 const Img = memo(function Img(props) {
   const [loaded, setLoaded] = useState(false)
   const ref = useRef(null)
-  useEffect(() => { if (ref.current?.complete) setLoaded(true) }, [])
+  useEffect(() => { if (ref.current?.complete && ref.current.naturalWidth) setLoaded(true) }, [])
   return (
     <img
       decoding="async"
-      {...props} ref={ref} onLoad={() => setLoaded(true)}
+      {...props} ref={ref}
+      onLoad={() => setLoaded(true)}
+      onError={(e) => { if (e.currentTarget.src !== IMG_FALLBACK) { e.currentTarget.src = IMG_FALLBACK } setLoaded(true) }}
       className={`${props.className || ''} fadeimg ${loaded ? 'in' : ''}`}
     />
   )
@@ -1924,7 +1932,7 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
               {QUIZ.map((_, i) => (
                 <i key={i} className={i < qi ? 'done' : i === qi ? 'cur' : ''} />
               ))}
-              <Text size="1" weight="bold" style={{ color: '#F5C242', marginLeft: 8, whiteSpace: 'nowrap' }}>
+              <Text size="1" weight="bold" style={{ color: 'var(--gold-10)', marginLeft: 8, whiteSpace: 'nowrap' }}>
                 ₹{correct * 25} in the bank
               </Text>
             </div>
@@ -1933,7 +1941,7 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
           <div className="qbar" style={{ background: 'rgba(255,255,255,.18)', marginTop: 12 }}>
             <div
               className="qbar-fill"
-              style={{ width: `${(tleft / QUIZ_SECONDS) * 100}%`, background: 'linear-gradient(90deg, #F5C242, #FFE9A8)' }}
+              style={{ width: `${(tleft / QUIZ_SECONDS) * 100}%`, background: 'linear-gradient(90deg, var(--gold-10), var(--gold-4))' }}
             />
           </div>
           <div className="cz-q">
@@ -1990,7 +1998,7 @@ function QuizDialog({ open, onOpenChange, onFinish, skin }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Content className={`quiz-dialog czn cz-${skin.name.toLowerCase()}`} maxWidth="380px" aria-describedby={undefined}>
-        <Dialog.Title size="3" mb="3" align="center" style={{ color: '#F5C242', letterSpacing: '2px', textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>
+        <Dialog.Title size="3" mb="3" align="center" style={{ color: 'var(--gold-10)', letterSpacing: '2px', textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>
           THE NIGHTLY TABLE
         </Dialog.Title>
         <button className="quiz-close" onClick={() => onOpenChange(false)} aria-label="Close">
@@ -2128,14 +2136,14 @@ function SpinDialog({ open, onOpenChange }) {
 
   // thin gold separators between prize segments
   const gradient = WHEEL.map((s, i) =>
-    `#F5C242 ${i * segs}deg ${i * segs + 1.4}deg, ${s.color} ${i * segs + 1.4}deg ${(i + 1) * segs}deg`
+    `var(--gold-10) ${i * segs}deg ${i * segs + 1.4}deg, ${s.color} ${i * segs + 1.4}deg ${(i + 1) * segs}deg`
   ).join(', ')
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Content className="wheel-dialog czn" maxWidth="360px" aria-describedby={undefined}>
         <Bulbs n={11} />
-        <Dialog.Title size="3" align="center" mb="0" style={{ color: '#F5C242', letterSpacing: '2px', textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>
+        <Dialog.Title size="3" align="center" mb="0" style={{ color: 'var(--gold-10)', letterSpacing: '2px', textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>
           SPIN & WIN
         </Dialog.Title>
         <button className="quiz-close" onClick={() => onOpenChange(false)} aria-label="Close">
@@ -2409,7 +2417,7 @@ function FlashSale({ items, onChange, onSeeAll }) {
       <Flex align="center" justify="between" px="4">
         <Flex align="center" gap="3" style={{ minWidth: 0 }}>
           <Heading as="h2" size="4" style={{ color: '#fff', letterSpacing: '-0.2px', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <LightningBoltIcon width={17} height={17} color="#FFD43B" /> Flash sale
+          <LightningBoltIcon width={17} height={17} style={{ color: 'var(--gold-9)' }} /> Flash sale
         </Heading>
           <DealTimer />
         </Flex>
@@ -3283,7 +3291,7 @@ function MiniBars({ data, color = '#2E6E4E', hi = -1 }) {
   return (
     <div className="mini-bars">
       {data.map((v, i) => (
-        <span key={i} style={{ height: `${22 + 78 * (v / mx)}%`, background: i === hi ? '#F5C242' : color }} />
+        <span key={i} style={{ height: `${22 + 78 * (v / mx)}%`, background: i === hi ? 'var(--gold-10)' : color }} />
       ))}
     </div>
   )
@@ -3326,7 +3334,7 @@ function AcctDash({ onReorder }) {
           <svg width="74" height="74" viewBox="0 0 74 74" style={{ flex: 'none' }}>
             <circle cx="37" cy="37" r="30" stroke="rgba(255,255,255,.2)" strokeWidth="7" fill="none" />
             <circle
-              cx="37" cy="37" r="30" stroke="#FFD43B" strokeWidth="7" fill="none" strokeLinecap="round"
+              cx="37" cy="37" r="30" style={{ stroke: 'var(--gold-9)' }} strokeWidth="7" fill="none" strokeLinecap="round"
               strokeDasharray={2 * Math.PI * 30}
               strokeDashoffset={(2 * Math.PI * 30) * (1 - (ready ? Math.min(1, k.month / TARGETS.monthly.target) : 0))}
               transform="rotate(-90 37 37)"
@@ -3373,7 +3381,7 @@ function AcctDash({ onReorder }) {
         </div>
         <Flex align="center" justify="between" mt="2">
           <Text style={{ fontSize: 10.5, color: '#98A0AB' }}>{fmtL(tt.target - tt.done)} to go · ends {tt.ends}</Text>
-          <Text style={{ fontSize: 10.5, color: '#F5C242', fontWeight: 800 }}>{tt.note}</Text>
+          <Text style={{ fontSize: 10.5, color: 'var(--gold-10)', fontWeight: 800 }}>{tt.note}</Text>
         </Flex>
       </div>
 
@@ -3403,7 +3411,7 @@ function AcctDash({ onReorder }) {
           <MiniLine data={savSer} color="#46B576" fill />
         </div>
         <div className="kpi dk">
-          <Text size="1" style={{ color: '#F5C242', fontWeight: 700 }}>Best month</Text>
+          <Text size="1" style={{ color: 'var(--gold-10)', fontWeight: 700 }}>Best month</Text>
           <Flex align="baseline" gap="2">
             <Text size="4" weight="bold" as="div" style={{ color: '#F2F4F7' }}>{fmtL(best[1] * 1000)}</Text>
             <Text style={{ fontSize: 10, color: '#98A0AB', fontWeight: 700 }}>{best[0]}</Text>
@@ -3417,7 +3425,7 @@ function AcctDash({ onReorder }) {
           HIGHLIGHTS
         </Text>
         <div className="dkrow">
-          <span className="bdg-ic" style={{ background: 'rgba(245,194,66,.14)', color: '#F5C242' }}>
+          <span className="bdg-ic" style={{ background: 'rgba(245,194,66,.14)', color: 'var(--gold-10)' }}>
             <StarFilledIcon width={14} height={14} />
           </span>
           <Text size="2" weight="bold" style={{ flex: 1, color: '#F2F4F7' }}>Top 25% dealer in HSR Layout</Text>
@@ -3441,7 +3449,7 @@ function AcctDash({ onReorder }) {
           <ChevronRightIcon width={15} height={15} color="#5A6270" />
         </button>
         <div className="dkrow">
-          <span className="bdg-ic" style={{ background: 'rgba(245,194,66,.14)', color: '#F5C242' }}>
+          <span className="bdg-ic" style={{ background: 'rgba(245,194,66,.14)', color: 'var(--gold-10)' }}>
             <RocketIcon width={14} height={14} />
           </span>
           <Text size="2" weight="bold" style={{ flex: 1, color: '#F2F4F7' }}>
@@ -4963,7 +4971,7 @@ function AcctEstPdf() {
           PDF COLOURS
         </Text>
         <ColorRow label="PAPER BACKGROUND" value={brand.paper} onChange={(v) => set('paper', v)} swatches={EST_PAPERS} />
-        <ColorRow label="ACCENT (BOLD TEMPLATE)" value={brand.accent || '#CDE76D'} onChange={(v) => set('accent', v)} swatches={['#CDE76D', '#FFD43B', '#9BE3C0', '#F2B8A0', '#BFD3F2', '#E8C7F2']} />
+        <ColorRow label="ACCENT (BOLD TEMPLATE)" value={brand.accent || '#CDE76D'} onChange={(v) => set('accent', v)} swatches={['#CDE76D', 'var(--gold-9)', '#9BE3C0', '#F2B8A0', '#BFD3F2', '#E8C7F2']} />
         <ColorRow label="COMPANY NAME" value={brand.wordmark} onChange={(v) => set('wordmark', v)} />
         <ColorRow label="FOOTER TEXT" value={brand.footer} onChange={(v) => set('footer', v)} />
         <ColorRow label="SIDE VERTICAL TEXT" value={brand.side} onChange={(v) => set('side', v)} />
@@ -6462,7 +6470,7 @@ function CartPage({ cart, onClose, onChange, onPlaced }) {
               <div className="cp-card cp-flash">
                 <Flex align="center" justify="between">
                   <Text size="2" weight="bold" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <LightningBoltIcon width={14} height={14} color="#FFD43B" /> Flash deals before you checkout
+                    <LightningBoltIcon width={14} height={14} style={{ color: 'var(--gold-9)' }} /> Flash deals before you checkout
                   </Text>
                   <DealTimer />
                 </Flex>
