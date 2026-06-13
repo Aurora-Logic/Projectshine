@@ -1170,20 +1170,27 @@ function SpsCalc({ onBack }) {
   )
 }
 
-function UtilTile({ c, icon: Icon, title, sub, onClick, badge }) {
+function UxCard({ c, icon: Icon, title, sub, onClick, badge }) {
   return (
-    <button className="util-tile2" onClick={onClick}>
-      {badge ? <span className="util-tile-badge">{badge}</span> : null}
-      <span className={`flat-ic c-${c}`}><Icon width={16} height={16} /></span>
-      <Text size="2" weight="bold" as="div" style={{ marginTop: 9, letterSpacing: '-0.2px' }}>{title}</Text>
-      <Text size="1" color="gray" as="div">{sub}</Text>
+    <button className={`ux-card k-${c}`} onClick={onClick}>
+      {badge ? <span className="ux-badge">{badge}</span> : null}
+      <span className={`flat-ic c-${c}`}><Icon width={17} height={17} /></span>
+      <div>
+        <Text size="2" weight="bold" as="div" style={{ letterSpacing: '-0.2px' }}>{title}</Text>
+        <Text size="1" color="gray" as="div">{sub}</Text>
+      </div>
     </button>
   )
 }
 
-function UtilitiesPage({ onClose, onGoBom, onGoClaims, onGoCalc, onGoVisit, onSpin, onQuiz, bomCount = 0 }) {
+/* Utilities — a vibrant "second home". Sections live INSIDE the hub (internal
+   nav stack) so Back always returns here, never dumps you into the account. */
+function UtilitiesPage({ onClose, onSpin, onQuiz, lastOrder, bomCount = 0 }) {
   const a11y = useSheetA11y(onClose)
-  const [view, setView] = useState('hub')      // 'hub' | 'spscalc' | 'pros'
+  const [stack, setStack] = useState(['hub'])
+  const view = stack[stack.length - 1]
+  const push = (v) => setStack(s => [...s, v])
+  const back = () => { if (stack.length > 1) setStack(s => s.slice(0, -1)); else onClose() }
   const [proTab, setProTab] = useState('carpenter')
   const [refs, setRefs] = usePersisted('qc-refs', [])
   const [rName, setRName] = useState('')
@@ -1196,14 +1203,33 @@ function UtilitiesPage({ onClose, onGoBom, onGoClaims, onGoCalc, onGoVisit, onSp
     setSent(true); setRName(''); setRPhone('')
   }
 
-  if (view === 'spscalc') return <SpsCalc onBack={() => setView('hub')} />
+  // sub-screen shell (header + body) wrapping a reused account component; a plain
+  // helper (not a nested component) so the child keeps its state across renders.
+  const subScreen = (title, sub, body) => (
+    <div className="prospage" role="dialog" aria-modal="true" tabIndex={-1}>
+      <div className="pdp-head">
+        <button className="sheet-back" onClick={back} aria-label="Back"><ArrowLeftIcon /></button>
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>{title}</Heading>
+          {sub ? <Text size="1" color="gray" as="div">{sub}</Text> : null}
+        </Box>
+      </div>
+      <div className="cp-body">{body}</div>
+    </div>
+  )
+
+  if (view === 'spscalc') return <SpsCalc onBack={back} />
+  if (view === 'calc') return subScreen('Hardware calculators', 'Slides · hinges · closers', <AcctCalc />)
+  if (view === 'bom') return subScreen('BOM', null, <AcctBoms onSettings={() => push('estpdf')} />)
+  if (view === 'estpdf') return subScreen('BOM PDF settings', null, <AcctEstPdf />)
+  if (view === 'claims') return subScreen('Claims & returns', null, <AcctClaims lastOrder={lastOrder} />)
 
   if (view === 'pros') {
     const pros = PROS[proTab]
     return (
       <div className="prospage" role="dialog" aria-modal="true" aria-label="Find a Pro" tabIndex={-1}>
         <div className="pdp-head">
-          <button className="sheet-back" onClick={() => setView('hub')} aria-label="Back"><ArrowLeftIcon /></button>
+          <button className="sheet-back" onClick={back} aria-label="Back"><ArrowLeftIcon /></button>
           <Box style={{ flex: 1, minWidth: 0 }}>
             <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>{proTab === 'carpenter' ? 'Find a Carpenter' : 'Find an Architect'}</Heading>
             <Text size="1" color="gray" as="div">Dealer-verified, rated on real jobs</Text>
@@ -1246,15 +1272,17 @@ function UtilitiesPage({ onClose, onGoBom, onGoClaims, onGoCalc, onGoVisit, onSp
     )
   }
 
+  // ---------------- hub (vibrant second home) ----------------
   return (
     <div className="utilpage" role="dialog" aria-modal="true" aria-label="Utilities" tabIndex={-1} ref={a11y}>
       <div className="util-head">
         <button className="sheet-back" onClick={onClose} aria-label="Back" style={{ background: 'rgba(255,255,255,.7)' }}><ArrowLeftIcon /></button>
-        <Heading as="h2" mt="3" style={{ fontSize: 26, letterSpacing: '-0.7px' }}>Utilities</Heading>
-        <Text size="2" color="gray" as="div" mt="1">Your counter's toolkit — calculators, BoM, pros & rewards</Text>
+        <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--green-11)', letterSpacing: '.5px' }}>YOUR TOOLKIT</Text>
+        <Heading as="h2" style={{ fontSize: 27, letterSpacing: '-0.8px' }}>Utilities</Heading>
+        <Text size="2" color="gray" as="div" mt="1">Calculate, quote, hire a pro & earn — all in one place</Text>
       </div>
       <div className="cp-body">
-        <button className="util-feat" onClick={() => setView('spscalc')}>
+        <button className="util-feat" onClick={() => push('spscalc')}>
           <span className="util-feat-ic"><MixerHorizontalIcon width={24} height={24} /></span>
           <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
             <span className="util-feat-tag">NEW · CALCULATOR</span>
@@ -1264,44 +1292,33 @@ function UtilitiesPage({ onClose, onGoBom, onGoClaims, onGoCalc, onGoVisit, onSp
           <ChevronRightIcon width={20} height={20} color="#fff" style={{ flex: 'none' }} />
         </button>
 
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 20 }}>CALCULATORS</Text>
-        <div className="util-tiles">
-          <UtilTile c="violet" icon={MixerHorizontalIcon} title="Partition BoM" sub="LSPS & SSPS systems" onClick={() => setView('spscalc')} badge="NEW" />
-          <UtilTile c="blue" icon={RulerSquareIcon} title="Hardware calc" sub="Slides · hinges · closers" onClick={onGoCalc} />
+        <div className="ux-grid">
+          <UxCard c="violet" icon={MixerHorizontalIcon} title="Partition BoM" sub="LSPS & SSPS" badge="NEW" onClick={() => push('spscalc')} />
+          <UxCard c="blue" icon={RulerSquareIcon} title="Hardware calc" sub="Slides · hinges" onClick={() => push('calc')} />
+          <UxCard c="green" icon={FileTextIcon} title="BOM" sub={bomCount > 0 ? `${bomCount} saved · quote` : 'Create quotes'} onClick={() => push('bom')} />
+          <UxCard c="red" icon={ExclamationTriangleIcon} title="Claims & returns" sub="Raise a request" onClick={() => push('claims')} />
+          <UxCard c="orange" icon={PersonIcon} title="Find Carpenter" sub="Verified installers" onClick={() => { setProTab('carpenter'); push('pros') }} />
+          <UxCard c="indigo" icon={IdCardIcon} title="Find Architect" sub="Designers near you" onClick={() => { setProTab('designer'); push('pros') }} />
         </div>
 
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>QUOTES</Text>
-        <button className="util-row-card" onClick={onGoBom}>
-          <span className="flat-ic c-green"><FileTextIcon width={16} height={16} /></span>
-          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-            <Text size="2" weight="bold" as="div">BOM</Text>
-            <Text size="1" color="gray" as="div">Create & manage customer bills of materials{bomCount > 0 ? ` · ${bomCount} saved` : ''}</Text>
-          </div>
-          <ChevronRightIcon width={16} height={16} color="var(--gray-8)" style={{ flex: 'none' }} />
-        </button>
-
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>FIND A PRO</Text>
-        <div className="util-tiles">
-          <UtilTile c="orange" icon={PersonIcon} title="Find Carpenter" sub="Verified installers" onClick={() => { setProTab('carpenter'); setView('pros') }} />
-          <UtilTile c="indigo" icon={IdCardIcon} title="Find Architect" sub="Designers near you" onClick={() => { setProTab('designer'); setView('pros') }} />
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 20, marginBottom: 2 }}>PLAY &amp; EARN</Text>
+        <div className="ux-rewards">
+          <button className="ux-reward r-spin" onClick={onSpin}>
+            <span className="ux-reward-ic"><RocketIcon width={20} height={20} /></span>
+            <div style={{ textAlign: 'left' }}>
+              <Text size="2" weight="bold" as="div" style={{ color: '#fff' }}>Spin &amp; Win</Text>
+              <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.82)' }}>Daily reward</Text>
+            </div>
+          </button>
+          <button className="ux-reward r-quiz" onClick={onQuiz}>
+            <span className="ux-reward-ic"><LightningBoltIcon width={20} height={20} /></span>
+            <div style={{ textAlign: 'left' }}>
+              <Text size="2" weight="bold" as="div" style={{ color: '#fff' }}>Daily Quiz</Text>
+              <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.82)' }}>Earn coins</Text>
+            </div>
+          </button>
         </div>
-
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>PLAY &amp; EARN</Text>
-        <div className="util-tiles">
-          <UtilTile c="pink" icon={RocketIcon} title="Spin &amp; Win" sub="Daily reward" onClick={onSpin} />
-          <UtilTile c="amber" icon={LightningBoltIcon} title="Daily Quiz" sub="Earn coins" onClick={onQuiz} />
-        </div>
-
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>SUPPORT</Text>
-        <button className="util-row-card" onClick={onGoClaims}>
-          <span className="flat-ic c-red"><ExclamationTriangleIcon width={16} height={16} /></span>
-          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-            <Text size="2" weight="bold" as="div">Claims &amp; returns</Text>
-            <Text size="1" color="gray" as="div">Raise a claim or return a delivered item</Text>
-          </div>
-          <ChevronRightIcon width={16} height={16} color="var(--gray-8)" style={{ flex: 'none' }} />
-        </button>
-        <div style={{ height: 8 }} />
+        <div style={{ height: 10 }} />
       </div>
     </div>
   )
@@ -6904,12 +6921,9 @@ export default function App() {
           {prosOpen && (
             <UtilitiesPage
               onClose={closePros}
-              onGoCalc={() => { setProsOpen(false); acctInitSub.current = 'calc'; setAcctOpen(true) }}
-              onGoVisit={() => { setProsOpen(false); acctInitSub.current = 'site'; setAcctOpen(true) }}
-              onGoBom={() => { setProsOpen(false); acctInitSub.current = 'boms'; setAcctOpen(true) }}
-              onGoClaims={() => { setProsOpen(false); acctInitSub.current = 'claims'; setAcctOpen(true) }}
               onSpin={() => setWheelOpen(true)}
               onQuiz={() => setQuizOpen(true)}
+              lastOrder={order}
               bomCount={loadBoms().length}
             />
           )}

@@ -4885,6 +4885,45 @@ button.lg-link {
 }
 .util-row-card:active { transform: scale(.98); }
 
+/* vibrant "second home" card grid */
+.ux-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.ux-card {
+  position: relative; text-align: left; cursor: pointer; font-family: inherit;
+  border-radius: 18px; padding: 15px; min-height: 120px; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 14px;
+  border: 1px solid transparent; box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+  -webkit-tap-highlight-color: transparent; transition: transform .12s ease;
+}
+.ux-card:active { transform: scale(.97); }
+.ux-card .flat-ic { width: 38px; height: 38px; }
+.ux-badge {
+  position: absolute; top: 13px; right: 13px;
+  font-size: 8.5px; font-weight: 800; letter-spacing: .5px;
+  color: #fff; background: var(--green-9); padding: 2px 7px; border-radius: 999px;
+}
+.ux-card.k-violet { background: linear-gradient(158deg, #F3EEFF, #FBFAFF); border-color: #E7DEFF; }
+.ux-card.k-blue   { background: linear-gradient(158deg, #EAF2FF, #F9FBFF); border-color: #D8E8FF; }
+.ux-card.k-green  { background: linear-gradient(158deg, #E9FBF1, #F8FFFB); border-color: #CDEFDD; }
+.ux-card.k-red    { background: linear-gradient(158deg, #FFEEEE, #FFF8F8); border-color: #FFDADA; }
+.ux-card.k-orange { background: linear-gradient(158deg, #FFF1E6, #FFFAF4); border-color: #FFE1C9; }
+.ux-card.k-indigo { background: linear-gradient(158deg, #ECEEFF, #F9FAFF); border-color: #DADFFF; }
+
+.ux-rewards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.ux-reward {
+  display: flex; align-items: center; gap: 11px; cursor: pointer; font-family: inherit;
+  border: none; border-radius: 16px; padding: 14px;
+  -webkit-tap-highlight-color: transparent; transition: transform .12s ease;
+}
+.ux-reward:active { transform: scale(.97); }
+.ux-reward-ic {
+  flex: none; width: 40px; height: 40px; border-radius: 50%; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, .2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), inset 0 -2px 3px rgba(0, 0, 0, .12);
+}
+.ux-reward.r-spin { background: linear-gradient(145deg, #FF6CAB, #C23DD6); box-shadow: 0 6px 16px rgba(194, 61, 214, .26); }
+.ux-reward.r-quiz { background: linear-gradient(145deg, #FFB13C, #F5772A); box-shadow: 0 6px 16px rgba(245, 119, 42, .26); }
+
 /* ===== SPS BoM calculator — 3D / tactile ===== */
 .sc-card {
   background: #fff; border: 1px solid var(--gray-3); border-radius: 18px;
