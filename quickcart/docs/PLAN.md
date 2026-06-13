@@ -74,15 +74,17 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 
 ### A5 · Architecture refactor (sequence matters; no features mid-split)
 
-> **13 Jun status — FOUNDATION LAYER extracted** (bottom-up; each verified, build green):
-> `money.js`, `lib/estimate.js` (BOM PDF), `lib/util.js` (pure helpers),
-> `lib/storage.js` (safeStorage — fixes the white screen, see A5.5), `hooks.js`
-> (useSkyTheme/useNextFrame/useSheetA11y/useCountUp), `contexts.js`. App.jsx
-> **7,723 → 7,088**, zero runtime errors. Next phase: components/ then screens/
-> (the larger line-count reductions) — they now have modules to import from.
-> jspdf already lazy via dynamic `import()` (A6.5 head start).
+> **13 Jun status — FOUNDATION + leaf/card/section components extracted** (bottom-up; each verified, build green):
+> Foundation: `money.js`, `lib/estimate.js`, `lib/util.js`, `lib/storage.js`
+> (safeStorage — fixes the white screen, A5.5), `hooks.js`, `contexts.js`.
+> Components: `components/Img.jsx`, `ui.jsx` (PageExit/SkyLayer/CartGlyph/
+> DealTimer/SectionHead/AddControl/btnish), `cards.jsx` (Product/Flash/Combo),
+> `feed.jsx` (Shelf/RecoStrip). App.jsx **7,723 → 6,662**, zero runtime errors.
+> Remaining components: FlashSale/ComboDeals/CartBar/NavBar/TopBar/games (more
+> data-coupled). Then screens/ (CartPage/AccountPage/PDP/…). jspdf already lazy
+> via dynamic `import()` (A6.5 head start).
 
-- [ ] **A5.1 L** *(foundation done — 6 modules extracted, App.jsx 7,723 → 7,088. components/ + screens/ phase next.)* Split App.jsx along its section banners → `lib/ hooks/ components/ screens/ games/ orders/`. No logic changes.
+- [ ] **A5.1 L** *(foundation + 4 component modules done; App.jsx 7,723 → 6,662. Remaining sections + screens/ continue.)* Split App.jsx along its section banners → `lib/ hooks/ components/ screens/ games/ orders/`. No logic changes.
 - [ ] **A5.2 M** Cart provider (`CartStateCtx` + stable dispatch); delete cart prop-drilling from ~30 signatures.
 - [ ] **A5.3 M** One `useHistoryLayer` + overlay stack replaces 9 pushState copies + render-time ref mutation; unwind entries on cross-navigation.
 - [ ] **A5.4 M** `route.js` with `parseRoute()`; parameterize `#pdp-<id>`.
