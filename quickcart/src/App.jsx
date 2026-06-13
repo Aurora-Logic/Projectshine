@@ -4850,8 +4850,9 @@ function ColorRow({ label, value, onChange, swatches = EST_SWATCHES }) {
 
 function AcctEstPdf() {
   const [saved, setBrand] = usePersisted('qc-est-brand', EST_BRAND_DEFAULT)
-  const brand = { ...EST_BRAND_DEFAULT, ...saved }
+  const brand = { ...EST_BRAND_DEFAULT, ...saved, dealer: { ...EST_BRAND_DEFAULT.dealer, ...(saved && saved.dealer) } }
   const set = (k, v) => setBrand({ ...brand, [k]: v })
+  const setDealer = (k) => (e) => setBrand({ ...brand, dealer: { ...brand.dealer, [k]: e.target.value } })
   const onFile = (e) => {
     const file = e.target.files && e.target.files[0]
     if (!file) return
@@ -4998,6 +4999,81 @@ function AcctEstPdf() {
           onChange={(e) => set('note', e.target.value)}
         />
         <Text size="1" color="gray" as="div" mt="1">Wrap words in **double asterisks** to make them bold on the PDF.</Text>
+      </div>
+
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          DEALER DETAILS ON THE PDF
+        </Text>
+        <Flex direction="column" gap="2" mt="2">
+          <input className="cp-input" style={{ fontSize: 16 }} placeholder="Address line" value={brand.dealer.addr1} onChange={setDealer('addr1')} />
+          <input className="cp-input" style={{ fontSize: 16 }} placeholder="City · PIN" value={brand.dealer.addr2} onChange={setDealer('addr2')} />
+          <Flex gap="2">
+            <input className="cp-input" style={{ fontSize: 16, flex: 1, minWidth: 0 }} type="tel" placeholder="Phone" value={brand.dealer.phone} onChange={setDealer('phone')} />
+            <input className="cp-input" style={{ fontSize: 16, flex: 1, minWidth: 0 }} placeholder="GSTIN" value={brand.dealer.gstin} onChange={setDealer('gstin')} />
+          </Flex>
+          <Flex gap="2">
+            <input className="cp-input" style={{ fontSize: 16, flex: 1, minWidth: 0 }} type="email" placeholder="Email" value={brand.dealer.email} onChange={setDealer('email')} />
+            <input className="cp-input" style={{ fontSize: 16, flex: 1, minWidth: 0 }} placeholder="Website" value={brand.dealer.website} onChange={setDealer('website')} />
+          </Flex>
+        </Flex>
+      </div>
+
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          DOCUMENT
+        </Text>
+        <Flex direction="column" gap="2" mt="2">
+          <input className="cp-input" style={{ fontSize: 16 }} placeholder="Document title" value={brand.docTitle} onChange={(e) => set('docTitle', e.target.value)} />
+          <input className="cp-input" style={{ fontSize: 16 }} placeholder="Watermark (empty = none, e.g. DRAFT)" value={brand.watermark} onChange={(e) => set('watermark', e.target.value)} />
+        </Flex>
+        <Flex align="center" justify="between" mt="3">
+          <div>
+            <Text size="2" weight="bold" as="div">Signature block</Text>
+            <Text size="1" color="gray" as="div">Authorised-signatory line above the footer</Text>
+          </div>
+          <Toggle on={!!brand.signature} onToggle={() => set('signature', !brand.signature)} />
+        </Flex>
+      </div>
+
+      <div className="cp-card">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+          PRICING ON THE PDF
+        </Text>
+        <Flex align="center" justify="between" mt="2">
+          <div>
+            <Text size="2" weight="bold" as="div">Show prices</Text>
+            <Text size="1" color="gray" as="div">Off makes a quantities-only material list</Text>
+          </div>
+          <Toggle on={brand.showPrices !== false} onToggle={() => set('showPrices', brand.showPrices === false)} />
+        </Flex>
+        {brand.showPrices !== false && (
+          <>
+            <Flex align="center" justify="between" mt="3">
+              <div>
+                <Text size="2" weight="bold" as="div">Show savings rows</Text>
+                <Text size="1" color="gray" as="div">Off shows net prices without discount lines</Text>
+              </div>
+              <Toggle on={brand.showSavings !== false} onToggle={() => set('showSavings', brand.showSavings === false)} />
+            </Flex>
+            <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+              GST LINE
+            </Text>
+            <Flex gap="2" mt="2">
+              {[[0, 'Off'], [5, '5%'], [12, '12%'], [18, '18%'], [28, '28%']].map(([v, l]) => (
+                <Button
+                  key={v} size="1" radius="full"
+                  variant={(Number(brand.gstPct) || 0) === v ? 'solid' : 'soft'}
+                  color={(Number(brand.gstPct) || 0) === v ? 'green' : 'gray'}
+                  style={{ fontWeight: 800 }}
+                  onClick={() => set('gstPct', v)}
+                >
+                  {l}
+                </Button>
+              ))}
+            </Flex>
+          </>
+        )}
       </div>
     </>
   )
@@ -5795,6 +5871,20 @@ const EST_BRAND_DEFAULT = {
   logosPos: 'top', // Classic template: brand strip on top or above the footer
   preparedBy: 'Virag Bora',
   note: 'This Bill of Materials is only for reference. **Prices are subject to change.**',
+  docTitle: 'Bill of Materials',
+  showPrices: true,
+  showSavings: true,
+  gstPct: 0, // 0 = no GST line; else 5/12/18/28
+  signature: false,
+  watermark: '', // empty = none; e.g. DRAFT
+  dealer: {
+    addr1: '304 Maple Heights, HSR Layout',
+    addr2: 'Bengaluru 560102',
+    phone: '+91 98450 00000',
+    email: 'estimates@quickcart.in',
+    website: 'quickcart-nine-iota.vercel.app',
+    gstin: '29AAACQ1234L1ZQ',
+  },
 }
 const hexToRgb = (hex) => {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || '')
@@ -5873,66 +5963,90 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   const today = [String(d.getDate()).padStart(2, '0'), String(d.getMonth() + 1).padStart(2, '0'), d.getFullYear()].join('.')
   const validDays = brand.validDays || 7
   const note = brand.note || EST_BRAND_DEFAULT.note
+  const dealer = { ...EST_BRAND_DEFAULT.dealer, ...(brand.dealer || {}) }
+  const docTitle = (brand.docTitle || 'Bill of Materials').trim() || 'Bill of Materials'
+  const showPrices = brand.showPrices !== false
+  const showSavings = brand.showSavings !== false
+  const gstPct = Number(brand.gstPct) || 0
+  const gstAmt = gstPct ? Math.round((bill.toPay * gstPct) / 100) : 0
+  const grand = bill.toPay + gstAmt
   const totalPcs = items.reduce((s, { n }) => s + n, 0)
-  const paper = () => doc.setFillColor(...PAPER).rect(0, 0, W, H, 'F')
+  const paper = () => {
+    doc.setFillColor(...PAPER).rect(0, 0, W, H, 'F')
+    if (brand.watermark) {
+      doc.saveGraphicsState()
+      doc.setGState(new doc.GState({ opacity: 0.07 }))
+      doc.setFont('DOC', 'bold').setFontSize(86).setTextColor(...INK)
+      doc.text(brand.watermark.toUpperCase(), W / 2, H / 2 + 30, { angle: 45, align: 'center' })
+      doc.restoreGraphicsState()
+    }
+  }
   paper()
 
   const preparedBy = brand.preparedBy || 'Virag Bora'
-  const dealerLines = [`${preparedBy} — ${brand.name}`, '304 Maple Heights, HSR Layout', 'Bengaluru 560102 · +91 98450 00000']
+  const dealerLines = [`${preparedBy} — ${brand.name}`, dealer.addr1, `${dealer.addr2} · ${dealer.phone}`]
   const custLines = [
     cust.name, cust.phone,
     ...(cust.site ? doc.splitTextToSize(cust.site, 80) : []),
     cust.refBy ? `Ref. by — ${cust.refBy}` : null,
   ].filter(Boolean)
-  const billRows = [
-    ['Item total', inr(bill.itemTotal)],
-    bill.bulkSave > 0 && ['Bulk price savings', '−' + inr(bill.bulkSave)],
-    bill.schemeOff > 0 && [`Volume scheme (${bill.slabPct}%)`, '−' + inr(bill.schemeOff)],
+  const netItems = bill.itemTotal - bill.bulkSave - bill.schemeOff
+  const billRows = !showPrices ? [] : [
+    ...(showSavings ? [
+      ['Item total', inr(bill.itemTotal)],
+      bill.bulkSave > 0 && ['Bulk price savings', '−' + inr(bill.bulkSave)],
+      bill.schemeOff > 0 && [`Volume scheme (${bill.slabPct}%)`, '−' + inr(bill.schemeOff)],
+    ] : [['Item total', inr(netItems)]]),
     ['Delivery' + (bill.express ? ' (express · 1 hr)' : ''), bill.fee === 0 ? 'FREE' : inr(bill.fee)],
   ].filter(Boolean)
 
   /* shared items table; layout knobs vary per template */
   const itemsTable = ({ startY, bottom, headFill = null, headText = INK, big = false }) => {
-    const priceCols = showImg ? [4, 5] : [3, 4]
+    const cols = [{ h: 'Qty', w: 11 }]
+    if (showImg) cols.push({ h: '', w: big ? 17 : 13, img: true })
+    cols.push({ h: 'Item no', w: 20, gray: true })
+    cols.push({ h: 'Description', w: 'auto' })
+    if (showPrices) {
+      cols.push({ h: 'Unit price', w: 25, right: true, gray: true })
+      cols.push({ h: 'Amount', w: 27, right: true })
+    }
+    const imgCol = cols.findIndex(c => c.img)
+    const columnStyles = {}
+    cols.forEach((c, i) => {
+      columnStyles[i] = {
+        ...(c.w !== 'auto' ? { cellWidth: c.w } : { cellWidth: 'auto' }),
+        ...(c.right ? { halign: 'right' } : {}),
+        ...(c.gray ? { textColor: GRAY } : {}),
+        ...(c.img ? { minCellHeight: big ? 16 : 12.5 } : {}),
+      }
+    })
     autoTable(doc, {
       startY,
       margin: { left: M, right: M, top: 14, bottom },
-      head: [showImg
-        ? ['Qty', '', 'Item no', 'Description', 'Unit price', 'Amount']
-        : ['Qty', 'Item no', 'Description', 'Unit price', 'Amount']],
-      body: items.map(({ p, n }) => {
-        const cells = [n, p.id.toUpperCase(), `${p.name}\n${p.qty || ''}`, inr(p.price), inr(p.price * n)]
-        if (showImg) cells.splice(1, 0, '')
-        return cells
-      }),
+      head: [cols.map(c => c.h)],
+      body: items.map(({ p, n }) => cols.map(c => {
+        if (c.img) return ''
+        switch (c.h) {
+          case 'Qty': return n
+          case 'Item no': return p.id.toUpperCase()
+          case 'Description': return `${p.name}\n${p.qty || ''}`
+          case 'Unit price': return inr(p.price)
+          default: return inr(p.price * n)
+        }
+      })),
       theme: 'plain',
       styles: { font: 'DOC', fontSize: 8.5, textColor: INK, cellPadding: { top: 2.2, bottom: 2.2, left: headFill ? 1.5 : 0, right: 2 }, valign: 'middle' },
       headStyles: headFill
         ? { font: 'DOC', fontStyle: 'bold', fontSize: 8, textColor: headText, fillColor: headFill, lineWidth: 0 }
         : { font: 'DOC', fontStyle: 'bold', fontSize: 8.5, textColor: headText, lineWidth: { bottom: 0.35 }, lineColor: INK },
       bodyStyles: { lineWidth: { bottom: 0.18 }, lineColor: HAIR },
-      columnStyles: showImg
-        ? {
-          0: { cellWidth: 11 },
-          1: { cellWidth: big ? 17 : 13, minCellHeight: big ? 16 : 12.5 },
-          2: { cellWidth: 20, textColor: GRAY },
-          3: { cellWidth: 'auto' },
-          4: { cellWidth: 25, halign: 'right', textColor: GRAY },
-          5: { cellWidth: 27, halign: 'right' },
-        }
-        : {
-          0: { cellWidth: 11 },
-          1: { cellWidth: 20, textColor: GRAY },
-          2: { cellWidth: 'auto' },
-          3: { cellWidth: 25, halign: 'right', textColor: GRAY },
-          4: { cellWidth: 27, halign: 'right' },
-        },
+      columnStyles,
       willDrawPage: (data) => { if (data.pageNumber > 1) paper() },
       didParseCell: (data) => {
-        if (data.section === 'head' && priceCols.includes(data.column.index)) data.cell.styles.halign = 'right'
+        if (data.section === 'head' && cols[data.column.index] && cols[data.column.index].right) data.cell.styles.halign = 'right'
       },
       didDrawCell: (data) => {
-        if (!showImg || data.section !== 'body' || data.column.index !== 1) return
+        if (imgCol < 0 || data.section !== 'body' || data.column.index !== imgCol) return
         const t = thumbs[data.row.index]
         const s = big ? 12 : 9, ix = data.cell.x, iy = data.cell.y + (data.cell.height - s) / 2
         if (t) doc.addImage(t, 'JPEG', ix, iy, s, s)
@@ -5945,7 +6059,8 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   /* shared totals block: hairline rows + bold total; returns last y */
   const totalsBlock = (startY, bottomGuard) => {
     let y = startY
-    const blockH = (billRows.length + 2) * 7.5 + 14
+    const nRows = 1 + billRows.length + (gstPct ? 2 : 0)
+    const blockH = (nRows + 1) * 7.5 + 14
     if (y + blockH > bottomGuard) { doc.addPage(); paper(); y = 30 }
     const tx = 118
     const row = (label, val) => {
@@ -5957,11 +6072,32 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
     }
     row('Items', `${items.length} · ${totalPcs} pcs`)
     for (const [l, v] of billRows) row(l, v)
-    doc.setFont('DOC', 'bold').setFontSize(10).setTextColor(...INK)
-    doc.text('Total', tx, y)
-    doc.text(inr(bill.toPay), W - M, y, { align: 'right' })
-    doc.setDrawColor(...INK).setLineWidth(0.35).line(tx, y + 3, W - M, y + 3)
+    if (showPrices && gstPct) row('Subtotal', inr(bill.toPay))
+    if (showPrices && gstPct) row(`GST (${gstPct}%)`, inr(gstAmt))
+    if (showPrices) {
+      doc.setFont('DOC', 'bold').setFontSize(10).setTextColor(...INK)
+      doc.text(gstPct ? 'Grand total' : 'Total', tx, y)
+      doc.text(inr(grand), W - M, y, { align: 'right' })
+      doc.setDrawColor(...INK).setLineWidth(0.35).line(tx, y + 3, W - M, y + 3)
+    } else {
+      doc.setFont('DOC', 'bold').setFontSize(9).setTextColor(...INK)
+      doc.text('Material list — prices on request', tx, y)
+      doc.setDrawColor(...INK).setLineWidth(0.35).line(tx, y + 3, W - M, y + 3)
+    }
     return y
+  }
+
+  /* optional signature block; returns the y it ended at */
+  const signature = (y, limit) => {
+    if (!brand.signature) return y
+    if (y + 30 > limit) { doc.addPage(); paper(); y = 36 }
+    const sx = W - M - 62
+    doc.setDrawColor(...INK).setLineWidth(0.3).line(sx, y + 20, W - M, y + 20)
+    doc.setFont('DOC', 'normal').setFontSize(7.5).setTextColor(...GRAY)
+    doc.text('Authorised signatory', sx, y + 24.5)
+    doc.setFont('DOC', 'bold').setFontSize(8).setTextColor(...INK)
+    doc.text(brand.name, sx, y + 28.5)
+    return y + 30
   }
 
   /* ============ template: CLASSIC (Swiss hairlines, logos on top) ============ */
@@ -5993,7 +6129,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
 
     const tTop = infoY + 6 + Math.max(custLines.length, 3) * 4.3 + 5
     doc.setDrawColor(...HAIR).setLineWidth(0.3).line(M, tTop, W - M, tTop)
-    doc.setFont('DOC', 'bold').setFontSize(17).setTextColor(...INK).text('Bill of Materials', M, tTop + 9.5)
+    doc.setFont('DOC', 'bold').setFontSize(docTitle.length > 22 ? 13 : 17).setTextColor(...INK).text(docTitle, M, tTop + 9.5)
     doc.setFont('DOC', 'normal').setFontSize(10).setTextColor(...GRAY)
     doc.text(no, 132, tTop + 9.5, { align: 'center' })
     doc.text(today, W - M, tTop + 9.5, { align: 'right' })
@@ -6005,16 +6141,17 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
     y = drawRich(doc, note, 118, y + 9.5, W - M - 118, { size: 8 })
     doc.setFont('DOC', 'normal').setFontSize(7.5).setTextColor(...GRAY)
       .text(`Valid ${validDays} days from the date above. Prepared by ${preparedBy}.`, 118, y + 4.5)
+    signature(y + 8, H - (logosTop ? 26 : 44))
 
     const pages = doc.getNumberOfPages()
     for (let i = 1; i <= pages; i++) {
       doc.setPage(i)
       doc.setDrawColor(...INK).setLineWidth(0.4).line(M, H - 21, W - M, H - 21)
       doc.setFont('DOC', 'normal').setFontSize(7.5).setTextColor(...FOOT)
-      doc.text(['estimates@quickcart.in', 'quickcart-nine-iota.vercel.app'], M, H - 15.5)
-      doc.text(['304 Maple Heights, HSR Layout', 'Bengaluru 560102'], 72, H - 15.5)
+      doc.text([dealer.email, dealer.website], M, H - 15.5)
+      doc.text([dealer.addr1, dealer.addr2], 72, H - 15.5)
       doc.text(['Trade prices · GST billing', '90-min site delivery'], 128, H - 15.5)
-      doc.text(['GSTIN', '29AAACQ1234L1ZQ'], 176, H - 15.5)
+      doc.text(['GSTIN', dealer.gstin], 176, H - 15.5)
       doc.setFontSize(6.5).setTextColor(...SIDE)
         .text(`${brand.name} · Furniture Hardware · Registered dealer — Bengaluru`, 8, H - 10, { angle: 90 })
     }
@@ -6024,7 +6161,8 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   const renderBold = () => {
     const onAccent = [20, 22, 24]
     doc.setFillColor(...ACCENT).rect(0, 0, W, 52, 'F')
-    doc.setFont('DOC', 'bold').setFontSize(34).setTextColor(...WORD).text('BOM', M, 20)
+    const bt = docTitle.length > 14 ? docTitle : docTitle.toUpperCase()
+    doc.setFont('DOC', 'bold').setFontSize(bt.length > 18 ? 15 : bt.length > 8 ? 22 : 34).setTextColor(...WORD).text(bt, M, 20)
     const mw = Math.min(36, (mark.w / mark.h) * 14)
     doc.addImage(mark.data, 'PNG', W - M - mw, 7, mw, 14)
     const cap = (t, x, yy) => {
@@ -6041,7 +6179,8 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
 
     const fin = itemsTable({ startY: 60, bottom: 48, headFill: PAPER.map(c => Math.max(0, c - 14)), big: false })
     let y = totalsBlock(fin + 8, H - 52)
-    drawRich(doc, note, M, y + 2, 92, { size: 8 })
+    const ny = drawRich(doc, note, M, y + 2, 92, { size: 8 })
+    signature(Math.max(y, ny) + 4, H - 44)
 
     const pages = doc.getNumberOfPages()
     for (let i = 1; i <= pages; i++) {
@@ -6051,7 +6190,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
       doc.text('(DEALER)', M, H - 33).text('(TERMS)', 96, H - 33).text('(PREPARED BY)', 162, H - 33)
       doc.setCharSpace(0)
       doc.setFont('DOC', 'normal').setFontSize(7.5)
-      doc.text([dealerLines[1] + ', ' + dealerLines[2].split(' · ')[0], 'GSTIN 29AAACQ1234L1ZQ'], M, H - 28)
+      doc.text([dealer.addr1 + ', ' + dealer.addr2, 'GSTIN ' + dealer.gstin], M, H - 28)
       doc.text([`Confirm within ${validDays} days · GST as applicable`, 'Trade prices · 90-min site delivery'], 96, H - 28)
       doc.text(preparedBy, 162, H - 28)
       doc.setFillColor(...ACCENT).rect(0, H - 14, W, 14, 'F')
@@ -6104,10 +6243,15 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
 
     const fin = itemsTable({ startY: my + 16, bottom: 50, big: true })
     let y = totalsBlock(fin + 8, H - 56)
-    doc.setFont('DOC', 'normal').setFontSize(7).setTextColor(...GRAY)
-    const words = doc.splitTextToSize(`${inrWords(bill.toPay).toUpperCase()} RUPEES ONLY`, 78)
-    doc.text(words, W - M, y + 7, { align: 'right' })
-    drawRich(doc, note, 118, y + 7 + words.length * 3.6 + 4, W - M - 118, { size: 7.5, lh: 3.9, color: GRAY })
+    let wy = y + 7
+    if (showPrices) {
+      doc.setFont('DOC', 'normal').setFontSize(7).setTextColor(...GRAY)
+      const words = doc.splitTextToSize(`${inrWords(grand).toUpperCase()} RUPEES ONLY`, 78)
+      doc.text(words, W - M, wy, { align: 'right' })
+      wy += words.length * 3.6 + 4
+    }
+    const sy = drawRich(doc, note, 118, wy, W - M - 118, { size: 7.5, lh: 3.9, color: GRAY })
+    signature(sy + 4, H - 46)
 
     const pages = doc.getNumberOfPages()
     for (let i = 1; i <= pages; i++) {
@@ -6119,7 +6263,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
         lx += dw + 7
       }
       doc.setFont('DOC', 'normal').setFontSize(6.5).setTextColor(...FOOT).setCharSpace(0.6)
-      doc.text(['REGISTERED OFFICE:', dealerLines[1].toUpperCase(), dealerLines[2].toUpperCase()], M, H - 26)
+      doc.text(['REGISTERED OFFICE:', dealer.addr1.toUpperCase(), `${dealer.addr2} · ${dealer.phone}`.toUpperCase()], M, H - 26)
       doc.text(`${i} / ${pages}`, M, H - 8)
       doc.setCharSpace(0)
       doc.setFontSize(6.5).setTextColor(...SIDE)
@@ -6143,7 +6287,7 @@ function EstimateSheet({ items, bill, onClose }) {
     setBusy(true)
     setErr(null)
     try {
-      await generateEstimate({ cust, items, bill, brand: { ...EST_BRAND_DEFAULT, ...brand } })
+      await generateEstimate({ cust, items, bill, brand: { ...EST_BRAND_DEFAULT, ...brand, dealer: { ...EST_BRAND_DEFAULT.dealer, ...(brand && brand.dealer) } } })
       onClose()
     } catch {
       setErr('Could not prepare the PDF. Check your connection and try again.')
