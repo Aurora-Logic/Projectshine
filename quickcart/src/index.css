@@ -6002,3 +6002,8 @@ button.lg-link {
   transition: transform .12s ease;
 }
 .cart-clear:active { transform: scale(.95); }
+
+/* Utilities — blanked empty shell (design removed, awaiting rebuild) */
+.uh-blank { display: flex; align-items: center; justify-content: center; text-align: center; }
+.uh-blank-inner { color: var(--gray-10); padding: 48px 26px; }
+.uh-blank-inner svg { color: var(--gray-7); }

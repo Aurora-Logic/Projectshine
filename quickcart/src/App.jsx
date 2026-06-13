@@ -1241,7 +1241,7 @@ function WeightCalc({ onBack }) {
 /* ============ Utilities hub — helper components (place ABOVE UtilitiesPage) ============ */
 
 // Chunky raised 3D mode tile (Instamart FOOD/INSTAMART/... pillar). Active tile pops white.
-function UtilitiesPage({ onClose, onSpin, onQuiz, lastOrder, bomCount = 0, onChange, onGoReorder, onGoKit }) {
+function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit }) {
   const a11y = useSheetA11y(onClose)
   const [stack, setStack] = useState(['hub'])
   const view = stack[stack.length - 1]
@@ -1253,7 +1253,6 @@ function UtilitiesPage({ onClose, onSpin, onQuiz, lastOrder, bomCount = 0, onCha
   const [rPhone, setRPhone] = useState('')
   const [rType, setRType] = useState('Carpenter')
   const [sent, setSent] = useState(false)
-  const [chip, setChip] = useState('All')
   const [openLearn, setOpenLearn] = useState(null)
   const refer = (e) => {
     sparkle(e)
@@ -1363,129 +1362,21 @@ function UtilitiesPage({ onClose, onSpin, onQuiz, lastOrder, bomCount = 0, onCha
     )
   }
 
-  // ---------------- hub: home-grounded (FestHero clone -> tool grid -> engagement -> learn -> endless feed) ----------------
-  const HERO_TILES = [
-    ['Panel weight', '1595428774223-ef52624120d2', () => push('weightcalc')],
-    ['Hardware calc', '1556911220-bff31c812dba', () => push('calc')],
-    ['Create BOM', '1524758631624-e2822e304c36', () => push('bom')],
-    ['Find a Pro', '1565814329452-e1efa11c5b89', () => { setProTab('carpenter'); push('pros') }],
-  ]
-  const TOOLS = [
-    ['Calculators', '1556911220-bff31c812dba', '3 tools', () => push('calc')],
-    ['BOM maker', '1524758631624-e2822e304c36', 'Branded PDF', () => push('bom')],
-    ['Find Carpenter', '1565814329452-e1efa11c5b89', 'Verified', () => { setProTab('carpenter'); push('pros') }],
-    ['Find Architect', '1497366216548-37526070297c', 'Designers', () => { setProTab('designer'); push('pros') }],
-    ['Site visit', '1484154218962-a197022b5858', 'Measure-up', () => push('site')],
-    ['Display centre', '1489171078254-c3365d6e359f', 'Showroom', () => push('display')],
-    ['Brand support', '1503387762-592deb58ef4e', 'Ebco · Zipco', () => push('brand')],
-    ['Claims', '1556228453-efd6c1ff04f6', 'Returns / CN', () => push('claims')],
-    ['Credit ledger', '1416339306562-f3d12fefd36f', '30-day credit', () => push('credit')],
-    ['Project lists', '1558997519-83ea9252edf8', 'Saved lists', () => push('lists')],
-    ['Dashboard', '1582582621959-48d27397dc69', 'Targets', () => push('dash')],
-  ]
-
+  // ---------------- hub: intentionally blank — design removed for a fresh rebuild ----------------
   return (
     <div className="utilpage" role="dialog" aria-modal="true" aria-label="Utilities" tabIndex={-1} ref={a11y}>
-      <div className="sw-head">
-        <Flex align="center" justify="between" className="sw-top">
-          <button className="uq-iconbtn" onClick={onClose} aria-label="Back"><ArrowLeftIcon width={18} height={18} /></button>
-          <button className="sw-loc" onClick={onClose}>
-            <span className="sw-loc-tag"><span className="uq-live" />DEALER TOOLKIT</span>
-            <span className="sw-loc-name">Everything to quote &amp; sell <ChevronDownIcon width={15} height={15} /></span>
-          </button>
-          <Flex align="center" gap="2">
-            <button className="uq-iconbtn uq-iconbtn-rel" onClick={() => push('bom')} aria-label="Saved BOMs">
-              <BookmarkIcon width={17} height={17} />
-              {bomCount > 0 ? <span className="uq-count">{bomCount}</span> : null}
-            </button>
-            <button className="uq-iconbtn" onClick={() => push('credit')} aria-label="Credit ledger"><FileTextIcon width={17} height={17} /></button>
-          </Flex>
-        </Flex>
-        <button className="sw-search" onClick={() => push('spscalc')}>
-          <MagnifyingGlassIcon width={18} height={18} />
-          <span className="sw-search-ph">Search tools — ‘Partition BoM’</span>
-        </button>
-        <button className="uh-earn" onClick={onSpin}>
-          <span className="uh-earn-bar"><span style={{ width: '60%' }} /></span>
-          <span className="uh-earn-tx">3 of 5 BoMs this month · unlock ₹500 tool credit</span>
-          <span className="uh-earn-cta">Spin <ChevronRightIcon width={12} height={12} /></span>
-        </button>
+      <div className="pdp-head">
+        <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Utilities</Heading>
+        </Box>
       </div>
-
-      <div className="cp-body uh-body">
-        <div className="uh-hero">
-          <div className="fest-wrap">
-            <div className="fest-grid f-a">
-              <button className="fest-promo" onClick={() => push('spscalc')}>
-                <Text as="div" weight="bold" style={{ fontSize: 20, lineHeight: 1.15, color: '#2b2200' }}>Partition BoM</Text>
-                <Text as="div" weight="bold" style={{ fontSize: 16, color: '#2b2200' }}>60-SECOND QUOTE</Text>
-                <span className="fest-cta">Open calculator</span>
-                <Img className="fest-promo-img" src={img('1558997519-83ea9252edf8', 300)} alt="" />
-              </button>
-              <div className="fest-tiles">
-                {HERO_TILES.map(([l, ph, go]) => (
-                  <button key={l} className="fest-tile" onClick={go}>
-                    <Img src={img(ph, 300)} alt={l} loading="lazy" />
-                    <span className="fest-tl">{l}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="fest-edge scallop" />
-            <div className="fest-dots d-dot">{Array.from({ length: 12 }, (_, i) => <span key={i} />)}</div>
-          </div>
+      <div className="cp-body uh-blank">
+        <div className="uh-blank-inner">
+          <GearIcon width={30} height={30} />
+          <Text size="3" weight="bold" as="div" mt="3">Utilities is being rebuilt</Text>
+          <Text size="2" color="gray" as="div" mt="1">A fresh dealer toolkit is on the way.</Text>
         </div>
-
-        <Box pt="4">
-          <SectionHead title="Shop by tool" sub="Calculators, quoting, hire, services & your business" />
-          <Grid columns="3" gapX="3" gapY="4" px="4">
-            {TOOLS.map(([label, ph, sub, go]) => (
-              <div className="cat-tile" key={label} {...btnish(go)}>
-                <Img className="cat-img" src={img(ph, 280)} alt={label} loading="lazy" />
-                <Text size="1" weight="bold" as="div" align="center" mt="2" truncate>{label}</Text>
-                <Text as="div" align="center" style={{ fontSize: 10.5, color: 'var(--gray-9)', fontWeight: 600 }}>{sub}</Text>
-              </div>
-            ))}
-          </Grid>
-        </Box>
-
-        <Box pt="5"><GameRow onSpin={onSpin} /></Box>
-
-        <button className="uh-quiz" onClick={onQuiz}>
-          <span className="uh-quiz-ic"><LightningBoltIcon width={18} height={18} /></span>
-          <span className="uh-quiz-tx">
-            <Text size="2" weight="bold" as="div" style={{ color: '#fff', letterSpacing: '-0.2px' }}>Daily dealer quiz</Text>
-            <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.82)' }}>3 questions · win coins & tool credit</Text>
-          </span>
-          <span className="uh-quiz-cta">Play <ChevronRightIcon width={13} height={13} /></span>
-        </button>
-
-        <Box pt="5">
-          <SectionHead title="Learn & how-to" extra={<span className="save-pill">UPDATED WEEKLY</span>} onSeeAll={() => { const el = document.querySelector('.uh-lgrid'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }) }} />
-          <div className="hscroll">
-            {LEARN.slice(0, 5).map(l => (
-              <button key={l.id} className="insp-mini" onClick={() => { setOpenLearn(l.id); push('learn') }}>
-                <Img src={img(l.ph, 360)} alt="" />
-                <span className="insp-mini-cap"><b>{l.title}</b><i>{l.kicker} · {l.mins} min</i></span>
-              </button>
-            ))}
-          </div>
-        </Box>
-
-        <Box pt="5">
-          <SectionHead title="More for dealers" sub="Guides, specs & quoting tips" />
-          <div className="uh-lgrid">
-            {LEARN.map(l => (
-              <button key={`g-${l.id}`} className="uh-lcard" onClick={() => { setOpenLearn(l.id); push('learn') }}>
-                <span className="uh-lcard-img"><Img src={img(l.ph, 360)} alt="" /><span className="uh-lcard-k">{l.kicker}</span></span>
-                <Text size="2" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.25, marginTop: 8 }}>{l.title}</Text>
-                <div className="uh-lmeta"><FileTextIcon width={11} height={11} /> {l.mins} min read · {l.stat}</div>
-              </button>
-            ))}
-          </div>
-        </Box>
-        <div className="sw-end">You’re all caught up — new tools &amp; guides every week</div>
-        <div style={{ height: 14 }} />
       </div>
     </div>
   )
