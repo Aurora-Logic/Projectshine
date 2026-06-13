@@ -66,20 +66,20 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 
 - [x] *(foundation — z/radius/shadow/gold tokens live, new pages wired; full hex/radius sweep rides the A5.1 split)* **A4.1 L** Token block in `:root`: color ramps, radius scale, shadows, z-scale (`--z-header/nav/page/overlay/gate`), type scale with 10px floor; replace top ~20 hexes, 13 radii, per-page z-integers.
 - [x] *(53 dead rule blocks from replaced designs deleted; fold-by-component rides A5.1)* **A4.2 M** Fold append-only patch layers into one section per component; delete ~27 dead selectors, dead media query, empty `App.css`.
-- [ ] **A4.3 M** One `.page` primitive + one `.progress-fill` replaces 10 page blocks / 8 bars.
-- [ ] **A4.4 M** Promote top repeated inline styles to utilities; keep inline only for dynamic values (469 inline styles today).
-- [ ] **A4.5 M** Palette discipline: collapse 8 yellows → one gold ramp; promos onto 2–3 sanctioned accents.
-- [ ] **A4.6 M** Honest names (`.pdp-head`→`.page-head`, `.cp-card`→`.card`) + prefix legend; single reduced-motion block.
-- [ ] **A4.7 L** Imagery program (biggest visual lift): per-SKU packshots (client/backend supplies), localize to `public/img/`, `onError` fallback in `Img`. *Backend dependency noted by client: images come from backend.*
+- [x] *(14 identical page shells → one grouped `.page` primitive; progress-track/fill utility added — bars keep deliberate per-context durations)* **A4.3 M** One `.page` primitive + one `.progress-fill` replaces 10 page blocks / 8 bars.
+- [x] *(50 "section label" copies → `.u-seclabel` w/ double-class specificity; combined-style repeats fold into A5.1)* **A4.4 M** Promote top repeated inline styles to utilities; keep inline only for dynamic values.
+- [x] *(8 yellows → one `--gold-3..12` ramp; index.css 38 sites + App.jsx inline tokenized; BOM picker hexes left)* **A4.5 M** Palette discipline: collapse 8 yellows → one gold ramp; promos onto 2–3 sanctioned accents.
+- [x] *(7 reduced-motion blocks → 1; class-prefix legend added. Leaky renames `.pdp-head`/`.cp-card` deferred — `.card` too generic, rides A5.1)* **A4.6 M** Honest names + prefix legend; single reduced-motion block.
+- [x] *(client-side done: `Img` onError → inline-SVG packshot placeholder. Per-SKU packshots are the backend's to supply.)* **A4.7 L** Imagery program: `onError` fallback in `Img`; packshots come from backend.
 
 ### A5 · Architecture refactor (sequence matters; no features mid-split)
 
-> **13 Jun status:** money math extracted to `money.js` (pure, unit-tested) as the
-> first A5 slice. The full file split (A5.1) is deliberately **deferred while a
-> parallel working session commits into App.jsx** — splitting now would break its
-> anchors mid-flight. Run the split in a coordinated window.
+> **13 Jun status:** parallel session closed (working tree clean). Split underway:
+> `money.js` (pure, unit-tested) + `lib/estimate.js` (the ~460-line BOM PDF system,
+> verified end-to-end) extracted. Remaining screen/component extraction continues
+> in this coordinated window. jspdf already lazy via dynamic `import()` (A6.5 head start).
 
-- [ ] **A5.1 L** Split App.jsx along its section banners → `lib/ hooks/ components/ screens/ games/ orders/`. No logic changes.
+- [ ] **A5.1 L** *(in progress: money.js + lib/estimate.js extracted; App.jsx 7,723 → 7,265. Screens/hooks/components remain.)* Split App.jsx along its section banners → `lib/ hooks/ components/ screens/ games/ orders/`. No logic changes.
 - [ ] **A5.2 M** Cart provider (`CartStateCtx` + stable dispatch); delete cart prop-drilling from ~30 signatures.
 - [ ] **A5.3 M** One `useHistoryLayer` + overlay stack replaces 9 pushState copies + render-time ref mutation; unwind entries on cross-navigation.
 - [ ] **A5.4 M** `route.js` with `parseRoute()`; parameterize `#pdp-<id>`.
@@ -94,7 +94,7 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 - [x] **A6.2 S** OG/meta tags (reuse manifest copy + 1200×630 image).
 - [x] **A6.3 S** `vercel.json` → `npm ci`; `engines` field; security headers/CSP.
 - [x] *(vitest: 24 tests on money math + seed integrity; Actions: lint+test+build)* **A6.4 M** Tests + CI after lint green: vitest on cart/bulk/scheme math + render-smoke per hash; GitHub Actions.
-- [ ] **A6.5 M** Code-split after A5.1 (lazy wheel/quiz/account/orders/login). *(blocked by A5.1 — components must live in modules before React.lazy can split them)*
+- [ ] **A6.5 M** Code-split after A5.1 (lazy wheel/quiz/account/orders/login). *(partial: jspdf/autotable/html2canvas already split via dynamic import() in lib/estimate.js. Lazy screens still blocked on A5.1 component extraction.)*
 - [x] *(variable woff2, latin subset, preloaded, immutable cache header)* **A6.6 S** Self-host Plus Jakarta Sans.
 - [x] *(qc-geo opt-in flag; no permission prompt on first paint)* **A6.7 S** Geolocation behind explicit affordance (time-theme default).
 - [x] *(start_url done earlier; icon-512 QC mark verified inside the mask safe zone, `purpose: any maskable` declared; SW skipped — offline not a goal)* **A6.8 S** PWA: `start_url` → home hash (skip gate), separate maskable icon, SW only if offline matters.
