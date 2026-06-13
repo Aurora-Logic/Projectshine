@@ -1646,11 +1646,15 @@ function ProsPage({ onClose, onGoCalc, onGoVisit }) {
 function KitBanner({ onOpen }) {
   return (
     <div className="kit-banner" {...btnish(onOpen)}>
-      <Img src={img(KITS[0].ph, 200)} alt="" />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <Text size="2" weight="bold" as="div">Fitting out a full site?</Text>
-        <Text size="1" color="gray" as="div" mt="1" style={{ lineHeight: 1.4 }}>
-          Kitchen, wardrobe or office — get the complete fittings list in one tap
+      <Img src={img(KITS[0].ph, 640)} alt="" />
+      <div className="kit-scrim" />
+      <div className="kit-copy">
+        <span className="kit-eyebrow">KITCHEN · WARDROBE · OFFICE</span>
+        <Text size="3" weight="bold" as="div" style={{ color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.2 }}>
+          Fitting out a full site?
+        </Text>
+        <Text as="div" style={{ fontSize: 11.5, color: 'rgba(255, 255, 255, .85)', marginTop: 3, lineHeight: 1.4 }}>
+          The complete fittings list, sized to your project
         </Text>
         <span className="kit-cta">Build a project kit <ChevronRightIcon width={13} height={13} /></span>
       </div>
@@ -4359,11 +4363,12 @@ function AcctBrand() {
   }
   return (
     <>
-      <div className="sub-hero orange">
-        <SpeakerLoudIcon width={15} height={15} color="var(--orange-11)" style={{ flex: 'none' }} />
-        <Text size="1" weight="bold" style={{ color: 'var(--orange-11)' }}>
-          Boards, demos, carpenter meets and promo stock — on the brand
+      <div className="sub-hero orange stack">
+        <Text size="1" weight="bold" as="div" style={{ color: 'var(--orange-11)', fontSize: 10, letterSpacing: '.6px' }}>
+          BRAND SUPPORT
         </Text>
+        <Text size="2" weight="bold" as="div" mt="1">Boards, demos, meets & promo stock — on us</Text>
+        <Text size="1" color="gray" as="div">Approved by your area manager · tracked right here</Text>
       </div>
       {!formOpen && (
         <button className="qs-cta" style={{ marginTop: 0, marginBottom: 12 }} onClick={() => setFormOpen(true)}>
@@ -4388,8 +4393,8 @@ function AcctBrand() {
           </div>
           {needsQty ? (
             <>
-              <Text size="1" color="gray" as="div" mt="2">
-                {type === 'Branding kit' ? 'Boards / standees needed' : 'Approx. pieces needed'}
+              <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                {type === 'Branding kit' ? 'BOARDS / STANDEES NEEDED' : 'APPROX. PIECES NEEDED'}
               </Text>
               <input
                 className="cp-input" style={{ marginTop: 4 }} type="number" min="1" placeholder="e.g. 2"
@@ -4398,7 +4403,9 @@ function AcctBrand() {
             </>
           ) : (
             <>
-              <Text size="1" color="gray" as="div" mt="2" mb="1">Preferred date</Text>
+              <Text size="1" weight="bold" as="div" mt="3" mb="1" style={{ color: 'var(--gray-10)', letterSpacing: '.5px', fontSize: 10.5 }}>
+                PREFERRED DATE
+              </Text>
               <CalPicker value={date} onChange={setDate} />
             </>
           )}
