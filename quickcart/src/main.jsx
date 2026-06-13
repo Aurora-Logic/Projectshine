@@ -12,6 +12,11 @@ class ErrorBoundary extends Component {
     return { error }
   }
 
+  componentDidCatch(error, info) {
+    // surface the real error so a crash is diagnosable (was silently swallowed)
+    console.error('[QuickCart] render crash:', error, info?.componentStack)
+  }
+
   reset = (clear) => {
     if (clear) {
       try {
@@ -37,6 +42,11 @@ class ErrorBoundary extends Component {
         <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>
           A glitch on our side — your cart and settings are safe.
         </div>
+        {import.meta.env.DEV && (
+          <pre style={{ fontSize: 11, color: '#b91c1c', background: '#fef2f2', padding: 10, borderRadius: 8, maxWidth: '100%', whiteSpace: 'pre-wrap', overflow: 'auto', textAlign: 'left' }}>
+            {String(this.state.error?.message || this.state.error)}
+          </pre>
+        )}
         <button
           onClick={() => this.reset(false)}
           style={{

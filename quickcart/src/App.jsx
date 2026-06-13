@@ -4145,7 +4145,7 @@ const ACCT_FLAT = [
   ['site', SewingPinIcon, 'Submit site visit'],
   ['display', EyeOpenIcon, 'Display centre visit'],
   ['brand', SpeakerLoudIcon, 'Brand support'],
-  ['boms', FileTextIcon, 'Saved estimates'],
+  ['boms', FileTextIcon, 'Saved BOMs'],
   ['estpdf', GearIcon, 'BOM PDF settings'],
   ['support', ChatBubbleIcon, 'Support'],
   ['notif', BellIcon, 'Notification preferences'],
@@ -4158,7 +4158,7 @@ const ACCT_TITLES = {
   gst: 'GST details', calc: 'Calculators', site: 'Submit site visit',
   display: 'Display centre visit', support: 'Support', claims: 'Claims & returns', brand: 'Brand support', addr: 'Address book',
   notif: 'Notification preferences', privacy: 'Account privacy',
-  estpdf: 'BOM PDF settings', boms: 'Saved estimates',
+  estpdf: 'BOM PDF settings', boms: 'Saved BOMs',
 }
 
 /* Estimate PDF branding: company name, logo upload, text colours */
@@ -4301,7 +4301,7 @@ function AcctEstPdf() {
             )}
           </Flex>
         </Flex>
-        <Text size="1" color="gray" as="div" mt="2">Shown at the top-right of every customer estimate.</Text>
+        <Text size="1" color="gray" as="div" mt="2">Shown at the top-right of every customer BOM.</Text>
       </div>
 
       <div className="cp-card">
@@ -5263,17 +5263,17 @@ const viewBom = async (rec) => {
 const shareBom = async (rec) => {
   const { blob, filename } = await regenBom(rec, 'blob')
   const file = new File([blob], filename, { type: 'application/pdf' })
-  const text = `Estimate ${rec.no} for ${rec.cust.name} — ₹${(rec.total || 0).toLocaleString('en-IN')}`
+  const text = `BOM ${rec.no} for ${rec.cust.name} — ₹${(rec.total || 0).toLocaleString('en-IN')}`
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try { await navigator.share({ files: [file], title: filename, text }) } catch { /* cancelled */ }
   } else {
     regenBom(rec, 'save') // desktop: no file-share — download so it can be attached
   }
 }
-const waBom = (rec) => window.open(`https://wa.me/?text=${encodeURIComponent(`Estimate ${rec.no} for ${rec.cust.name} — ₹${(rec.total || 0).toLocaleString('en-IN')}. Sending the BOM PDF next.`)}`, '_blank')
-const mailBom = (rec) => { window.location.href = `mailto:?subject=${encodeURIComponent(`Estimate ${rec.no}`)}&body=${encodeURIComponent(`Estimate ${rec.no} for ${rec.cust.name} — ₹${(rec.total || 0).toLocaleString('en-IN')}.\n\nThe BOM PDF is attached separately.`)}` }
+const waBom = (rec) => window.open(`https://wa.me/?text=${encodeURIComponent(`BOM ${rec.no} for ${rec.cust.name} — ₹${(rec.total || 0).toLocaleString('en-IN')}. Sending the BOM PDF next.`)}`, '_blank')
+const mailBom = (rec) => { window.location.href = `mailto:?subject=${encodeURIComponent(`BOM ${rec.no}`)}&body=${encodeURIComponent(`BOM ${rec.no} for ${rec.cust.name} — ₹${(rec.total || 0).toLocaleString('en-IN')}.\n\nThe BOM PDF is attached separately.`)}` }
 
-function EstimateSheet({ items, bill, onClose }) {
+function EstimateSheet({ items, bill, onClose, onSettings }) {
   const [cust, setCust] = usePersisted('qc-est-cust', { name: '', phone: '', site: '', refBy: '' })
   const [brand] = usePersisted('qc-est-brand', EST_BRAND_DEFAULT)
   const [special, setSpecial] = useState('')
@@ -5301,7 +5301,14 @@ function EstimateSheet({ items, bill, onClose }) {
     <div className="qsheet-overlay" onClick={onClose}>
       <div className="qsheet" onClick={(e) => e.stopPropagation()}>
         <div className="qsheet-grab" />
-        <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Bill of Materials</Heading>
+        <Flex align="center" justify="between">
+          <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Bill of Materials</Heading>
+          {onSettings && (
+            <button className="bom-set-btn" onClick={onSettings} aria-label="BOM PDF settings">
+              <GearIcon width={15} height={15} /> Settings
+            </button>
+          )}
+        </Flex>
         <Text size="1" color="gray" as="div" mt="1">
           {items.length} item{items.length === 1 ? '' : 's'} · ₹{bill.toPay.toLocaleString('en-IN')} — exported as a branded BOM PDF for your customer.
         </Text>
@@ -5330,14 +5337,14 @@ function AcctBoms() {
     return (
       <Box p="6" style={{ textAlign: 'center' }}>
         <FileTextIcon width={30} height={30} color="var(--gray-8)" />
-        <Text size="2" weight="bold" as="div" mt="3">No saved estimates yet</Text>
+        <Text size="2" weight="bold" as="div" mt="3">No saved BOMs yet</Text>
         <Text size="1" color="gray" as="div" mt="1">Generate a BOM from the cart — every one you export is saved here to re-view, re-download or share.</Text>
       </Box>
     )
   }
   return (
     <Box px="4" pt="2">
-      <Text size="1" color="gray" as="div" mb="2">{boms.length} saved estimate{boms.length === 1 ? '' : 's'} · stored on this device</Text>
+      <Text size="1" color="gray" as="div" mb="2">{boms.length} saved BOM{boms.length === 1 ? '' : 's'} · stored on this device</Text>
       {boms.map(rec => (
         <div key={rec.no} className="cp-card">
           <Flex justify="between" align="start" gap="3">
@@ -5363,7 +5370,7 @@ function AcctBoms() {
   )
 }
 
-function CartPage({ cart, onClose, onChange, onConvertTier, onPlaced }) {
+function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced }) {
   const a11y = useSheetA11y(onClose)
   const openQty = useContext(QtyCtx)
   const items = Object.values(cart.items)
@@ -5731,6 +5738,7 @@ function CartPage({ cart, onClose, onChange, onConvertTier, onPlaced }) {
           items={items}
           bill={{ itemTotal: grossTotal, bulkSave, schemeOff, slabPct: slab ? slab.off : 0, fee, express, toPay }}
           onClose={() => setEstSheet(false)}
+          onSettings={onSettings ? () => { setEstSheet(false); onSettings() } : undefined}
         />
       )}
       {placed && (
@@ -6696,6 +6704,7 @@ export default function App() {
           {cartOpen && (
           <CartPage
             cart={cart} onClose={closeCart} onChange={changeCart} onConvertTier={convertTier}
+            onSettings={() => { closeCart(); acctInitSub.current = 'estpdf'; setAcctOpen(true) }}
             onPlaced={(rec) => {
               setOrder(rec)
               safeSet('qc-order', JSON.stringify(rec))
