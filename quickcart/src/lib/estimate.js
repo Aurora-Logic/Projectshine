@@ -159,8 +159,13 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   const showPrices = brand.showPrices !== false
   const showSavings = brand.showSavings !== false
   const gstPct = Number(brand.gstPct) || 0
-  const gstAmt = gstPct ? Math.round((bill.toPay * gstPct) / 100) : 0
-  const grand = bill.toPay + gstAmt
+  const useScheme = brand.showScheme !== false              // #1 dealer can drop the volume scheme from the customer BOM
+  const special = Math.max(0, Number(bill.special) || 0)    // #5 optional per-customer discount
+  const effScheme = useScheme ? bill.schemeOff : 0
+  // BOM total = cart total, + scheme added back when the dealer hides it, − the special discount
+  const subtotal = Math.max(0, bill.toPay + (bill.schemeOff - effScheme) - special)
+  const gstAmt = gstPct ? Math.round((subtotal * gstPct) / 100) : 0
+  const grand = subtotal + gstAmt
   const totalPcs = items.reduce((s, { n }) => s + n, 0)
   const paper = () => {
     doc.setFillColor(...PAPER).rect(0, 0, W, H, 'F')
@@ -181,14 +186,15 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
     ...(cust.site ? doc.splitTextToSize(CAPS ? cust.site.toUpperCase() : cust.site, 80) : []),
     cust.refBy ? `Ref. by — ${cust.refBy}` : null,
   ].filter(Boolean)
-  const netItems = bill.itemTotal - bill.bulkSave - bill.schemeOff
+  const netItems = bill.itemTotal - bill.bulkSave - effScheme
   const billRows = !showPrices ? [] : [
     ...(showSavings ? [
       ['Item total', inr(bill.itemTotal)],
       bill.bulkSave > 0 && ['Bulk price savings', '−' + inr(bill.bulkSave)],
-      bill.schemeOff > 0 && [`Volume scheme (${bill.slabPct}%)`, '−' + inr(bill.schemeOff)],
+      useScheme && bill.schemeOff > 0 && [`Volume scheme (${bill.slabPct}%)`, '−' + inr(bill.schemeOff)],
     ] : [['Item total', inr(netItems)]]),
     ['Delivery' + (bill.express ? ' (express · 1 hr)' : ''), bill.fee === 0 ? 'FREE' : inr(bill.fee)],
+    special > 0 && ['Special discount', '−' + inr(special)],
   ].filter(Boolean)
 
   /* shared items table; layout knobs vary per template */
@@ -266,9 +272,9 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
       doc.setDrawColor(...HAIR).setLineWidth(0.18).line(tx, y + 2.6, W - M, y + 2.6)
       y += 7.5
     }
-    row('Items', `${items.length} · ${totalPcs} pcs`)
+    row('Total items', `${items.length} · ${totalPcs} pcs`)
     for (const [l, v] of billRows) row(l, v)
-    if (showPrices && gstPct) row('Subtotal', inr(bill.toPay))
+    if (showPrices && gstPct) row('Subtotal', inr(subtotal))
     if (showPrices && gstPct) row(`GST (${gstPct}%)`, inr(gstAmt))
     if (showPrices) {
       doc.setFont('DOC', 'bold').setFontSize(10).setTextColor(...INK)
@@ -336,8 +342,9 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
     if (!logosTop) logoStrip(H - 38)
     y = drawRich(doc, note, 118, y + 9.5, W - M - 118, { size: 8 })
     doc.setFont('DOC', 'normal').setFontSize(7.5).setTextColor(...GRAY)
-      .text(`Valid ${validDays} days from the date above. Prepared by ${preparedBy}.`, 118, y + 4.5)
-    signature(y + 8, H - (logosTop ? 26 : 44))
+    doc.text(`Valid ${validDays} days from the date above.`, 118, y + 4.5)
+    doc.text(`Prepared by ${preparedBy}.`, 118, y + 8.5)
+    signature(y + 12, H - (logosTop ? 26 : 44))
 
     const pages = doc.getNumberOfPages()
     for (let i = 1; i <= pages; i++) {
@@ -395,7 +402,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
       for (const b of [...brands].reverse()) {
         const dw = (b.w / b.h) * 7
         lx -= dw
-        doc.setFillColor(255, 255, 255).roundedRect(lx - 1.5, H - 12, dw + 3, 10, 1.5, 1.5, 'F')
+        doc.setFillColor(255, 255, 255).rect(lx - 1.5, H - 12, dw + 3, 10, 'F')
         doc.addImage(b.data, 'PNG', lx, H - 10.5, dw, 7)
         lx -= 7.5
       }
@@ -451,9 +458,9 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
       doc.setPage(i)
       let lx = M
       for (const b of brands) {
-        const dw = (b.w / b.h) * 6
-        doc.addImage(b.data, 'PNG', lx, H - 38, dw, 6)
-        lx += dw + 7
+        const dw = (b.w / b.h) * 8
+        doc.addImage(b.data, 'PNG', lx, H - 39, dw, 8)
+        lx += dw + 9
       }
       doc.setFont('DOC', 'normal').setFontSize(6.5).setTextColor(...FOOT).setCharSpace(0.6)
       doc.text(['REGISTERED OFFICE:', dealer.addr1.toUpperCase(), `${dealer.addr2} · ${dealer.phone}`.toUpperCase()], M, H - 26)

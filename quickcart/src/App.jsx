@@ -4876,6 +4876,13 @@ function AcctEstPdf() {
               </div>
               <Toggle on={brand.showSavings !== false} onToggle={() => set('showSavings', brand.showSavings === false)} />
             </Flex>
+            <Flex align="center" justify="between" mt="3">
+              <div>
+                <Text size="2" weight="bold" as="div">Volume scheme discount</Text>
+                <Text size="1" color="gray" as="div">Off keeps the scheme off the customer BOM</Text>
+              </div>
+              <Toggle on={brand.showScheme !== false} onToggle={() => set('showScheme', brand.showScheme === false)} />
+            </Flex>
             <Text size="1" weight="bold" as="div" mt="3" className="u-seclabel">
               GST LINE
             </Text>
@@ -5654,13 +5661,15 @@ function AddressSheet({ addrs, sel, onPick, onAdd, onClose }) {
 function EstimateSheet({ items, bill, onClose }) {
   const [cust, setCust] = usePersisted('qc-est-cust', { name: '', phone: '', site: '', refBy: '' })
   const [brand] = usePersisted('qc-est-brand', EST_BRAND_DEFAULT)
+  const [special, setSpecial] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
   const go = async () => {
     setBusy(true)
     setErr(null)
     try {
-      await generateEstimate({ cust, items, bill, brand: { ...EST_BRAND_DEFAULT, ...brand, dealer: { ...EST_BRAND_DEFAULT.dealer, ...(brand && brand.dealer) } } })
+      const billOut = { ...bill, special: Math.max(0, Number(special) || 0) }
+      await generateEstimate({ cust, items, bill: billOut, brand: { ...EST_BRAND_DEFAULT, ...brand, dealer: { ...EST_BRAND_DEFAULT.dealer, ...(brand && brand.dealer) } } })
       onClose()
     } catch {
       setErr('Could not prepare the PDF. Check your connection and try again.')
@@ -5682,6 +5691,7 @@ function EstimateSheet({ items, bill, onClose }) {
           <input className="cp-input" style={{ fontSize: 16 }} type="tel" inputMode="tel" autoComplete="tel" placeholder="Phone (optional)" value={cust.phone} onChange={f('phone')} />
           <textarea className="cp-note" style={{ fontSize: 16 }} rows={2} placeholder="Site address (optional)" value={cust.site} onChange={f('site')} />
           <input className="cp-input" style={{ fontSize: 16 }} placeholder="Ref. by (optional) — e.g. visited earlier" value={cust.refBy || ''} onChange={f('refBy')} />
+          <input className="cp-input" style={{ fontSize: 16 }} type="number" inputMode="numeric" min="0" placeholder="Special discount ₹ for this customer (optional)" value={special} onChange={(e) => setSpecial(e.target.value)} />
         </Flex>
         {err && <Text size="1" as="div" mt="2" style={{ color: 'var(--red-10)', fontWeight: 700 }}>{err}</Text>}
         <button className="qs-cta" style={{ justifyContent: 'center', gap: 7 }} disabled={!cust.name.trim() || busy} onClick={go}>
