@@ -1237,15 +1237,57 @@ function WeightCalc({ onBack }) {
   )
 }
 
-function ToolCard({ c, icon: Icon, title, sub, onClick, badge }) {
+/* ============ Utilities hub — helper components (place ABOVE UtilitiesPage) ============ */
+
+// Chunky raised 3D mode tile (Instamart FOOD/INSTAMART/... pillar). Active tile pops white.
+function UqMode({ c, icon: Icon, label, active, onClick }) {
   return (
-    <button className="tool-card" onClick={onClick}>
-      {badge ? <span className="tool-badge">{badge}</span> : null}
-      <span className={`flat-ic c-${c}`}><Icon width={17} height={17} /></span>
-      <div>
-        <Text size="2" weight="bold" as="div" style={{ letterSpacing: '-0.2px' }}>{title}</Text>
-        <Text size="1" color="gray" as="div">{sub}</Text>
-      </div>
+    <button className={`uq-mode ${active ? 'is-on' : ''}`} onClick={onClick}>
+      <span className={`flat-ic c-${c}`}><Icon width={20} height={20} /></span>
+      <span className="uq-mode-lbl">{label}</span>
+    </button>
+  )
+}
+
+// Horizontally-scrolling category-strip chip: a single glossy 3D disc + label (+ optional ribbon).
+function UqChip({ c, icon: Icon, label, badge, onClick }) {
+  return (
+    <button className="uq-chip" onClick={onClick}>
+      {badge ? <span className="uq-chip-badge">{badge}</span> : null}
+      <span className={`flat-ic c-${c}`}><Icon width={18} height={18} /></span>
+      <span className="uq-chip-lbl">{label}</span>
+    </button>
+  )
+}
+
+// "Buy Now" style promo banner (CSS-art only, no <img>). hero = wider flagship card.
+function UqBanner({ tone, hero, tag, title, sub, icon: Icon, cta, onClick }) {
+  return (
+    <button className={`uq-pb uq-tone-${tone} ${hero ? 'uq-pb-hero' : ''}`} onClick={onClick}>
+      <span className="uq-pb-blob uq-pb-blob-a" aria-hidden="true" />
+      <span className="uq-pb-blob uq-pb-blob-b" aria-hidden="true" />
+      <span className="uq-pb-copy">
+        {tag ? <span className="uq-pb-tag">{tag}</span> : null}
+        <Text size={hero ? '5' : '3'} weight="bold" as="div" className="uq-pb-title">{title}</Text>
+        <Text size="1" as="div" className="uq-pb-sub">{sub}</Text>
+        <span className="uq-pb-cta">{cta}<ChevronRightIcon width={14} height={14} /></span>
+      </span>
+      <span className="uq-pb-ic"><Icon width={hero ? 28 : 24} height={hero ? 28 : 24} /></span>
+    </button>
+  )
+}
+
+// Soft token-tinted tool card for the grid. stat = inline green "N saved" pill.
+function UqTool({ c, tint, icon: Icon, title, sub, stat, badge, onClick }) {
+  return (
+    <button className={`uq-tool uq-t-${tint}`} onClick={onClick}>
+      {badge ? <span className="uq-tool-badge">{badge}</span> : null}
+      <span className={`flat-ic c-${c}`}><Icon width={18} height={18} /></span>
+      <span className="uq-tool-tx">
+        <Text size="2" weight="bold" as="div" className="uq-tool-title">{title}</Text>
+        <Text size="1" as="div" className="uq-tool-sub">{sub}</Text>
+        {stat ? <span className="uq-tool-stat">{stat}</span> : null}
+      </span>
     </button>
   )
 }
@@ -1340,69 +1382,115 @@ function UtilitiesPage({ onClose, onSpin, onQuiz, lastOrder, bomCount = 0 }) {
     )
   }
 
-  // ---------------- hub: home-style gradient header + clean body (3D icons only) ----------------
+  // ---------------- hub: q-commerce home (Swiggy/Grab style) ----------------
   return (
-    <div className="utilpage" role="dialog" aria-modal="true" aria-label="Utilities" tabIndex={-1} ref={a11y}>
-      <div className="u2-head">
-        <Flex align="center" justify="between" className="u2-toprow">
-          <button className="sheet-back u2-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
-          <Text size="2" weight="bold" style={{ color: '#fff', letterSpacing: '.2px' }}>Utilities</Text>
-          <div style={{ width: 36, flex: 'none' }} />
-        </Flex>
-        {/* major calculator — in place of the home header's brand */}
-        <button className="u2-feat" onClick={() => push('spscalc')}>
-          <span className="u2-feat-ic"><MixerHorizontalIcon width={25} height={25} /></span>
-          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-            <span className="u2-feat-tag">FLAGSHIP CALCULATOR</span>
-            <Text size="4" weight="bold" as="div" style={{ letterSpacing: '-0.4px', marginTop: 2 }}>Partition BoM</Text>
-            <Text size="1" color="gray" as="div">Linked &amp; Syncro → instant priced BoM</Text>
+      <div className="utilpage" role="dialog" aria-modal="true" aria-label="Utilities" tabIndex={-1} ref={a11y}>
+        {/* ===== gradient header: deliver row + 2 action icons + 4 mode tiles + search ===== */}
+        <div className="uq-head">
+          <Flex align="center" justify="between" className="uq-toprow">
+            <button className="uq-iconbtn" onClick={onClose} aria-label="Back"><ArrowLeftIcon width={18} height={18} /></button>
+            <button className="uq-loc" onClick={onClose}>
+              <span className="uq-loc-tag"><span className="uq-live" />DEALER TOOLKIT</span>
+              <span className="uq-loc-name">Everything to quote & sell <ChevronDownIcon width={15} height={15} /></span>
+            </button>
+            <Flex align="center" gap="2" className="uq-actions">
+              <button className="uq-iconbtn uq-iconbtn-rel" onClick={() => push('bom')} aria-label="Saved BOMs">
+                <BookmarkIcon width={17} height={17} />
+                {bomCount > 0 ? <span className="uq-count">{bomCount}</span> : null}
+              </button>
+              <button className="uq-iconbtn" onClick={() => push('claims')} aria-label="Claims & returns">
+                <FileTextIcon width={17} height={17} />
+              </button>
+            </Flex>
+          </Flex>
+
+          {/* four chunky 3D mode tiles — the pillars; active tile popped white */}
+          <div className="uq-modes">
+            <UqMode c="green"  icon={MixerHorizontalIcon} label="Calculate"  active onClick={() => push('spscalc')} />
+            <UqMode c="blue"   icon={FileTextIcon}        label="BOM"                onClick={() => push('bom')} />
+            <UqMode c="orange" icon={PersonIcon}          label="Find a Pro"         onClick={() => { setProTab('carpenter'); push('pros') }} />
+            <UqMode c="pink"   icon={RocketIcon}          label="Rewards"            onClick={onSpin} />
           </div>
-          <span className="u2-feat-go"><ChevronRightIcon width={18} height={18} /></span>
-        </button>
+
+          {/* white pill search → defaults to the flagship */}
+          <button className="uq-search" onClick={() => push('spscalc')}>
+            <MagnifyingGlassIcon width={18} height={18} />
+            <span className="uq-search-ph">Search tools — ‘Partition BoM’</span>
+          </button>
+        </div>
+
+        {/* ===== scrollable body ===== */}
+        <div className="cp-body uq-body">
+          {/* horizontally-scrolling 3D category-icon strip (every destination once) */}
+          <div className="uq-strip">
+            <UqChip c="green"  icon={MixerHorizontalIcon}     label="Partition" badge="POPULAR" onClick={() => push('spscalc')} />
+            <UqChip c="violet" icon={DashboardIcon}           label="Panel wt." onClick={() => push('weightcalc')} />
+            <UqChip c="blue"   icon={RulerSquareIcon}         label="Hardware"  onClick={() => push('calc')} />
+            <UqChip c="teal"   icon={FileTextIcon}            label="BOM"       onClick={() => push('bom')} />
+            <UqChip c="orange" icon={PersonIcon}              label="Carpenter" onClick={() => { setProTab('carpenter'); push('pros') }} />
+            <UqChip c="indigo" icon={IdCardIcon}              label="Architect" onClick={() => { setProTab('designer'); push('pros') }} />
+            <UqChip c="pink"   icon={RocketIcon}              label="Spin"      onClick={onSpin} />
+            <UqChip c="amber"  icon={LightningBoltIcon}       label="Quiz"      onClick={onQuiz} />
+            <UqChip c="red"    icon={ExclamationTriangleIcon} label="Claims"    onClick={() => push('claims')} />
+          </div>
+
+          {/* flagship featured banner — pure-CSS concentric-ring art, » affordance */}
+          <button className="uq-flag" onClick={() => push('spscalc')}>
+            <span className="uq-flag-art" aria-hidden="true">
+              <span className="uq-ring" />
+              <span className="uq-ring uq-ring2" />
+              <span className="uq-flag-glyph"><MixerHorizontalIcon width={28} height={28} /></span>
+            </span>
+            <span className="uq-flag-tx">
+              <span className="uq-flag-eyebrow">FLAGSHIP CALCULATOR</span>
+              <Heading as="h3" size="5" className="uq-flag-title">Partition BoM</Heading>
+              <Text size="1" as="div" className="uq-flag-sub">Linked & Syncro → instant priced bill of materials</Text>
+              <span className="uq-flag-cta">Open calculator <span className="uq-chev">»</span></span>
+            </span>
+          </button>
+
+          {/* "Buy Now" style scrolling promo carousel */}
+          <Flex align="center" justify="between" className="uq-rowhead">
+            <Heading as="h3" size="3" className="uq-rowhead-t">Featured</Heading>
+            <button className="uq-rowhead-link" onClick={() => { setProTab('carpenter'); push('pros') }}>
+              View all <ChevronRightIcon width={13} height={13} />
+            </button>
+          </Flex>
+          <div className="uq-hscroll">
+            <UqBanner hero tone="green" tag="VERIFIED PROS" title="Find a Pro"
+              sub="Rated carpenters & architects" icon={PersonIcon} cta="Browse"
+              onClick={() => { setProTab('carpenter'); push('pros') }} />
+            <UqBanner tone="violet" tag="NEW TOOL" title="Panel weight"
+              sub="Ply · MDF · glass in seconds" icon={DashboardIcon} cta="Open"
+              onClick={() => push('weightcalc')} />
+            <UqBanner tone="amber" tag="EARN COINS" title="Daily Quiz"
+              sub="Answer & win rewards" icon={LightningBoltIcon} cta="Play"
+              onClick={onQuiz} />
+          </div>
+
+          {/* token-tinted tool grid */}
+          <Flex align="center" justify="between" className="uq-rowhead">
+            <Heading as="h3" size="3" className="uq-rowhead-t">All tools</Heading>
+            <Text size="1" color="gray" as="div" className="uq-rowhead-sub">Quote · build · earn</Text>
+          </Flex>
+          <div className="uq-grid">
+            <UqTool c="blue"   tint="blue"   icon={RulerSquareIcon}         title="Hardware calc" sub="Slides · hinges · closers" onClick={() => push('calc')} />
+            <UqTool c="teal"   tint="teal"   icon={FileTextIcon}            title="BOM" sub="Customer bills of materials" stat={bomCount > 0 ? `${bomCount} saved` : null} onClick={() => push('bom')} />
+            <UqTool c="indigo" tint="indigo" icon={IdCardIcon}              title="Architect" sub="Designers near you" onClick={() => { setProTab('designer'); push('pros') }} />
+            <UqTool c="pink"   tint="pink"   icon={RocketIcon}              title="Spin & Win" sub="Daily reward" onClick={onSpin} />
+            <UqTool c="violet" tint="violet" icon={DashboardIcon}           title="Panel weight" sub="Ply · MDF · glass" badge="NEW" onClick={() => push('weightcalc')} />
+            <UqTool c="red"    tint="red"    icon={ExclamationTriangleIcon} title="Claims & returns" sub="Raise or return" onClick={() => push('claims')} />
+          </div>
+
+          {/* footer reassurance strip */}
+          <div className="uq-foot">
+            <span className="flat-ic c-green"><StarFilledIcon width={15} height={15} /></span>
+            <Text size="1" weight="bold" as="div" className="uq-foot-t">Every tool is dealer-priced & always free to use</Text>
+          </div>
+          <div style={{ height: 8 }} />
+        </div>
       </div>
-
-      <div className="cp-body u2-body">
-        <Text size="1" weight="bold" className="u-seclabel" as="div">CALCULATORS</Text>
-        <div className="u2-grid">
-          <ToolCard c="violet" icon={DashboardIcon} title="Panel weight" sub="Ply · MDF · glass" badge="NEW" onClick={() => push('weightcalc')} />
-          <ToolCard c="blue" icon={RulerSquareIcon} title="Hardware calc" sub="Slides · hinges" onClick={() => push('calc')} />
-        </div>
-
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>QUOTES</Text>
-        <button className="util-row-card" onClick={() => push('bom')}>
-          <span className="flat-ic c-green"><FileTextIcon width={16} height={16} /></span>
-          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-            <Text size="2" weight="bold" as="div">BOM</Text>
-            <Text size="1" color="gray" as="div">Create &amp; manage customer bills of materials{bomCount > 0 ? ` · ${bomCount} saved` : ''}</Text>
-          </div>
-          <ChevronRightIcon width={16} height={16} color="var(--gray-8)" style={{ flex: 'none' }} />
-        </button>
-
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>FIND A PRO</Text>
-        <div className="u2-grid">
-          <ToolCard c="orange" icon={PersonIcon} title="Find Carpenter" sub="Verified installers" onClick={() => { setProTab('carpenter'); push('pros') }} />
-          <ToolCard c="indigo" icon={IdCardIcon} title="Find Architect" sub="Designers near you" onClick={() => { setProTab('designer'); push('pros') }} />
-        </div>
-
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>PLAY &amp; EARN</Text>
-        <div className="u2-grid">
-          <ToolCard c="pink" icon={RocketIcon} title="Spin &amp; Win" sub="Daily reward" onClick={onSpin} />
-          <ToolCard c="amber" icon={LightningBoltIcon} title="Daily Quiz" sub="Earn coins" onClick={onQuiz} />
-        </div>
-
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>SUPPORT</Text>
-        <button className="util-row-card" onClick={() => push('claims')}>
-          <span className="flat-ic c-red"><ExclamationTriangleIcon width={16} height={16} /></span>
-          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-            <Text size="2" weight="bold" as="div">Claims &amp; returns</Text>
-            <Text size="1" color="gray" as="div">Raise a claim or return a delivered item</Text>
-          </div>
-          <ChevronRightIcon width={16} height={16} color="var(--gray-8)" style={{ flex: 'none' }} />
-        </button>
-        <div style={{ height: 10 }} />
-      </div>
-    </div>
-  )
+    )
 }
 
 /* ---------------- B1 · Project Kit Builder ---------------- */
