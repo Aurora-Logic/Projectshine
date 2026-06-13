@@ -22,6 +22,7 @@ import { generateEstimate, EST_BRAND_DEFAULT, EST_FONTS, EST_SWATCHES, EST_PAPER
 import { img, DAY, daypart, condition, sparkle, bulkNudge, scrollToId, dealSecsLeft } from './lib/util.js'
 import { usePersisted, safeGet, safeSet, safeRemove } from './lib/storage.js'
 import { useSkyTheme, useNextFrame, useSheetA11y, useCountUp } from './hooks.js'
+import { QtyCtx, PdpCtx, CartCtx, CartItemsCtx } from './contexts.js'
 import { bulkTier, unitPriceFor, lineTotal } from './money.js'
 import './App.css'
 
@@ -70,12 +71,6 @@ function DevSimulator({ dp, cond, onChange, skinName, onSkin, heroPalName, onHer
 
 /* Bulk-tier nudge: "Add N more → X% off" — the dealer upsell loop */
 
-/* App-wide intents: any ADD opens the bulk qty sheet; any card tap opens the product page */
-const QtyCtx = createContext(null)
-const PdpCtx = createContext(null)
-const CartCtx = createContext(null)
-/* live cart lines — single source of truth for every stepper in the app */
-const CartItemsCtx = createContext({})
 
 const BRAND_NAMES = { ebco: 'Ebco', zipco: 'Zipco', peka: 'Peka', worksmart: 'Worksmart by Ebco', livsmart: 'Livsmart by Ebco' }
 
