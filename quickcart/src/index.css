@@ -4885,6 +4885,47 @@ button.lg-link {
 }
 .util-row-card:active { transform: scale(.98); }
 
+/* Utilities v2 — home-style gradient header, clean body, 3D icons only */
+.u2-head {
+  flex: none;
+  background-image: linear-gradient(168deg, #22B765 0%, #159150 52%, #0e7a3f 100%);
+  padding: calc(12px + env(safe-area-inset-top)) 16px 20px;
+}
+.u2-toprow { margin-bottom: 15px; }
+.u2-back { background: rgba(255, 255, 255, .2) !important; }
+.u2-back svg { color: #fff; }
+.u2-feat {
+  display: flex; align-items: center; gap: 13px; width: 100%; text-align: left;
+  background: #fff; border: none; border-radius: 18px; padding: 14px; cursor: pointer;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .24);
+  -webkit-tap-highlight-color: transparent; transition: transform .12s ease;
+}
+.u2-feat:active { transform: scale(.985); }
+.u2-feat-ic {
+  flex: none; width: 50px; height: 50px; border-radius: 50%; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(155deg, #45D98A, #1FAE5E);
+  box-shadow: 0 3px 8px rgba(31, 174, 94, .35), inset 0 1px 0 rgba(255, 255, 255, .5), inset 0 -2px 3px rgba(0, 0, 0, .14);
+}
+.u2-feat-tag { font-size: 9px; font-weight: 800; letter-spacing: .7px; color: var(--green-11); }
+.u2-feat-go { flex: none; color: var(--gray-8); }
+.u2-body { background: var(--gray-2); }
+.u2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-top: 10px; }
+.tool-card {
+  position: relative; text-align: left; cursor: pointer; font-family: inherit;
+  background: #fff; border: 1px solid var(--gray-3); border-radius: 16px;
+  padding: 14px; display: flex; flex-direction: column; gap: 12px; min-height: 106px;
+  justify-content: space-between; box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+  -webkit-tap-highlight-color: transparent; transition: transform .12s ease;
+}
+.tool-card:active { transform: scale(.97); }
+.tool-card .flat-ic { width: 40px; height: 40px; }
+.tool-badge {
+  position: absolute; top: 12px; right: 12px;
+  font-size: 8.5px; font-weight: 800; letter-spacing: .5px;
+  color: #fff; background: var(--green-9); padding: 2px 7px; border-radius: 999px;
+}
+
 /* vibrant "second home" card grid */
 .ux-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
 .ux-card {

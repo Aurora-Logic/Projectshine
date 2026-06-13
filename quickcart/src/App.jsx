@@ -1237,10 +1237,10 @@ function WeightCalc({ onBack }) {
   )
 }
 
-function UxCard({ c, icon: Icon, title, sub, onClick, badge }) {
+function ToolCard({ c, icon: Icon, title, sub, onClick, badge }) {
   return (
-    <button className={`ux-card k-${c}`} onClick={onClick}>
-      {badge ? <span className="ux-badge">{badge}</span> : null}
+    <button className="tool-card" onClick={onClick}>
+      {badge ? <span className="tool-badge">{badge}</span> : null}
       <span className={`flat-ic c-${c}`}><Icon width={17} height={17} /></span>
       <div>
         <Text size="2" weight="bold" as="div" style={{ letterSpacing: '-0.2px' }}>{title}</Text>
@@ -1340,52 +1340,65 @@ function UtilitiesPage({ onClose, onSpin, onQuiz, lastOrder, bomCount = 0 }) {
     )
   }
 
-  // ---------------- hub (vibrant second home) ----------------
+  // ---------------- hub: home-style gradient header + clean body (3D icons only) ----------------
   return (
     <div className="utilpage" role="dialog" aria-modal="true" aria-label="Utilities" tabIndex={-1} ref={a11y}>
-      <div className="util-head">
-        <button className="sheet-back" onClick={onClose} aria-label="Back" style={{ background: 'rgba(255,255,255,.7)' }}><ArrowLeftIcon /></button>
-        <Text size="1" weight="bold" as="div" mt="3" style={{ color: 'var(--green-11)', letterSpacing: '.5px' }}>YOUR TOOLKIT</Text>
-        <Heading as="h2" style={{ fontSize: 27, letterSpacing: '-0.8px' }}>Utilities</Heading>
-        <Text size="2" color="gray" as="div" mt="1">Calculate, quote, hire a pro & earn — all in one place</Text>
-      </div>
-      <div className="cp-body">
-        <button className="util-feat" onClick={() => push('spscalc')}>
-          <span className="util-feat-ic"><MixerHorizontalIcon width={24} height={24} /></span>
+      <div className="u2-head">
+        <Flex align="center" justify="between" className="u2-toprow">
+          <button className="sheet-back u2-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
+          <Text size="2" weight="bold" style={{ color: '#fff', letterSpacing: '.2px' }}>Utilities</Text>
+          <div style={{ width: 36, flex: 'none' }} />
+        </Flex>
+        {/* major calculator — in place of the home header's brand */}
+        <button className="u2-feat" onClick={() => push('spscalc')}>
+          <span className="u2-feat-ic"><MixerHorizontalIcon width={25} height={25} /></span>
           <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-            <span className="util-feat-tag">NEW · CALCULATOR</span>
-            <Text size="3" weight="bold" as="div" style={{ color: '#fff', letterSpacing: '-0.3px', marginTop: 3 }}>Partition BoM Calculator</Text>
-            <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.85)', marginTop: 1 }}>Linked & Syncro sliding systems → an instant, priced bill of materials</Text>
+            <span className="u2-feat-tag">FLAGSHIP CALCULATOR</span>
+            <Text size="4" weight="bold" as="div" style={{ letterSpacing: '-0.4px', marginTop: 2 }}>Partition BoM</Text>
+            <Text size="1" color="gray" as="div">Linked &amp; Syncro → instant priced BoM</Text>
           </div>
-          <ChevronRightIcon width={20} height={20} color="#fff" style={{ flex: 'none' }} />
+          <span className="u2-feat-go"><ChevronRightIcon width={18} height={18} /></span>
+        </button>
+      </div>
+
+      <div className="cp-body u2-body">
+        <Text size="1" weight="bold" className="u-seclabel" as="div">CALCULATORS</Text>
+        <div className="u2-grid">
+          <ToolCard c="violet" icon={DashboardIcon} title="Panel weight" sub="Ply · MDF · glass" badge="NEW" onClick={() => push('weightcalc')} />
+          <ToolCard c="blue" icon={RulerSquareIcon} title="Hardware calc" sub="Slides · hinges" onClick={() => push('calc')} />
+        </div>
+
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>QUOTES</Text>
+        <button className="util-row-card" onClick={() => push('bom')}>
+          <span className="flat-ic c-green"><FileTextIcon width={16} height={16} /></span>
+          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+            <Text size="2" weight="bold" as="div">BOM</Text>
+            <Text size="1" color="gray" as="div">Create &amp; manage customer bills of materials{bomCount > 0 ? ` · ${bomCount} saved` : ''}</Text>
+          </div>
+          <ChevronRightIcon width={16} height={16} color="var(--gray-8)" style={{ flex: 'none' }} />
         </button>
 
-        <div className="ux-grid">
-          <UxCard c="violet" icon={DashboardIcon} title="Panel weight" sub="Ply · MDF · glass" badge="NEW" onClick={() => push('weightcalc')} />
-          <UxCard c="blue" icon={RulerSquareIcon} title="Hardware calc" sub="Slides · hinges" onClick={() => push('calc')} />
-          <UxCard c="green" icon={FileTextIcon} title="BOM" sub={bomCount > 0 ? `${bomCount} saved · quote` : 'Create quotes'} onClick={() => push('bom')} />
-          <UxCard c="red" icon={ExclamationTriangleIcon} title="Claims & returns" sub="Raise a request" onClick={() => push('claims')} />
-          <UxCard c="orange" icon={PersonIcon} title="Find Carpenter" sub="Verified installers" onClick={() => { setProTab('carpenter'); push('pros') }} />
-          <UxCard c="indigo" icon={IdCardIcon} title="Find Architect" sub="Designers near you" onClick={() => { setProTab('designer'); push('pros') }} />
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>FIND A PRO</Text>
+        <div className="u2-grid">
+          <ToolCard c="orange" icon={PersonIcon} title="Find Carpenter" sub="Verified installers" onClick={() => { setProTab('carpenter'); push('pros') }} />
+          <ToolCard c="indigo" icon={IdCardIcon} title="Find Architect" sub="Designers near you" onClick={() => { setProTab('designer'); push('pros') }} />
         </div>
 
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 20, marginBottom: 2 }}>PLAY &amp; EARN</Text>
-        <div className="ux-rewards">
-          <button className="ux-reward r-spin" onClick={onSpin}>
-            <span className="ux-reward-ic"><RocketIcon width={20} height={20} /></span>
-            <div style={{ textAlign: 'left' }}>
-              <Text size="2" weight="bold" as="div" style={{ color: '#fff' }}>Spin &amp; Win</Text>
-              <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.82)' }}>Daily reward</Text>
-            </div>
-          </button>
-          <button className="ux-reward r-quiz" onClick={onQuiz}>
-            <span className="ux-reward-ic"><LightningBoltIcon width={20} height={20} /></span>
-            <div style={{ textAlign: 'left' }}>
-              <Text size="2" weight="bold" as="div" style={{ color: '#fff' }}>Daily Quiz</Text>
-              <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.82)' }}>Earn coins</Text>
-            </div>
-          </button>
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>PLAY &amp; EARN</Text>
+        <div className="u2-grid">
+          <ToolCard c="pink" icon={RocketIcon} title="Spin &amp; Win" sub="Daily reward" onClick={onSpin} />
+          <ToolCard c="amber" icon={LightningBoltIcon} title="Daily Quiz" sub="Earn coins" onClick={onQuiz} />
         </div>
+
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 18 }}>SUPPORT</Text>
+        <button className="util-row-card" onClick={() => push('claims')}>
+          <span className="flat-ic c-red"><ExclamationTriangleIcon width={16} height={16} /></span>
+          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+            <Text size="2" weight="bold" as="div">Claims &amp; returns</Text>
+            <Text size="1" color="gray" as="div">Raise a claim or return a delivered item</Text>
+          </div>
+          <ChevronRightIcon width={16} height={16} color="var(--gray-8)" style={{ flex: 'none' }} />
+        </button>
         <div style={{ height: 10 }} />
       </div>
     </div>
@@ -4397,13 +4410,11 @@ const ACCT_TILES = [
   ['lists', BookmarkIcon, 'Project', 'Lists'],
 ]
 
+// Calculators / BOM / Claims now live in the Utilities tab, so they're not duplicated here
 const ACCT_FLAT = [
-  ['calc', RulerSquareIcon, 'Calculators'],
-  ['claims', ExclamationTriangleIcon, 'Claims & returns'],
   ['site', SewingPinIcon, 'Submit site visit'],
   ['display', EyeOpenIcon, 'Display centre visit'],
   ['brand', SpeakerLoudIcon, 'Brand support'],
-  ['boms', FileTextIcon, 'BOM'],
   ['support', ChatBubbleIcon, 'Support'],
   ['notif', BellIcon, 'Notification preferences'],
   ['privacy', LockClosedIcon, 'Account privacy'],
