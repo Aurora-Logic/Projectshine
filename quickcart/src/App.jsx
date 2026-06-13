@@ -10,7 +10,7 @@ import {
   BarChartIcon, BellIcon, LockClosedIcon, ExitIcon, RulerSquareIcon, SewingPinIcon,
   EyeOpenIcon, ChatBubbleIcon, MobileIcon, EnvelopeClosedIcon, CalendarIcon,
   IdCardIcon, BookmarkIcon, ChevronLeftIcon, SpeakerLoudIcon, ExclamationTriangleIcon,
-  UploadIcon,
+  UploadIcon, DownloadIcon, Share2Icon, TrashIcon,
 } from '@radix-ui/react-icons'
 import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
@@ -20,7 +20,7 @@ import {
 } from './data.js'
 import { generateEstimate, EST_BRAND_DEFAULT, EST_FONTS, EST_SWATCHES, EST_PAPERS } from './lib/estimate.js'
 import { img, DAY, daypart, condition, sparkle, bulkNudge, scrollToId, dealSecsLeft } from './lib/util.js'
-import { usePersisted, safeGet, safeSet, safeRemove } from './lib/storage.js'
+import { usePersisted, safeGet, safeSet, safeRemove, getJSON, setJSON } from './lib/storage.js'
 import { useSkyTheme, useNextFrame, useSheetA11y, useCountUp } from './hooks.js'
 import { QtyCtx, PdpCtx, CartCtx, CartItemsCtx } from './contexts.js'
 import { Img } from './components/Img.jsx'
@@ -4144,7 +4144,8 @@ const ACCT_FLAT = [
   ['site', SewingPinIcon, 'Submit site visit'],
   ['display', EyeOpenIcon, 'Display centre visit'],
   ['brand', SpeakerLoudIcon, 'Brand support'],
-  ['estpdf', FileTextIcon, 'BOM PDF settings'],
+  ['boms', FileTextIcon, 'Saved estimates'],
+  ['estpdf', GearIcon, 'BOM PDF settings'],
   ['support', ChatBubbleIcon, 'Support'],
   ['notif', BellIcon, 'Notification preferences'],
   ['privacy', LockClosedIcon, 'Account privacy'],
@@ -4156,7 +4157,7 @@ const ACCT_TITLES = {
   gst: 'GST details', calc: 'Calculators', site: 'Submit site visit',
   display: 'Display centre visit', support: 'Support', claims: 'Claims & returns', brand: 'Brand support', addr: 'Address book',
   notif: 'Notification preferences', privacy: 'Account privacy',
-  estpdf: 'BOM PDF settings',
+  estpdf: 'BOM PDF settings', boms: 'Saved estimates',
 }
 
 /* Estimate PDF branding: company name, logo upload, text colours */
@@ -4531,6 +4532,7 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
       case 'notif': return <AcctNotif />
       case 'privacy': return <AcctPrivacy />
       case 'estpdf': return <AcctEstPdf />
+      case 'boms': return <AcctBoms />
       default: return null
     }
   }
@@ -5240,6 +5242,36 @@ function AddressSheet({ addrs, sel, onPick, onAdd, onClose }) {
   )
 }
 
+/* ---------------- Saved BOMs (#8) — persist, re-download, view, share ---------------- */
+const loadBoms = () => getJSON('qc-boms', [])
+const saveBom = (rec) => setJSON('qc-boms', [rec, ...loadBoms()].slice(0, 50))
+const fullBrand = (b) => ({ ...EST_BRAND_DEFAULT, ...b, dealer: { ...EST_BRAND_DEFAULT.dealer, ...(b && b.dealer) } })
+const bomItems = (rec) => rec.items.map(it => ({ p: { id: it.id, name: it.name, qty: it.qty, price: it.price, ph: it.ph }, n: it.n }))
+// re-generate a saved BOM with CURRENT branding but its original content + number/date/template
+const regenBom = (rec, out) => generateEstimate({
+  cust: rec.cust, items: bomItems(rec), bill: rec.bill,
+  brand: { ...fullBrand(getJSON('qc-est-brand', EST_BRAND_DEFAULT)), template: rec.template },
+  out, meta: { no: rec.no, date: rec.ts },
+})
+const viewBom = async (rec) => {
+  const { blob } = await regenBom(rec, 'blob')
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank')
+  setTimeout(() => URL.revokeObjectURL(url), 60000)
+}
+const shareBom = async (rec) => {
+  const { blob, filename } = await regenBom(rec, 'blob')
+  const file = new File([blob], filename, { type: 'application/pdf' })
+  const text = `Estimate ${rec.no} for ${rec.cust.name} — ₹${(rec.total || 0).toLocaleString('en-IN')}`
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: filename, text }) } catch { /* cancelled */ }
+  } else {
+    regenBom(rec, 'save') // desktop: no file-share — download so it can be attached
+  }
+}
+const waBom = (rec) => window.open(`https://wa.me/?text=${encodeURIComponent(`Estimate ${rec.no} for ${rec.cust.name} — ₹${(rec.total || 0).toLocaleString('en-IN')}. Sending the BOM PDF next.`)}`, '_blank')
+const mailBom = (rec) => { window.location.href = `mailto:?subject=${encodeURIComponent(`Estimate ${rec.no}`)}&body=${encodeURIComponent(`Estimate ${rec.no} for ${rec.cust.name} — ₹${(rec.total || 0).toLocaleString('en-IN')}.\n\nThe BOM PDF is attached separately.`)}` }
+
 function EstimateSheet({ items, bill, onClose }) {
   const [cust, setCust] = usePersisted('qc-est-cust', { name: '', phone: '', site: '', refBy: '' })
   const [brand] = usePersisted('qc-est-brand', EST_BRAND_DEFAULT)
@@ -5251,7 +5283,12 @@ function EstimateSheet({ items, bill, onClose }) {
     setErr(null)
     try {
       const billOut = { ...bill, special: Math.max(0, Number(special) || 0) }
-      await generateEstimate({ cust, items, bill: billOut, brand: { ...EST_BRAND_DEFAULT, ...brand, dealer: { ...EST_BRAND_DEFAULT.dealer, ...(brand && brand.dealer) } } })
+      const res = await generateEstimate({ cust, items, bill: billOut, brand: fullBrand(brand) })
+      saveBom({
+        no: res.no, ts: Date.now(), cust, total: res.grand, count: items.length,
+        template: brand.template || 'classic', bill: billOut,
+        items: items.map(({ p, n }) => ({ id: p.id, name: p.name, qty: p.qty, price: p.price, ph: p.ph, n })),
+      })
       onClose()
     } catch {
       setErr('Could not prepare the PDF. Check your connection and try again.')
@@ -5281,6 +5318,47 @@ function EstimateSheet({ items, bill, onClose }) {
         </button>
       </div>
     </div>
+  )
+}
+
+/* Saved estimates list — re-view / re-download / share past BOMs (#8) */
+function AcctBoms() {
+  const [boms, setBoms] = usePersisted('qc-boms', [])
+  const del = (no) => setBoms(boms.filter(b => b.no !== no))
+  if (!boms.length) {
+    return (
+      <Box p="6" style={{ textAlign: 'center' }}>
+        <FileTextIcon width={30} height={30} color="var(--gray-8)" />
+        <Text size="2" weight="bold" as="div" mt="3">No saved estimates yet</Text>
+        <Text size="1" color="gray" as="div" mt="1">Generate a BOM from the cart — every one you export is saved here to re-view, re-download or share.</Text>
+      </Box>
+    )
+  }
+  return (
+    <Box px="4" pt="2">
+      <Text size="1" color="gray" as="div" mb="2">{boms.length} saved estimate{boms.length === 1 ? '' : 's'} · stored on this device</Text>
+      {boms.map(rec => (
+        <div key={rec.no} className="cp-card">
+          <Flex justify="between" align="start" gap="3">
+            <div style={{ minWidth: 0 }}>
+              <Text size="2" weight="bold" as="div" truncate>{rec.cust.name || 'Customer'}</Text>
+              <Text size="1" color="gray" as="div">
+                {rec.no} · {new Date(rec.ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · {rec.count} item{rec.count === 1 ? '' : 's'}
+              </Text>
+            </div>
+            <Text size="2" weight="bold" style={{ flex: 'none', color: 'var(--green-11)' }}>₹{(rec.total || 0).toLocaleString('en-IN')}</Text>
+          </Flex>
+          <Flex gap="2" mt="3" wrap="wrap" align="center">
+            <button className="bom-act primary" onClick={() => shareBom(rec)}><Share2Icon width={14} height={14} /> Share</button>
+            <button className="bom-act" onClick={() => viewBom(rec)}><EyeOpenIcon width={14} height={14} /> View</button>
+            <button className="bom-act" onClick={() => regenBom(rec, 'save')}><DownloadIcon width={14} height={14} /> Download</button>
+            <button className="bom-act" onClick={() => waBom(rec)} aria-label="WhatsApp"><ChatBubbleIcon width={14} height={14} /></button>
+            <button className="bom-act" onClick={() => mailBom(rec)} aria-label="Email"><EnvelopeClosedIcon width={14} height={14} /></button>
+            <button className="bom-act del" onClick={() => del(rec.no)} aria-label="Delete" style={{ marginLeft: 'auto' }}><TrashIcon width={14} height={14} /></button>
+          </Flex>
+        </div>
+      ))}
+    </Box>
   )
 }
 

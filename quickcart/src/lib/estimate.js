@@ -107,7 +107,9 @@ const EST_FONTS = {
   helvetica: ['Arimo-Regular.ttf', 'Arimo-Bold.ttf', 'Helvetica'],
 }
 
-async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }) {
+// out: 'save' downloads · 'blob' returns { blob, filename, no } (for view/share)
+// meta: { no, date } re-uses a saved BOM's original number + date on re-generate
+async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT, out = 'save', meta = {} }) {
   const showImg = brand.photos !== false
   const thumb = (ph) => fetchB64(`https://images.unsplash.com/photo-${ph}?fit=crop&w=160&h=160&q=70&fm=jpg`)
     .then(b => 'data:image/jpeg;base64,' + b).catch(() => null)
@@ -147,8 +149,8 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   const ACCENT = hexToRgb(brand.accent || EST_BRAND_DEFAULT.accent)
   const FOOT = hexToRgb(brand.footer), SIDE = hexToRgb(brand.side), WORD = hexToRgb(brand.wordmark || '#1A1C1F')
   const inr = (n) => '₹' + n.toLocaleString('en-IN')
-  const no = `BOM-${String(Date.now()).slice(-6)}`
-  const d = new Date()
+  const no = meta.no || `BOM-${String(Date.now()).slice(-6)}`
+  const d = meta.date ? new Date(meta.date) : new Date()
   const today = [String(d.getDate()).padStart(2, '0'), String(d.getMonth() + 1).padStart(2, '0'), d.getFullYear()].join('.')
   const validDays = brand.validDays || 7
   const note0 = brand.note || EST_BRAND_DEFAULT.note
@@ -521,7 +523,10 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT }
   else if (brand.template === 'japan') renderJapan()
   else renderClassic()
 
-  doc.save(`${no} ${cust.name.trim()} BOM.pdf`)
+  const filename = `${no} ${cust.name.trim()} BOM.pdf`
+  if (out === 'blob') return { blob: doc.output('blob'), filename, no, grand }
+  doc.save(filename)
+  return { no, filename, grand }
 }
 
 export { generateEstimate, EST_BRAND_DEFAULT, EST_FONTS, EST_SWATCHES, EST_PAPERS, hexToRgb }
