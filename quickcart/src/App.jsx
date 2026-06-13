@@ -5768,10 +5768,11 @@ function AcctBoms({ onSettings }) {
   )
 }
 
-function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced }) {
+function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced, onClear }) {
   const a11y = useSheetA11y(onClose)
   const openQty = useContext(QtyCtx)
   const items = Object.values(cart.items)
+  const [clearConfirm, setClearConfirm] = useState(false)
   const [addrs, setAddrs] = useState(loadAddrs)
   const [sel, setSel] = useState(() => safeGet('qc-addr-sel') || loadAddrs()[0].id)
   const [addrSheet, setAddrSheet] = useState(false)
@@ -5845,6 +5846,13 @@ function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced
                 You're saving ₹{saving.toLocaleString('en-IN')} on this order
               </div>
             )}
+
+            <Flex align="center" justify="between" mt="2" mb="1" px="1">
+              <Text size="1" weight="bold" className="u-seclabel" as="div">{cart.count} ITEM{cart.count === 1 ? '' : 'S'} IN CART</Text>
+              <button className="cart-clear" onClick={() => setClearConfirm(true)}>
+                <TrashIcon width={13} height={13} /> Clear cart
+              </button>
+            </Flex>
 
             <div className="cp-card">
               {items.map(({ p, n }) => {
@@ -6130,6 +6138,19 @@ function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced
       )}
       {addrSheet && (
         <AddressSheet addrs={addrs} sel={sel} onPick={pickAddr} onAdd={addAddr} onClose={() => setAddrSheet(false)} />
+      )}
+      {clearConfirm && (
+        <div className="order-done" onClick={() => setClearConfirm(false)}>
+          <div className="od-card" onClick={(e) => e.stopPropagation()}>
+            <div className="od-ico-red"><TrashIcon width={24} height={24} /></div>
+            <Heading as="h2" size="5" mt="3" style={{ letterSpacing: '-0.3px' }}>Clear your cart?</Heading>
+            <Text size="2" color="gray" as="div" mt="2">This removes all {cart.count} item{cart.count === 1 ? '' : 's'} — you can’t undo it.</Text>
+            <Flex gap="2" mt="4">
+              <Button size="3" variant="soft" color="gray" radius="full" style={{ fontWeight: 800, flex: 1 }} onClick={() => setClearConfirm(false)}>Cancel</Button>
+              <Button size="3" color="red" radius="full" style={{ fontWeight: 800, flex: 1 }} onClick={() => { onClear(); setClearConfirm(false) }}>Clear cart</Button>
+            </Flex>
+          </div>
+        </div>
       )}
       {estSheet && (
         <EstimateSheet
@@ -6842,6 +6863,14 @@ export default function App() {
     }
   }, [])
 
+  const clearCart = useCallback(() => {
+    setCartItems({})
+    recoSrc.current = null
+    setReco(null)
+    setRecoStrip(null)
+    setLive('Cart cleared')
+  }, [])
+
   // #13 · one-click tier conversion — swap every cart line to its economy/standard/
   // premium equivalent (dealer-only; the customer BOM never shows these labels)
   const convertTier = useCallback((target) => {
@@ -7106,7 +7135,7 @@ export default function App() {
         <PageExit open={cartOpen}>
           {cartOpen && (
           <CartPage
-            cart={cart} onClose={closeCart} onChange={changeCart} onConvertTier={convertTier}
+            cart={cart} onClose={closeCart} onChange={changeCart} onConvertTier={convertTier} onClear={clearCart}
             onSettings={() => { closeCart(); acctInitSub.current = 'estpdf'; setAcctOpen(true) }}
             onPlaced={(rec) => {
               setOrder(rec)

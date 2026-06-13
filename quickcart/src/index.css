@@ -5992,3 +5992,13 @@ button.lg-link {
 .uh-read-hero { position: relative; flex: none; height: 34vh; min-height: 210px; }
 .uh-read-hero img { width: 100%; height: 100%; object-fit: cover; }
 .uh-read-k { position: absolute; left: 14px; bottom: 14px; background: rgba(255,255,255,.94); color: var(--gray-12); font-size: 10px; font-weight: 800; letter-spacing: .4px; border-radius: 999px; padding: 4px 10px; text-transform: uppercase; }
+
+/* clear-cart button (cart page) */
+.cart-clear {
+  display: inline-flex; align-items: center; gap: 5px; flex: none;
+  border: none; background: none; cursor: pointer; font-family: inherit;
+  font-size: 12px; font-weight: 700; color: var(--red-11);
+  padding: 4px 6px; border-radius: 8px; -webkit-tap-highlight-color: transparent;
+  transition: transform .12s ease;
+}
+.cart-clear:active { transform: scale(.95); }
