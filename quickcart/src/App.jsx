@@ -4277,8 +4277,46 @@ function AcctEstPdf() {
     im.src = url
     e.target.value = ''
   }
+  const [busy, setBusy] = useState(false)
+  const previewSample = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const items = NEW_EBCO.slice(0, 5).map((p, i) => ({ p, n: [4, 2, 6, 1, 3][i] }))
+      const itemTotal = items.reduce((s, { p, n }) => s + p.price * n, 0)
+      const bulkSave = Math.round(itemTotal * 0.04), schemeOff = Math.round(itemTotal * 0.05)
+      const bill = { itemTotal, bulkSave, schemeOff, slabPct: 5, fee: 0, express: false, toPay: itemTotal - bulkSave - schemeOff, special: 0 }
+      const cust = { name: 'Sample Customer', phone: '+91 90000 00000', site: 'Sample Site · Koramangala, Bengaluru', refBy: '' }
+      const { blob } = await generateEstimate({ cust, items, bill, brand, out: 'blob' })
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    } catch (e) { console.error('[QuickCart] sample preview failed', e) }
+    finally { setBusy(false) }
+  }
+  const tplName = { classic: 'Classic', bold: 'Bold', studio: 'Studio', japan: 'Japan' }[brand.template || 'classic']
+  const fontName = (EST_FONTS[brand.font || 'pjs'] || [])[2] || 'Plus Jakarta Sans'
+  const tplMeta = (brand.template || 'classic') === 'classic' ? `logos ${brand.logosPos || 'top'}` : '4 brand logos'
   return (
     <>
+      <div className="cp-card est-hero">
+        <div className="est-hero-prev">
+          <TplCard
+            k={brand.template || 'classic'} label={`Preview ${tplName} sample`}
+            active={false} paper={brand.paper || '#F8F5ED'} accent={brand.accent || '#CDE76D'}
+            onClick={previewSample}
+          />
+        </div>
+        <div className="est-hero-body">
+          <Text size="1" weight="bold" as="div" className="u-seclabel">YOUR CUSTOMER BOM</Text>
+          <Text size="5" weight="bold" as="div" style={{ letterSpacing: '-0.4px', lineHeight: 1.1, margin: '2px 0' }}>{brand.name}</Text>
+          <Text size="1" color="gray" as="div">{tplName} · {fontName} · {tplMeta}</Text>
+          <Button size="2" color="green" radius="full" highContrast onClick={previewSample} disabled={busy} style={{ fontWeight: 800, marginTop: 10, alignSelf: 'flex-start' }}>
+            <EyeOpenIcon /> {busy ? 'Building…' : 'Preview sample BOM'}
+          </Button>
+        </div>
+      </div>
+
       <div className="cp-card">
         <Text size="1" weight="bold" as="div" className="u-seclabel">
           COMPANY ON THE PDF

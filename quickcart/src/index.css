@@ -4602,6 +4602,35 @@ button.lg-link {
 }
 
 /* ---------- BOM template preview cards (settings) ---------- */
+/* #11 BOM settings hero — live template preview + sample CTA */
+.est-hero {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  background: linear-gradient(135deg, var(--green-2) 0%, var(--gray-1) 62%);
+  border: 1px solid var(--green-4) !important;
+}
+.est-hero-prev {
+  width: 82px;
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 12px;
+  transition: transform .12s ease;
+}
+.est-hero-prev:active { transform: scale(.96); }
+.est-hero-prev .tpl-card {
+  width: 100%;
+  display: block;
+  cursor: pointer;
+  border-color: var(--gray-5);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .14);
+}
+.est-hero-prev .tpl-lab { display: none; }
+.est-hero-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
 .tpl-grid { display: flex; gap: 10px; margin-top: 10px; }
 .tpl-card {
   flex: 1;
