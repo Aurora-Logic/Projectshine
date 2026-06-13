@@ -4512,7 +4512,7 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
       case 'notif': return <AcctNotif />
       case 'privacy': return <AcctPrivacy />
       case 'estpdf': return <AcctEstPdf />
-      case 'boms': return <AcctBoms />
+      case 'boms': return <AcctBoms onSettings={() => setSub('estpdf')} />
       default: return null
     }
   }
@@ -5308,43 +5308,78 @@ function EstimateSheet({ items, bill, onClose, onSettings }) {
   )
 }
 
-/* Saved estimates list — re-view / re-download / share past BOMs (#8) */
-function AcctBoms() {
+/* Saved BOMs list — re-view / re-download / share past BOMs (#8) */
+const BOM_TPL = {
+  classic: { c: 'green', label: 'Classic' },
+  bold: { c: 'amber', label: 'Bold' },
+  studio: { c: 'indigo', label: 'Studio' },
+}
+function AcctBoms({ onSettings }) {
   const [boms, setBoms] = usePersisted('qc-boms', [])
   const del = (no) => setBoms(boms.filter(b => b.no !== no))
+  const settingsBtn = onSettings && (
+    <button className="bom-settings-pill" onClick={onSettings}>
+      <GearIcon width={14} height={14} /> Settings
+    </button>
+  )
   if (!boms.length) {
     return (
-      <Box p="6" style={{ textAlign: 'center' }}>
-        <FileTextIcon width={30} height={30} color="var(--gray-8)" />
-        <Text size="2" weight="bold" as="div" mt="3">No saved BOMs yet</Text>
-        <Text size="1" color="gray" as="div" mt="1">Generate a BOM from the cart — every one you export is saved here to re-view, re-download or share.</Text>
+      <Box px="4" pt="3">
+        <div className="bom-empty">
+          <div className="bom-empty-ico"><FileTextIcon width={26} height={26} /></div>
+          <Text size="3" weight="bold" as="div" mt="3">No saved BOMs yet</Text>
+          <Text size="2" color="gray" as="div" mt="1" style={{ maxWidth: 290, marginInline: 'auto', lineHeight: 1.5 }}>
+            Generate a BOM from your cart — every one you export is saved here to re-view, re-download or share with customers.
+          </Text>
+          {onSettings && (
+            <Text size="1" color="gray" as="div" mt="4" mb="2">Set up your company branding first:</Text>
+          )}
+          <Flex justify="center">{settingsBtn}</Flex>
+        </div>
       </Box>
     )
   }
+  const totalVal = boms.reduce((s, b) => s + (b.total || 0), 0)
   return (
-    <Box px="4" pt="2">
-      <Text size="1" color="gray" as="div" mb="2">{boms.length} saved BOM{boms.length === 1 ? '' : 's'} · stored on this device</Text>
-      {boms.map(rec => (
-        <div key={rec.no} className="cp-card">
-          <Flex justify="between" align="start" gap="3">
-            <div style={{ minWidth: 0 }}>
-              <Text size="2" weight="bold" as="div" truncate>{rec.cust.name || 'Customer'}</Text>
-              <Text size="1" color="gray" as="div">
-                {rec.no} · {new Date(rec.ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · {rec.count} item{rec.count === 1 ? '' : 's'}
-              </Text>
-            </div>
-            <Text size="2" weight="bold" style={{ flex: 'none', color: 'var(--green-11)' }}>₹{(rec.total || 0).toLocaleString('en-IN')}</Text>
-          </Flex>
-          <Flex gap="2" mt="3" wrap="wrap" align="center">
-            <button className="bom-act primary" onClick={() => shareBom(rec)}><Share2Icon width={14} height={14} /> Share</button>
-            <button className="bom-act" onClick={() => viewBom(rec)}><EyeOpenIcon width={14} height={14} /> View</button>
-            <button className="bom-act" onClick={() => regenBom(rec, 'save')}><DownloadIcon width={14} height={14} /> Download</button>
-            <button className="bom-act" onClick={() => waBom(rec)} aria-label="WhatsApp"><ChatBubbleIcon width={14} height={14} /></button>
-            <button className="bom-act" onClick={() => mailBom(rec)} aria-label="Email"><EnvelopeClosedIcon width={14} height={14} /></button>
-            <button className="bom-act del" onClick={() => del(rec.no)} aria-label="Delete" style={{ marginLeft: 'auto' }}><TrashIcon width={14} height={14} /></button>
-          </Flex>
+    <Box px="4" pt="2" pb="4">
+      <div className="bom-head">
+        <div style={{ minWidth: 0 }}>
+          <Text size="3" weight="bold" as="div" style={{ letterSpacing: '-0.3px' }}>{boms.length} saved BOM{boms.length === 1 ? '' : 's'}</Text>
+          <Text size="1" color="gray" as="div">₹{totalVal.toLocaleString('en-IN')} quoted · saved on this device</Text>
         </div>
-      ))}
+        {settingsBtn}
+      </div>
+      {boms.map(rec => {
+        const tpl = BOM_TPL[rec.template] || BOM_TPL.classic
+        return (
+          <div key={rec.no} className="bom-card">
+            <Flex gap="3" align="center">
+              <div className={`bom-tile t-${tpl.c}`}><FileTextIcon width={20} height={20} /></div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <Text size="2" weight="bold" as="div" truncate>{rec.cust.name || 'Customer'}</Text>
+                <Text size="1" color="gray" as="div" truncate>
+                  {rec.no} · {new Date(rec.ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · {rec.count} item{rec.count === 1 ? '' : 's'}
+                </Text>
+              </div>
+              <div style={{ textAlign: 'right', flex: 'none' }}>
+                <Text size="3" weight="bold" as="div" style={{ color: 'var(--green-11)', letterSpacing: '-0.3px' }}>₹{(rec.total || 0).toLocaleString('en-IN')}</Text>
+                <span className={`bom-badge b-${tpl.c}`}>{tpl.label}</span>
+              </div>
+            </Flex>
+            <div className="bom-divider" />
+            <div className="bom-actions">
+              <button className="bom-act primary" onClick={() => shareBom(rec)}><Share2Icon width={14} height={14} /> Share</button>
+              <button className="bom-act" onClick={() => viewBom(rec)}><EyeOpenIcon width={14} height={14} /> View</button>
+              <button className="bom-act" onClick={() => regenBom(rec, 'save')}><DownloadIcon width={14} height={14} /> Download</button>
+            </div>
+            <div className="bom-actions2">
+              <button className="bom-ic" onClick={() => waBom(rec)} aria-label="Share on WhatsApp"><ChatBubbleIcon width={15} height={15} /> WhatsApp</button>
+              <button className="bom-ic" onClick={() => mailBom(rec)} aria-label="Send by email"><EnvelopeClosedIcon width={15} height={15} /> Email</button>
+              <button className="bom-ic del" onClick={() => del(rec.no)} aria-label="Delete BOM" style={{ marginLeft: 'auto' }}><TrashIcon width={15} height={15} /></button>
+            </div>
+          </div>
+        )
+      })}
     </Box>
   )
 }
