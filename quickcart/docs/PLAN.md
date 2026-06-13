@@ -74,16 +74,19 @@ Strong design showcase with real B2B domain thinking (credit ledger, reorder cad
 
 ### A5 · Architecture refactor (sequence matters; no features mid-split)
 
-> **13 Jun status:** parallel session closed (working tree clean). Split underway:
-> `money.js` (pure, unit-tested) + `lib/estimate.js` (the ~460-line BOM PDF system,
-> verified end-to-end) extracted. Remaining screen/component extraction continues
-> in this coordinated window. jspdf already lazy via dynamic `import()` (A6.5 head start).
+> **13 Jun status — FOUNDATION LAYER extracted** (bottom-up; each verified, build green):
+> `money.js`, `lib/estimate.js` (BOM PDF), `lib/util.js` (pure helpers),
+> `lib/storage.js` (safeStorage — fixes the white screen, see A5.5), `hooks.js`
+> (useSkyTheme/useNextFrame/useSheetA11y/useCountUp), `contexts.js`. App.jsx
+> **7,723 → 7,088**, zero runtime errors. Next phase: components/ then screens/
+> (the larger line-count reductions) — they now have modules to import from.
+> jspdf already lazy via dynamic `import()` (A6.5 head start).
 
-- [ ] **A5.1 L** *(in progress: money.js + lib/estimate.js extracted; App.jsx 7,723 → 7,265. Screens/hooks/components remain.)* Split App.jsx along its section banners → `lib/ hooks/ components/ screens/ games/ orders/`. No logic changes.
+- [ ] **A5.1 L** *(foundation done — 6 modules extracted, App.jsx 7,723 → 7,088. components/ + screens/ phase next.)* Split App.jsx along its section banners → `lib/ hooks/ components/ screens/ games/ orders/`. No logic changes.
 - [ ] **A5.2 M** Cart provider (`CartStateCtx` + stable dispatch); delete cart prop-drilling from ~30 signatures.
 - [ ] **A5.3 M** One `useHistoryLayer` + overlay stack replaces 9 pushState copies + render-time ref mutation; unwind entries on cross-navigation.
 - [ ] **A5.4 M** `route.js` with `parseRoute()`; parameterize `#pdp-<id>`.
-- [ ] **A5.5 M** `lib/storage.js`: KEYS enum + `safeStorage` (fixes storage-blocked white screen + `qc-addr-sel` format split); persist cart; `qc-version`.
+- [x] *(lib/storage.js: safeStorage + KEYS + usePersisted; all 37 localStorage calls migrated → never throw; storage-blocked mount verified. qc-addr-sel format unify / cart-persist / qc-version still open.)* **A5.5 M** `lib/storage.js`: KEYS enum + `safeStorage` (fixes storage-blocked white screen); persist cart; `qc-version`.
 - [ ] **A5.6 M** Structured data: `bulk: {thr, price, unit}`; real `cat/subcat` fields (CAT_RULES → dev check); config out of components.
 - [ ] **A5.7 M** `orders.js` (hydrate/history/stats + one `downloadDoc`); extract `ListingScreen` from CategoryPage/SearchSheet.
 - [ ] **A5.8 M** Correctness leftovers: tick `now` in OrderDetailPage; stop OrderCard interval post-delivery; clear quiz/spin timeouts; no storage writes in useState initializers; memo theme `T`; single day-source; rename one-letter props during split.
