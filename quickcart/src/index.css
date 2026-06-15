@@ -6015,11 +6015,31 @@ button.lg-link {
 .uc-est { display: flex; align-items: center; gap: 12px; margin: 14px -16px -16px; padding: 14px 16px; background: linear-gradient(135deg, var(--green-10), var(--green-11)); border-radius: 0 0 20px 20px; }
 .uc-est > div { flex: 1; }
 .uc-cta { flex: none; display: inline-flex; align-items: center; gap: 4px; background: #fff; color: var(--green-11); font-family: inherit; font-size: 13px; font-weight: 800; border: none; border-radius: 999px; padding: 11px 16px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.16); }
-.uc-calc2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.uc-calc { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--gray-4); border-radius: 16px; padding: 12px; cursor: pointer; font-family: inherit; text-align: left; }
-.uc-calc-tx { min-width: 0; }
-.uc-list { display: flex; flex-direction: column; background: #fff; border: 1px solid var(--gray-4); border-radius: 16px; overflow: hidden; }
-.uc-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: none; border: none; border-bottom: 1px solid var(--gray-3); cursor: pointer; font-family: inherit; text-align: left; width: 100%; }
-.uc-row:last-child { border-bottom: none; }
-.uc-row:active { background: var(--gray-2); }
-.uc-row-tx { flex: 1; min-width: 0; }
+
+
+/* ============ Utilities — rich calculator-first (home-grade) ============ */
+.wb-hero { position: relative; background: var(--hdr-d, #142F27); margin: 2px -14px 0; padding: 16px 14px 0; overflow: hidden; }
+.wb-hero-photo { position: absolute; top: 0; right: 0; width: 42%; height: 100%; object-fit: cover; }
+.wb-hero-scrim { position: absolute; inset: 0; background: linear-gradient(95deg, #142F27 0%, rgba(20,47,39,.55) 55%, rgba(20,47,39,.15) 100%); }
+.wb-hero-in { position: relative; z-index: 1; }
+.wb-live { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 900; letter-spacing: .6px; color: var(--gold-9); }
+.wb-live .oc-pulse { width: 7px; height: 7px; }
+.wb-panel { background: #fff; border-radius: 18px; padding: 14px; box-shadow: var(--sh-float); margin-top: 14px; }
+.wb-hero .uc-est { margin: 12px 0 0; border-radius: 16px; }
+.wb-est-thumb { width: 30px; height: 30px; border-radius: 999px; object-fit: cover; flex: none; border: 1.5px solid rgba(255,255,255,.5); }
+@keyframes linepop { from { transform: scale(.86); opacity: .5 } to { transform: scale(1); opacity: 1 } }
+.wb-est-val { animation: linepop .28s cubic-bezier(.34, 1.4, .64, 1); }
+.wb-twin { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 2px 0; }
+.wb-tcard { display: flex; flex-direction: column; background: #fff; border: 1px solid var(--gray-4); border-radius: 16px; overflow: hidden; box-shadow: var(--sh-card); cursor: pointer; font-family: inherit; text-align: left; }
+.wb-tcard-img { position: relative; display: block; height: 108px; }
+.wb-tcard-img img { width: 100%; height: 100%; object-fit: cover; }
+.wb-tcard-img::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.26), rgba(0,0,0,0) 55%); }
+.wb-tcard-bd { padding: 10px 12px 12px; }
+.wb-chip { position: absolute; top: 8px; left: 8px; z-index: 1; }
+.wb-pop { left: auto; right: 8px; }
+.wb-band { margin: 24px -14px 0; }
+.wb-feat { margin: 22px 0 0; }
+.wb-stiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; }
+.wb-stile { position: relative; min-height: 112px; }
+.wb-cat-imgwrap { position: relative; display: block; }
+.wb-cat-chip { position: absolute; top: 6px; left: 6px; z-index: 1; background: var(--green-9); color: #fff; font-size: 9px; font-weight: 800; border-radius: 999px; padding: 2px 7px; }

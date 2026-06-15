@@ -1371,28 +1371,22 @@ function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit }) {
     )
   }
 
-  // ---------------- hub: calculator-first workspace (do a job now; tools secondary) ----------------
-  const CALCS = [
-    ['Panel weight', 'Ply · MDF · glass', DashboardIcon, 'violet', () => push('weightcalc')],
-    ['Hardware calc', 'Slides · hinges', MixerHorizontalIcon, 'blue', () => push('calc')],
+  // ---------------- hub: rich calculator-first workspace (home-grade) ----------------
+  const COLLAGES = [
+    { label: 'Create a BoM', pill: '+ Branded PDF', phs: ['1594026112284-02bb6f3352fe', '1582139329536-e7284fece509', '1595428774223-ef52624120d2', '1556228453-efd6c1ff04f6'], go: () => push('bom') },
+    { label: 'Find a Carpenter', pill: '120+ verified', phs: ['1503387762-592deb58ef4e', '1556228453-efd6c1ff04f6', '1524758631624-e2822e304c36', '1484154218962-a197022b5858'], go: () => { setProTab('carpenter'); push('pros') } },
+    { label: 'Find an Architect', pill: 'Designers near you', phs: ['1497366216548-37526070297c', '1556911220-bff31c812dba', '1558997519-83ea9252edf8', '1565814329452-e1efa11c5b89'], go: () => { setProTab('designer'); push('pros') } },
   ]
-  const GROUPS = [
-    ['QUOTE & HIRE', [
-      ['Create a BOM', 'Branded customer PDF', FileTextIcon, 'green', () => push('bom')],
-      ['Find a Carpenter', 'Dealer-verified installers', PersonIcon, 'orange', () => { setProTab('carpenter'); push('pros') }],
-      ['Find an Architect', 'Designers near you', IdCardIcon, 'indigo', () => { setProTab('designer'); push('pros') }],
-    ]],
-    ['SERVICES', [
-      ['Site visit', 'Book a measurement', SewingPinIcon, 'amber', () => push('site')],
-      ['Display centre', 'Visit a showroom', EyeOpenIcon, 'pink', () => push('display')],
-      ['Brand support', 'Boards, demos & promo', BellIcon, 'blue', () => push('brand')],
-      ['Claims & returns', 'Raise or return', ExclamationTriangleIcon, 'red', () => push('claims')],
-    ]],
-    ['YOUR BUSINESS', [
-      ['Credit ledger', '30-day dealer credit', BarChartIcon, 'green', () => push('credit')],
-      ['Project lists', 'Saved fittings lists', BookmarkIcon, 'violet', () => push('lists')],
-      ['Dealer dashboard', 'Performance & targets', GearIcon, 'indigo', () => push('dash')],
-    ]],
+  const SERVICES = [
+    ['Site visit', '1582139329536-e7284fece509', SewingPinIcon, 'amber', null, () => push('site')],
+    ['Display centre', '1556911220-bff31c812dba', EyeOpenIcon, 'pink', null, () => push('display')],
+    ['Brand support', '1565814329452-e1efa11c5b89', BellIcon, 'blue', 'NEW', () => push('brand')],
+    ['Claims & returns', '1503387762-592deb58ef4e', ExclamationTriangleIcon, 'red', null, () => push('claims')],
+  ]
+  const BIZ = [
+    ['Credit ledger', '1484154218962-a197022b5858', '30-day credit', '₹2.4L free', () => push('credit')],
+    ['Project lists', '1489171078254-c3365d6e359f', 'Saved fittings', null, () => push('lists')],
+    ['Dashboard', '1497366216548-37526070297c', 'Targets & rank', '78%', () => push('dash')],
   ]
 
   return (
@@ -1407,63 +1401,117 @@ function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit }) {
       </div>
 
       <div className="cp-body">
-        {/* CALCULATOR HERO — the screen is the tool */}
-        <div className="uc-hero">
-          <Flex align="center" gap="2" mb="3">
-            <span className="uc-flag">FLAGSHIP</span>
-            <Box style={{ flex: 1, minWidth: 0 }}>
-              <Text size="3" weight="bold" as="div" style={{ letterSpacing: '-0.3px', lineHeight: 1.1 }}>Partition BoM</Text>
-              <Text size="1" color="gray" as="div">Linked &amp; 2-Way Syncro sliding systems</Text>
-            </Box>
-          </Flex>
-          <div className="seg">
-            {[['P', 'Aluminium'], ['W', 'Wood']].map(([k, t]) => (
-              <button key={k} className={`seg-b ${cMat === k ? 'on' : ''}`} onClick={() => setCMat(k)}>{t}</button>
+        <div className="wb-hero">
+          <Img className="wb-hero-photo" src={img('1558997519-83ea9252edf8', 400)} alt="" />
+          <div className="wb-hero-scrim" />
+          <div className="wb-hero-in">
+            <Flex align="center" gap="2">
+              <span className="uc-flag">FLAGSHIP CALCULATOR</span>
+              <span className="wb-live"><span className="oc-pulse" /> LIVE</span>
+            </Flex>
+            <Text size="5" weight="bold" as="div" style={{ color: '#fff', letterSpacing: '-0.4px', marginTop: 8 }}>Partition BoM</Text>
+            <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.72)' }}>Linked &amp; 2-Way Syncro sliding systems</Text>
+
+            <div className="wb-panel">
+              <div className="sc-mat">
+                {[['P', 'Aluminium', 'Profile frame'], ['W', 'Wood', 'Wooden doors']].map(([k, t, s]) => (
+                  <button key={k} className={`sc-mat-b ${cMat === k ? 'on' : ''}`} onClick={() => setCMat(k)}>
+                    <Text size="2" weight="bold" as="div">{t}</Text>
+                    <Text size="1" color="gray" as="div">{s}</Text>
+                  </button>
+                ))}
+              </div>
+              <div className="uc-fields" style={{ marginTop: 12 }}>
+                <div className="uc-field"><Text size="1" color="gray" as="div" mb="1">Total width</Text><Stepper value={cW} set={setCW} min={1} max={16} suffix="ft" /></div>
+                <div className="uc-field"><Text size="1" color="gray" as="div" mb="1">Height</Text><Stepper value={cH} set={setCH} min={1} max={10} suffix="ft" /></div>
+              </div>
+            </div>
+
+            <div className="uc-est">
+              <Img src={img('1558997519-83ea9252edf8', 80)} alt="" className="wb-est-thumb" />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.78)', fontWeight: 700 }}>Indicative · 4-door linked partition</Text>
+                <Heading as="div" size="7" key={ucTotal} className="wb-est-val" style={{ color: '#fff', letterSpacing: '-0.6px' }}>{ucInr(ucTotal)}</Heading>
+              </div>
+              <button className="uc-cta" onClick={() => push('spscalc')}>Build full BoM <ChevronRightIcon width={15} height={15} /></button>
+            </div>
+          </div>
+          <div className="fest-edge scallop" />
+          <div className="fest-dots d-dot">{Array.from({ length: 12 }, (_, i) => <span key={i} />)}</div>
+        </div>
+
+        <SectionHead title="Calculators" sub="Size it before you quote" onSeeAll={() => push('weightcalc')} />
+        <div className="wb-twin">
+          <button className="wb-tcard" onClick={() => push('weightcalc')}>
+            <span className="wb-tcard-img"><Img src={img('1489171078254-c3365d6e359f', 360)} alt="" /><span className="flat-ic c-violet wb-chip"><DashboardIcon width={15} height={15} /></span></span>
+            <span className="wb-tcard-bd"><Text size="2" weight="bold" as="div">Panel weight</Text><Text size="1" color="gray" as="div">Ply · MDF · glass</Text></span>
+          </button>
+          <button className="wb-tcard" onClick={() => push('calc')}>
+            <span className="wb-tcard-img"><Img src={img('1595428774223-ef52624120d2', 360)} alt="" /><span className="flat-ic c-blue wb-chip"><MixerHorizontalIcon width={15} height={15} /></span><span className="flash-off wb-pop">POPULAR</span></span>
+            <span className="wb-tcard-bd"><Text size="2" weight="bold" as="div">Hardware calc</Text><Text size="1" color="gray" as="div">Slides · hinges · closers</Text></span>
+          </button>
+        </div>
+
+        <div className="band-green wb-band">
+          <SectionHead title="Quote &amp; hire a job" sub="Win the job, then staff it" extra={<span className="save-pill">VERIFIED</span>} />
+          <div className="hscroll">
+            {COLLAGES.map(c => (
+              <button key={c.label} className="bs-card" onClick={c.go}>
+                <div className="bs-gridwrap">
+                  <div className="bs-grid">{c.phs.map((ph, i) => <Img key={i} src={img(ph, 180)} alt="" loading="lazy" />)}</div>
+                  <span className="bs-more">{c.pill}</span>
+                </div>
+                <Text as="div" weight="bold" style={{ fontSize: 15, letterSpacing: '-0.2px', padding: '14px 4px 2px' }}>{c.label}</Text>
+              </button>
             ))}
           </div>
-          <div className="uc-fields">
-            <div className="uc-field">
-              <Text size="1" color="gray" as="div" mb="1">Total width</Text>
-              <Stepper value={cW} set={setCW} min={1} max={16} suffix="ft" />
-            </div>
-            <div className="uc-field">
-              <Text size="1" color="gray" as="div" mb="1">Height</Text>
-              <Stepper value={cH} set={setCH} min={1} max={10} suffix="ft" />
-            </div>
+        </div>
+
+        <button className="kit-banner wb-feat" onClick={() => push('bom')}>
+          <Img src={img('1556228453-efd6c1ff04f6', 640)} alt="" />
+          <div className="kit-scrim" />
+          <div className="kit-copy">
+            <span className="kit-eyebrow">PROFESSIONAL · PDF</span>
+            <Text size="3" weight="bold" as="div" style={{ color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.2 }}>Send a quote that looks like a brand</Text>
+            <Text as="div" style={{ fontSize: 11.5, color: 'rgba(255,255,255,.85)', marginTop: 3, lineHeight: 1.4 }}>Your logo, your margins, customer-ready in 60 seconds</Text>
+            <span className="kit-cta">Create a BOM <ChevronRightIcon width={13} height={13} /></span>
           </div>
-          <div className="uc-est">
-            <div style={{ minWidth: 0 }}>
-              <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.78)', fontWeight: 700 }}>Indicative · 4-door linked</Text>
-              <Heading as="div" size="6" style={{ color: '#fff', letterSpacing: '-0.6px' }}>{ucInr(ucTotal)}</Heading>
-            </div>
-            <button className="uc-cta" onClick={() => push('spscalc')}>Build full BoM <ChevronRightIcon width={15} height={15} /></button>
+        </button>
+
+        <div className="band-flash wb-band">
+          <SectionHead title="Services &amp; support" sub="Book a visit or raise a claim" light />
+          <div className="wb-stiles">
+            {SERVICES.map(([label, ph, Icon, c, badge, go]) => (
+              <button key={label} className="fest-tile wb-stile" onClick={go}>
+                <Img src={img(ph, 300)} alt={label} loading="lazy" />
+                <span className={`flat-ic c-${c} wb-chip`}><Icon width={14} height={14} /></span>
+                {badge ? <span className="flash-off wb-pop">{badge}</span> : null}
+                <span className="fest-tl">{label}</span>
+              </button>
+            ))}
           </div>
         </div>
 
-        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 20, marginBottom: 8 }}>MORE CALCULATORS</Text>
-        <div className="uc-calc2">
-          {CALCS.map(([title, sub, Icon, c, go]) => (
-            <button key={title} className="uc-calc" onClick={go}>
-              <span className={`flat-ic c-${c}`}><Icon width={16} height={16} /></span>
-              <span className="uc-calc-tx"><Text size="2" weight="bold" as="div">{title}</Text><Text size="1" color="gray" as="div">{sub}</Text></span>
-            </button>
-          ))}
+        <div className="band-pink wb-band">
+          <SectionHead title="Your business" sub="Credit, lists &amp; performance" onSeeAll={() => push('dash')} />
+          <Grid columns="3" gapX="3" gapY="4" px="4">
+            {BIZ.map(([label, ph, stat, chip, go]) => (
+              <div className="cat-tile" key={label} {...btnish(go)}>
+                <span className="wb-cat-imgwrap">
+                  <Img className="cat-img" src={img(ph, 280)} alt={label} loading="lazy" />
+                  {chip ? <span className="wb-cat-chip">{chip}</span> : null}
+                </span>
+                <Text size="1" weight="bold" as="div" align="center" mt="2" truncate>{label}</Text>
+                <Text as="div" align="center" style={{ fontSize: 10.5, color: 'var(--gray-9)', fontWeight: 600 }}>{stat}</Text>
+              </div>
+            ))}
+          </Grid>
         </div>
 
-        {GROUPS.map(([label, rows]) => (
-          <div key={label}>
-            <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 20, marginBottom: 8 }}>{label}</Text>
-            <div className="uc-list">
-              {rows.map(([title, sub, Icon, c, go]) => (
-                <button key={title} className="uc-row" onClick={go}>
-                  <span className={`flat-ic c-${c}`}><Icon width={16} height={16} /></span>
-                  <span className="uc-row-tx"><Text size="2" weight="bold" as="div">{title}</Text><Text size="1" color="gray" as="div">{sub}</Text></span>
-                  <ChevronRightIcon width={16} height={16} color="var(--gray-8)" />
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+        <div className="sub-hero green-line" style={{ marginTop: 22 }}>
+          <span className="oc-pulse" />
+          <Text size="1" weight="bold">Indicative MRP · verify before quoting · prices update live</Text>
+        </div>
         <div style={{ height: 14 }} />
       </div>
     </div>
