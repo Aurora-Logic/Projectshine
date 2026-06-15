@@ -6007,3 +6007,19 @@ button.lg-link {
 .uh-blank { display: flex; align-items: center; justify-content: center; text-align: center; }
 .uh-blank-inner { color: var(--gray-10); padding: 48px 26px; }
 .uh-blank-inner svg { color: var(--gray-7); }
+
+/* ============ Utilities — calculator-first workspace ============ */
+.uc-hero { background: #fff; border: 1px solid var(--gray-4); border-radius: 20px; padding: 16px; box-shadow: var(--sh-card); margin-top: 2px; }
+.uc-flag { flex: none; align-self: flex-start; background: var(--gold-9); color: var(--gold-12); font-size: 9px; font-weight: 900; letter-spacing: .6px; border-radius: 999px; padding: 4px 9px; }
+.uc-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.uc-est { display: flex; align-items: center; gap: 12px; margin: 14px -16px -16px; padding: 14px 16px; background: linear-gradient(135deg, var(--green-10), var(--green-11)); border-radius: 0 0 20px 20px; }
+.uc-est > div { flex: 1; }
+.uc-cta { flex: none; display: inline-flex; align-items: center; gap: 4px; background: #fff; color: var(--green-11); font-family: inherit; font-size: 13px; font-weight: 800; border: none; border-radius: 999px; padding: 11px 16px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.16); }
+.uc-calc2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.uc-calc { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--gray-4); border-radius: 16px; padding: 12px; cursor: pointer; font-family: inherit; text-align: left; }
+.uc-calc-tx { min-width: 0; }
+.uc-list { display: flex; flex-direction: column; background: #fff; border: 1px solid var(--gray-4); border-radius: 16px; overflow: hidden; }
+.uc-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: none; border: none; border-bottom: 1px solid var(--gray-3); cursor: pointer; font-family: inherit; text-align: left; width: 100%; }
+.uc-row:last-child { border-bottom: none; }
+.uc-row:active { background: var(--gray-2); }
+.uc-row-tx { flex: 1; min-width: 0; }

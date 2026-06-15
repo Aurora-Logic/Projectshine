@@ -1054,11 +1054,11 @@ function Stepper({ value, set, min = 0, max = 16, suffix }) {
 }
 
 /* LSPS / SSPS sliding-partition BoM calculator — the flagship "3D" tool */
-function SpsCalc({ onBack }) {
+function SpsCalc({ onBack, init }) {
   const a11y = useSheetA11y(onBack)
-  const [material, setMaterial] = useState('P')
-  const [widthFt, setWidthFt] = useState(12)
-  const [heightFt, setHeightFt] = useState(9)
+  const [material, setMaterial] = useState(init?.material || 'P')
+  const [widthFt, setWidthFt] = useState(init?.widthFt || 12)
+  const [heightFt, setHeightFt] = useState(init?.heightFt || 9)
   const [lF, setLF] = useState(1)
   const [lM, setLM] = useState(3)
   const [sF, setSF] = useState(2)
@@ -1254,6 +1254,15 @@ function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit }) {
   const [rType, setRType] = useState('Carpenter')
   const [sent, setSent] = useState(false)
   const [openLearn, setOpenLearn] = useState(null)
+  // calculator-first hero state + live estimate (a typical 4-door linked partition)
+  const [cMat, setCMat] = useState('P')
+  const [cW, setCW] = useState(12)
+  const [cH, setCH] = useState(9)
+  const ucInr = (n) => '₹' + n.toLocaleString('en-IN')
+  const ucTotal = useMemo(() => {
+    try { return calculateBoM({ lspsFixedDoors: 1, lspsMovableDoors: 3, sspsFixedDoors: 0, sspsMovableDoors: 0, heightFt: cH, widthFt: cW, material: cMat }).lspsTotal }
+    catch { return 0 }
+  }, [cMat, cW, cH])
   const refer = (e) => {
     sparkle(e)
     setRefs([{ name: rName.trim(), phone: rPhone, type: rType, ts: Date.now() }, ...refs])
@@ -1275,7 +1284,7 @@ function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit }) {
     </div>
   )
 
-  if (view === 'spscalc') return <SpsCalc onBack={back} />
+  if (view === 'spscalc') return <SpsCalc onBack={back} init={{ material: cMat, widthFt: cW, heightFt: cH }} />
   if (view === 'weightcalc') return <WeightCalc onBack={back} />
   if (view === 'calc') return subScreen('Hardware calculators', 'Slides · hinges · closers', <AcctCalc />)
   if (view === 'bom') return subScreen('BOM', null, <AcctBoms onSettings={() => push('estpdf')} />)
@@ -1362,21 +1371,100 @@ function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit }) {
     )
   }
 
-  // ---------------- hub: intentionally blank — design removed for a fresh rebuild ----------------
+  // ---------------- hub: calculator-first workspace (do a job now; tools secondary) ----------------
+  const CALCS = [
+    ['Panel weight', 'Ply · MDF · glass', DashboardIcon, 'violet', () => push('weightcalc')],
+    ['Hardware calc', 'Slides · hinges', MixerHorizontalIcon, 'blue', () => push('calc')],
+  ]
+  const GROUPS = [
+    ['QUOTE & HIRE', [
+      ['Create a BOM', 'Branded customer PDF', FileTextIcon, 'green', () => push('bom')],
+      ['Find a Carpenter', 'Dealer-verified installers', PersonIcon, 'orange', () => { setProTab('carpenter'); push('pros') }],
+      ['Find an Architect', 'Designers near you', IdCardIcon, 'indigo', () => { setProTab('designer'); push('pros') }],
+    ]],
+    ['SERVICES', [
+      ['Site visit', 'Book a measurement', SewingPinIcon, 'amber', () => push('site')],
+      ['Display centre', 'Visit a showroom', EyeOpenIcon, 'pink', () => push('display')],
+      ['Brand support', 'Boards, demos & promo', BellIcon, 'blue', () => push('brand')],
+      ['Claims & returns', 'Raise or return', ExclamationTriangleIcon, 'red', () => push('claims')],
+    ]],
+    ['YOUR BUSINESS', [
+      ['Credit ledger', '30-day dealer credit', BarChartIcon, 'green', () => push('credit')],
+      ['Project lists', 'Saved fittings lists', BookmarkIcon, 'violet', () => push('lists')],
+      ['Dealer dashboard', 'Performance & targets', GearIcon, 'indigo', () => push('dash')],
+    ]],
+  ]
+
   return (
     <div className="utilpage" role="dialog" aria-modal="true" aria-label="Utilities" tabIndex={-1} ref={a11y}>
       <div className="pdp-head">
         <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
         <Box style={{ flex: 1, minWidth: 0 }}>
           <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Utilities</Heading>
+          <Text size="1" color="gray" as="div">Quote a job in seconds</Text>
         </Box>
+        <button className="sheet-back" onClick={() => push('bom')} aria-label="Saved BOMs"><BookmarkIcon width={17} height={17} /></button>
       </div>
-      <div className="cp-body uh-blank">
-        <div className="uh-blank-inner">
-          <GearIcon width={30} height={30} />
-          <Text size="3" weight="bold" as="div" mt="3">Utilities is being rebuilt</Text>
-          <Text size="2" color="gray" as="div" mt="1">A fresh dealer toolkit is on the way.</Text>
+
+      <div className="cp-body">
+        {/* CALCULATOR HERO — the screen is the tool */}
+        <div className="uc-hero">
+          <Flex align="center" gap="2" mb="3">
+            <span className="uc-flag">FLAGSHIP</span>
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <Text size="3" weight="bold" as="div" style={{ letterSpacing: '-0.3px', lineHeight: 1.1 }}>Partition BoM</Text>
+              <Text size="1" color="gray" as="div">Linked &amp; 2-Way Syncro sliding systems</Text>
+            </Box>
+          </Flex>
+          <div className="seg">
+            {[['P', 'Aluminium'], ['W', 'Wood']].map(([k, t]) => (
+              <button key={k} className={`seg-b ${cMat === k ? 'on' : ''}`} onClick={() => setCMat(k)}>{t}</button>
+            ))}
+          </div>
+          <div className="uc-fields">
+            <div className="uc-field">
+              <Text size="1" color="gray" as="div" mb="1">Total width</Text>
+              <Stepper value={cW} set={setCW} min={1} max={16} suffix="ft" />
+            </div>
+            <div className="uc-field">
+              <Text size="1" color="gray" as="div" mb="1">Height</Text>
+              <Stepper value={cH} set={setCH} min={1} max={10} suffix="ft" />
+            </div>
+          </div>
+          <div className="uc-est">
+            <div style={{ minWidth: 0 }}>
+              <Text size="1" as="div" style={{ color: 'rgba(255,255,255,.78)', fontWeight: 700 }}>Indicative · 4-door linked</Text>
+              <Heading as="div" size="6" style={{ color: '#fff', letterSpacing: '-0.6px' }}>{ucInr(ucTotal)}</Heading>
+            </div>
+            <button className="uc-cta" onClick={() => push('spscalc')}>Build full BoM <ChevronRightIcon width={15} height={15} /></button>
+          </div>
         </div>
+
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 20, marginBottom: 8 }}>MORE CALCULATORS</Text>
+        <div className="uc-calc2">
+          {CALCS.map(([title, sub, Icon, c, go]) => (
+            <button key={title} className="uc-calc" onClick={go}>
+              <span className={`flat-ic c-${c}`}><Icon width={16} height={16} /></span>
+              <span className="uc-calc-tx"><Text size="2" weight="bold" as="div">{title}</Text><Text size="1" color="gray" as="div">{sub}</Text></span>
+            </button>
+          ))}
+        </div>
+
+        {GROUPS.map(([label, rows]) => (
+          <div key={label}>
+            <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 20, marginBottom: 8 }}>{label}</Text>
+            <div className="uc-list">
+              {rows.map(([title, sub, Icon, c, go]) => (
+                <button key={title} className="uc-row" onClick={go}>
+                  <span className={`flat-ic c-${c}`}><Icon width={16} height={16} /></span>
+                  <span className="uc-row-tx"><Text size="2" weight="bold" as="div">{title}</Text><Text size="1" color="gray" as="div">{sub}</Text></span>
+                  <ChevronRightIcon width={16} height={16} color="var(--gray-8)" />
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div style={{ height: 14 }} />
       </div>
     </div>
   )
