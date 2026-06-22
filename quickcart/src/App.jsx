@@ -1240,8 +1240,40 @@ function WeightCalc({ onBack }) {
 
 /* ============ Utilities hub — helper components (place ABOVE UtilitiesPage) ============ */
 
-// Chunky raised 3D mode tile (Instamart FOOD/INSTAMART/... pillar). Active tile pops white.
-function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit }) {
+// Rotating search-pill hints for the Utilities header (home-style chrome).
+const UTIL_HINTS = [
+  'Search “partition BoM”', 'Search “panel weight”', 'Search “branded quote PDF”',
+  'Search “hardware calc”', 'Search “find a carpenter”',
+]
+
+// "Most-used tools" rail — the Bestsellers analog: 2×2 photo collages + scroll progress.
+function UtilToolsRail({ tools }) {
+  const ref = useRef(null)
+  const [idx, setIdx] = useState(0)
+  const onScroll = () => {
+    const el = ref.current
+    if (el) setIdx(Math.min(tools.length - 1, Math.round(el.scrollLeft / 180)))
+  }
+  return (
+    <Box pt="5" className="cv" data-sec="tools">
+      <SectionHead title="Most-used tools" sub="Your top utilities this month" />
+      <div className="hscroll" ref={ref} onScroll={onScroll}>
+        {tools.map(t => (
+          <button key={t.label} className="bs-card" onClick={t.go}>
+            <div className="bs-gridwrap">
+              <div className="bs-grid">{t.phs.map((ph, i) => <Img key={i} src={img(ph, 180)} alt="" loading="lazy" />)}</div>
+              <span className="bs-more">{t.pill}</span>
+            </div>
+            <Text as="div" weight="bold" style={{ fontSize: 15, letterSpacing: '-0.2px', padding: '14px 4px 2px' }}>{t.label}</Text>
+          </button>
+        ))}
+      </div>
+      <div className="bs-prog">{tools.map((_, i) => <span key={i} className={i === idx ? 'on' : ''} />)}</div>
+    </Box>
+  )
+}
+
+function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit, onSpin, onQuiz, bomCount = 0 }) {
   const a11y = useSheetA11y(onClose)
   const [stack, setStack] = useState(['hub'])
   const view = stack[stack.length - 1]
@@ -1263,6 +1295,24 @@ function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit }) {
     try { return calculateBoM({ lspsFixedDoors: 1, lspsMovableDoors: 3, sspsFixedDoors: 0, sspsMovableDoors: 0, heightFt: cH, widthFt: cW, material: cMat }).lspsTotal }
     catch { return 0 }
   }, [cMat, cW, cH])
+
+  // home-style header chrome: scoped in-modal scroll, rotating hint, cart + tab state
+  const bodyRef = useRef(null)
+  const [hint, setHint] = useState(0)
+  const [tab, setTab] = useState('all')
+  const [compact, setCompact] = useState(false)  // collapse the header once the feed scrolls
+  useEffect(() => {
+    const t = setInterval(() => setHint(h => (h + 1) % UTIL_HINTS.length), 2600)
+    return () => clearInterval(t)
+  }, [])
+  const openCart = useContext(CartCtx)
+  const cartItems = useContext(CartItemsCtx)
+  const cartCount = Object.values(cartItems || {}).reduce((s, it) => s + (it?.n || 0), 0)
+  const scrollSec = (sec) => {
+    const el = bodyRef.current?.querySelector(`[data-sec="${sec}"]`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   const refer = (e) => {
     sparkle(e)
     setRefs([{ name: rName.trim(), phone: rPhone, type: rType, ts: Date.now() }, ...refs])
@@ -1371,7 +1421,13 @@ function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit }) {
     )
   }
 
-  // ---------------- hub: rich calculator-first workspace (home-grade) ----------------
+  // ---------------- hub: home-style feed (shared DNA, distinct tools content) ----------------
+  const TOOLS = [
+    { label: 'Partition BoM', pill: 'LIVE', go: () => push('spscalc'), phs: ['1558997519-83ea9252edf8', '1595428774223-ef52624120d2', '1594026112284-02bb6f3352fe', '1556228453-efd6c1ff04f6'] },
+    { label: 'Branded BoM PDF', pill: 'PRO · PDF', go: () => push('bom'), phs: ['1582139329536-e7284fece509', '1556228453-efd6c1ff04f6', '1484154218962-a197022b5858', '1595428774223-ef52624120d2'] },
+    { label: 'Hardware calc', pill: 'POPULAR', go: () => push('calc'), phs: ['1595428774223-ef52624120d2', '1594026112284-02bb6f3352fe', '1556911220-bff31c812dba', '1489171078254-c3365d6e359f'] },
+    { label: 'Panel weight', pill: 'QUICK', go: () => push('weightcalc'), phs: ['1489171078254-c3365d6e359f', '1582139329536-e7284fece509', '1558997519-83ea9252edf8', '1565814329452-e1efa11c5b89'] },
+  ]
   const COLLAGES = [
     { label: 'Create a BoM', pill: '+ Branded PDF', phs: ['1594026112284-02bb6f3352fe', '1582139329536-e7284fece509', '1595428774223-ef52624120d2', '1556228453-efd6c1ff04f6'], go: () => push('bom') },
     { label: 'Find a Carpenter', pill: '120+ verified', phs: ['1503387762-592deb58ef4e', '1556228453-efd6c1ff04f6', '1524758631624-e2822e304c36', '1484154218962-a197022b5858'], go: () => { setProTab('carpenter'); push('pros') } },
@@ -1388,20 +1444,75 @@ function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit }) {
     ['Project lists', '1489171078254-c3365d6e359f', 'Saved fittings', null, () => push('lists')],
     ['Dashboard', '1497366216548-37526070297c', 'Targets & rank', '78%', () => push('dash')],
   ]
+  const TABS = [
+    ['all', 'All', DashboardIcon, 'top'],
+    ['tools', 'Tools', MixerHorizontalIcon, 'tools'],
+    ['quote', 'Quotes', FileTextIcon, 'quote'],
+    ['svc', 'Services', GearIcon, 'services'],
+    ['biz', 'Business', BarChartIcon, 'business'],
+  ]
 
   return (
     <div className="utilpage" role="dialog" aria-modal="true" aria-label="Utilities" tabIndex={-1} ref={a11y}>
-      <div className="pdp-head">
-        <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
-        <Box style={{ flex: 1, minWidth: 0 }}>
-          <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Utilities</Heading>
-          <Text size="1" color="gray" as="div">Quote a job in seconds</Text>
-        </Box>
-        <button className="sheet-back" onClick={() => push('bom')} aria-label="Saved BOMs"><BookmarkIcon width={17} height={17} /></button>
+      <div className={`util-top ${compact ? 'util-compact' : ''}`}>
+        <Flex align="center" gap="3" className="util-toprow">
+          <button className="avatar util-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon width={18} height={18} /></button>
+          <Box flexGrow="1" style={{ minWidth: 0 }}>
+            <Heading as="h2" size="4" style={{ color: '#fff', letterSpacing: '-0.3px' }}>Utilities</Heading>
+            <Text size="1" as="div" truncate className="util-sub" style={{ color: 'rgba(255,255,255,.8)' }}>Quote, calculate &amp; run your business</Text>
+          </Box>
+          <div className="avatar" {...btnish(() => push('bom'))} aria-label="Saved BOMs">
+            <BookmarkIcon width={17} height={17} />
+            {bomCount > 0 && <span className="cart-badge">{bomCount > 9 ? '9+' : bomCount}</span>}
+          </div>
+          <div className="avatar" onClick={openCart || undefined} aria-label="Cart">
+            <CartGlyph />
+            {cartCount > 0 && <span className="cart-badge">{cartCount > 9 ? '9+' : cartCount}</span>}
+          </div>
+        </Flex>
+
+        <TextField.Root
+          size="3" radius="full" placeholder={UTIL_HINTS[hint]} readOnly
+          onClick={() => { setTab('tools'); scrollSec('tools') }}
+          onFocus={(e) => { e.target.blur(); setTab('tools'); scrollSec('tools') }}
+          style={{ background: '#fff', boxShadow: '0 3px 10px rgba(0,0,0,.2)', cursor: 'pointer' }}
+        >
+          <TextField.Slot><MagnifyingGlassIcon width={17} height={17} /></TextField.Slot>
+        </TextField.Root>
+
+        <div className="rewards-strip" {...btnish(() => scrollSec('journey'))}>
+          <StarFilledIcon width={14} height={14} color="var(--amber-9)" style={{ flex: 'none' }} />
+          <span className="tier-mini" style={{ background: '#98A2B3' }} />
+          <Text size="1" weight="bold" truncate style={{ flex: 1, minWidth: 0 }}>
+            Silver dealer · ahead of {Math.round(((MY_RANK.of - MY_RANK.rank) / MY_RANK.of) * 100)}% in your region
+          </Text>
+          <Text size="1" weight="bold" color="amber" style={{ flex: 'none' }}>View journey</Text>
+          <ChevronRightIcon width={13} height={13} color="var(--amber-11)" style={{ flex: 'none' }} />
+        </div>
+
+        <div className="tgt-mini" {...btnish(() => scrollSec('journey'))}>
+          <Text size="1" weight="bold" style={{ color: '#fff', flex: 'none' }}>Monthly target</Text>
+          <div className="tgt-mini-bar">
+            <div className="tgt-mini-fill" style={{ width: `${Math.min(100, Math.round((TARGETS.monthly.done / TARGETS.monthly.target) * 100))}%` }} />
+          </div>
+          <Text size="1" weight="bold" style={{ color: '#fff', flex: 'none' }}>
+            {Math.round((TARGETS.monthly.done / TARGETS.monthly.target) * 100)}% · ₹{Math.round((TARGETS.monthly.target - TARGETS.monthly.done) / 1000)}k to go
+          </Text>
+          <ChevronRightIcon width={12} height={12} color="rgba(255,255,255,.7)" style={{ flex: 'none' }} />
+        </div>
+
+        <div className="tabs-t util-tabs">
+          {TABS.map(([key, label, Icon, sec]) => (
+            <button key={key} className={`tab-t ${key === tab ? 'active' : ''}`} onClick={() => { setTab(key); scrollSec(sec) }}>
+              <span className="tab-chip"><Icon width={18} height={18} color="var(--green-11)" /></span>
+              <span className="lb">{label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="cp-body">
-        <div className="wb-hero">
+      <div className="cp-body" ref={bodyRef} onScroll={(e) => setCompact(e.currentTarget.scrollTop > 40)}>
+        <div className="wb-hero" data-sec="top">
           <Img className="wb-hero-photo" src={img('1558997519-83ea9252edf8', 400)} alt="" />
           <div className="wb-hero-scrim" />
           <div className="wb-hero-in">
@@ -1440,19 +1551,11 @@ function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit }) {
           <div className="fest-dots d-dot">{Array.from({ length: 12 }, (_, i) => <span key={i} />)}</div>
         </div>
 
-        <SectionHead title="Calculators" sub="Size it before you quote" onSeeAll={() => push('weightcalc')} />
-        <div className="wb-twin">
-          <button className="wb-tcard" onClick={() => push('weightcalc')}>
-            <span className="wb-tcard-img"><Img src={img('1489171078254-c3365d6e359f', 360)} alt="" /><span className="flat-ic c-violet wb-chip"><DashboardIcon width={15} height={15} /></span></span>
-            <span className="wb-tcard-bd"><Text size="2" weight="bold" as="div">Panel weight</Text><Text size="1" color="gray" as="div">Ply · MDF · glass</Text></span>
-          </button>
-          <button className="wb-tcard" onClick={() => push('calc')}>
-            <span className="wb-tcard-img"><Img src={img('1595428774223-ef52624120d2', 360)} alt="" /><span className="flat-ic c-blue wb-chip"><MixerHorizontalIcon width={15} height={15} /></span><span className="flash-off wb-pop">POPULAR</span></span>
-            <span className="wb-tcard-bd"><Text size="2" weight="bold" as="div">Hardware calc</Text><Text size="1" color="gray" as="div">Slides · hinges · closers</Text></span>
-          </button>
-        </div>
+        <UtilToolsRail tools={TOOLS} />
 
-        <div className="band-green wb-band">
+        <GameRow onSpin={onSpin} />
+
+        <div className="band-green wb-band" data-sec="quote">
           <SectionHead title="Quote &amp; hire a job" sub="Win the job, then staff it" extra={<span className="save-pill">VERIFIED</span>} />
           <div className="hscroll">
             {COLLAGES.map(c => (
@@ -1478,7 +1581,7 @@ function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit }) {
           </div>
         </button>
 
-        <div className="band-flash wb-band">
+        <div className="band-flash wb-band" data-sec="services">
           <SectionHead title="Services &amp; support" sub="Book a visit or raise a claim" light />
           <div className="wb-stiles">
             {SERVICES.map(([label, ph, Icon, c, badge, go]) => (
@@ -1492,7 +1595,18 @@ function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit }) {
           </div>
         </div>
 
-        <div className="band-pink wb-band">
+        <button className="util-quiz" onClick={() => onQuiz && onQuiz()}>
+          <div className="util-quiz-bd">
+            <span className="util-quiz-k">TONIGHT’S TABLE · QUIZ</span>
+            <Text size="3" weight="bold" as="div" style={{ color: '#fff', letterSpacing: '-0.2px', lineHeight: 1.2 }}>Know your hardware? Win ₹75 off</Text>
+            <Text size="1" as="div" style={{ color: 'rgba(255,243,209,.78)', marginTop: 3 }}>3 questions · 10s each · banked to your next bill</Text>
+          </div>
+          <span className="util-quiz-cta">Play now <ChevronRightIcon width={14} height={14} /></span>
+        </button>
+
+        <div data-sec="journey"><Leaderboard /></div>
+
+        <div className="band-pink wb-band" data-sec="business">
           <SectionHead title="Your business" sub="Credit, lists &amp; performance" onSeeAll={() => push('dash')} />
           <Grid columns="3" gapX="3" gapY="4" px="4">
             {BIZ.map(([label, ph, stat, chip, go]) => (
@@ -5599,7 +5713,7 @@ function AddressSheet({ addrs, sel, onPick, onAdd, onClose }) {
 const loadBoms = () => getJSON('qc-boms', [])
 const saveBom = (rec) => setJSON('qc-boms', [rec, ...loadBoms()].slice(0, 50))
 const fullBrand = (b) => ({ ...EST_BRAND_DEFAULT, ...b, dealer: { ...EST_BRAND_DEFAULT.dealer, ...(b && b.dealer) } })
-const bomItems = (rec) => rec.items.map(it => ({ p: { id: it.id, name: it.name, qty: it.qty, price: it.price, ph: it.ph }, n: it.n }))
+const bomItems = (rec) => rec.items.map(it => ({ p: { id: it.id, name: it.name, qty: it.qty, price: it.price, ph: it.ph }, n: it.n, disc: it.disc || 0 }))
 // re-generate a saved BOM with CURRENT branding but its original content + number/date/template
 const regenBom = (rec, out) => generateEstimate({
   cust: rec.cust, items: bomItems(rec), bill: rec.bill,
@@ -5629,18 +5743,25 @@ function EstimateSheet({ items, bill, onClose, onSettings }) {
   const [cust, setCust] = usePersisted('qc-est-cust', { name: '', phone: '', site: '', refBy: '' })
   const [brand] = usePersisted('qc-est-brand', EST_BRAND_DEFAULT)
   const [special, setSpecial] = useState('')
+  const [disc, setDisc] = useState({})
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
+  const discOf = (p, n) => Math.min(p.price * n, Math.max(0, Number(disc[p.id]) || 0))
+  const grossItems = items.reduce((s, { p, n }) => s + p.price * n, 0)
+  const lineDisc = items.reduce((s, { p, n }) => s + discOf(p, n), 0)
+  const specialN = Math.max(0, Number(special) || 0)
+  const grandTotal = Math.max(0, bill.toPay - lineDisc - specialN)
   const go = async () => {
     setBusy(true)
     setErr(null)
     try {
-      const billOut = { ...bill, special: Math.max(0, Number(special) || 0) }
-      const res = await generateEstimate({ cust, items, bill: billOut, brand: fullBrand(brand) })
+      const itemsOut = items.map(it => ({ ...it, disc: discOf(it.p, it.n) }))
+      const billOut = { ...bill, special: specialN }
+      const res = await generateEstimate({ cust, items: itemsOut, bill: billOut, brand: fullBrand(brand) })
       saveBom({
         no: res.no, ts: Date.now(), cust, total: res.grand, count: items.length,
         template: brand.template || 'classic', bill: billOut,
-        items: items.map(({ p, n }) => ({ id: p.id, name: p.name, qty: p.qty, price: p.price, ph: p.ph, n })),
+        items: items.map(({ p, n }) => ({ id: p.id, name: p.name, qty: p.qty, price: p.price, ph: p.ph, n, disc: discOf(p, n) })),
       })
       onClose()
     } catch {
@@ -5662,15 +5783,52 @@ function EstimateSheet({ items, bill, onClose, onSettings }) {
           )}
         </Flex>
         <Text size="1" color="gray" as="div" mt="1">
-          {items.length} item{items.length === 1 ? '' : 's'} · ₹{bill.toPay.toLocaleString('en-IN')} — exported as a branded BOM PDF for your customer.
+          {items.length} item{items.length === 1 ? '' : 's'} · ₹{grandTotal.toLocaleString('en-IN')} — branded BOM PDF for your customer.
         </Text>
-        {/* 16px font so iOS Safari doesn't zoom the sheet on focus */}
+
+        <Text size="1" weight="bold" className="u-seclabel" as="div" style={{ marginTop: 14 }}>LINE ITEMS · set a discount per line</Text>
+        <div className="bom-lines">
+          {items.map(({ p, n }) => {
+            const gross = p.price * n
+            const d = discOf(p, n)
+            return (
+              <div className="bom-line" key={p.id}>
+                <Img src={img(p.ph, 80)} alt="" />
+                <div className="bom-line-tx">
+                  <Text size="1" weight="bold" as="div" className="clamp1">{p.name}</Text>
+                  <Text as="div" style={{ fontSize: 10.5, color: 'var(--gray-10)' }}>{n} × ₹{p.price.toLocaleString('en-IN')} = ₹{gross.toLocaleString('en-IN')}</Text>
+                </div>
+                <div className="bom-disc">
+                  <span>₹</span>
+                  <input
+                    type="number" inputMode="numeric" min="0" max={gross} placeholder="0" aria-label={`Discount for ${p.name}`}
+                    value={disc[p.id] || ''} onChange={(e) => setDisc({ ...disc, [p.id]: e.target.value })}
+                  />
+                </div>
+                <Text size="1" weight="bold" as="div" className="bom-net">₹{(gross - d).toLocaleString('en-IN')}</Text>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="bom-tot">
+          <Flex justify="between"><Text size="1" color="gray">Items total</Text><Text size="1" weight="bold">₹{grossItems.toLocaleString('en-IN')}</Text></Flex>
+          {lineDisc > 0 && (
+            <Flex justify="between" mt="1"><Text size="1" style={{ color: 'var(--green-11)' }}>Line discounts</Text><Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>−₹{lineDisc.toLocaleString('en-IN')}</Text></Flex>
+          )}
+          {specialN > 0 && (
+            <Flex justify="between" mt="1"><Text size="1" style={{ color: 'var(--green-11)' }}>Extra discount</Text><Text size="1" weight="bold" style={{ color: 'var(--green-11)' }}>−₹{specialN.toLocaleString('en-IN')}</Text></Flex>
+          )}
+          <div className="cp-divider" style={{ margin: '8px 0' }} />
+          <Flex justify="between"><Text size="2" weight="bold">Customer total</Text><Text size="2" weight="bold">₹{grandTotal.toLocaleString('en-IN')}</Text></Flex>
+        </div>
+
         <Flex direction="column" gap="2" mt="3">
           <input className="cp-input" style={{ fontSize: 16 }} placeholder="Customer / site name" autoComplete="name" value={cust.name} onChange={f('name')} />
           <input className="cp-input" style={{ fontSize: 16 }} type="tel" inputMode="tel" autoComplete="tel" placeholder="Phone (optional)" value={cust.phone} onChange={f('phone')} />
           <textarea className="cp-note" style={{ fontSize: 16 }} rows={2} placeholder="Site address (optional)" value={cust.site} onChange={f('site')} />
           <input className="cp-input" style={{ fontSize: 16 }} placeholder="Ref. by (optional) — e.g. visited earlier" value={cust.refBy || ''} onChange={f('refBy')} />
-          <input className="cp-input" style={{ fontSize: 16 }} type="number" inputMode="numeric" min="0" placeholder="Special discount ₹ for this customer (optional)" value={special} onChange={(e) => setSpecial(e.target.value)} />
+          <input className="cp-input" style={{ fontSize: 16 }} type="number" inputMode="numeric" min="0" placeholder="Extra discount ₹ on the whole bill (optional)" value={special} onChange={(e) => setSpecial(e.target.value)} />
         </Flex>
         {err && <Text size="1" as="div" mt="2" style={{ color: 'var(--red-10)', fontWeight: 700 }}>{err}</Text>}
         <button className="qs-cta" style={{ justifyContent: 'center', gap: 7 }} disabled={!cust.name.trim() || busy} onClick={go}>

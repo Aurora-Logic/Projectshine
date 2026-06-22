@@ -164,8 +164,11 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT, 
   const useScheme = brand.showScheme !== false              // #1 dealer can drop the volume scheme from the customer BOM
   const special = Math.max(0, Number(bill.special) || 0)    // #5 optional per-customer discount
   const effScheme = useScheme ? bill.schemeOff : 0
-  // BOM total = cart total, + scheme added back when the dealer hides it, − the special discount
-  const subtotal = Math.max(0, bill.toPay + (bill.schemeOff - effScheme) - special)
+  // per-line discounts the dealer set in the BOM sheet
+  const lineDisc = items.reduce((s, it) => s + Math.min(it.p.price * it.n, Math.max(0, it.disc || 0)), 0)
+  const anyDisc = items.some(it => (it.disc || 0) > 0)
+  // BOM total = cart total, + scheme added back when the dealer hides it, − line discounts − the special discount
+  const subtotal = Math.max(0, bill.toPay + (bill.schemeOff - effScheme) - special - lineDisc)
   const gstAmt = gstPct ? Math.round((subtotal * gstPct) / 100) : 0
   const grand = subtotal + gstAmt
   const totalPcs = items.reduce((s, { n }) => s + n, 0)
@@ -196,6 +199,7 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT, 
       useScheme && bill.schemeOff > 0 && [`Volume scheme (${bill.slabPct}%)`, '−' + inr(bill.schemeOff)],
     ] : [['Item total', inr(netItems)]]),
     ['Delivery' + (bill.express ? ' (express · 1 hr)' : ''), bill.fee === 0 ? 'FREE' : inr(bill.fee)],
+    lineDisc > 0 && ['Line discounts', '−' + inr(lineDisc)],
     special > 0 && ['Special discount', '−' + inr(special)],
   ].filter(Boolean)
 
@@ -206,8 +210,9 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT, 
     cols.push({ h: 'Item no', w: 20, gray: true })
     cols.push({ h: 'Description', w: 'auto' })
     if (showPrices) {
-      cols.push({ h: 'Unit price', w: 25, right: true, gray: true })
-      cols.push({ h: 'Amount', w: 27, right: true })
+      cols.push({ h: 'Unit price', w: 22, right: true, gray: true })
+      if (anyDisc) cols.push({ h: 'Disc', w: 18, right: true, gray: true })
+      cols.push({ h: 'Amount', w: 26, right: true })
     }
     const imgCol = cols.findIndex(c => c.img)
     const columnStyles = {}
@@ -223,16 +228,17 @@ async function generateEstimate({ cust, items, bill, brand = EST_BRAND_DEFAULT, 
       startY,
       margin: { left: M, right: M, top: 14, bottom },
       head: [cols.map(c => c.h)],
-      body: items.map(({ p, n }) => cols.map(c => {
+      body: items.map((it) => { const { p, n } = it; return cols.map(c => {
         if (c.img) return ''
         switch (c.h) {
           case 'Qty': return n
           case 'Item no': return p.id.toUpperCase()
           case 'Description': return `${p.name}\n${p.qty || ''}`
           case 'Unit price': return inr(p.price)
+          case 'Disc': return it.disc > 0 ? '−' + inr(it.disc) : ''
           default: return inr(p.price * n)
         }
-      })),
+      }) }),
       theme: 'plain',
       styles: { font: 'DOC', fontSize: 8.5, textColor: INK, cellPadding: { top: 2.2, bottom: 2.2, left: headFill ? 1.5 : 0, right: 2 }, valign: 'middle' },
       headStyles: headFill

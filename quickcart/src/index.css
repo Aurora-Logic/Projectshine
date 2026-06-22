@@ -4976,6 +4976,66 @@ button.lg-link {
 .ux-reward.r-spin { background: linear-gradient(145deg, #FF6CAB, #C23DD6); box-shadow: 0 6px 16px rgba(194, 61, 214, .26); }
 .ux-reward.r-quiz { background: linear-gradient(145deg, #FFB13C, #F5772A); box-shadow: 0 6px 16px rgba(245, 119, 42, .26); }
 
+/* ===== Utilities — home-style green header + feed chrome ===== */
+.util-top {
+  flex: none;
+  padding: calc(14px + env(safe-area-inset-top)) 16px 0;
+  background-color: #11823f;
+  background-image: linear-gradient(168deg, #22B765 0%, #159150 52%, #0e7a3f 100%);
+}
+.util-toprow { margin-bottom: 14px; padding-top: 4px; }
+.util-back { background: rgba(255, 255, 255, .2); }
+.util-back svg { color: #fff; }
+.util-top .rt-TextFieldRoot:focus-within { outline: 2px solid rgba(255, 255, 255, .9); outline-offset: 2px; }
+.util-top .rewards-strip { margin-top: 16px; }
+.util-top .tgt-mini { margin-top: 10px; }
+/* the tool-category rail sits flush to the header bottom, like home's brand rail */
+.util-tabs { margin: 14px -16px 0; }
+.util-top .tab-t { background: rgba(255, 255, 255, .16); }
+.util-top .tab-t.active { background: rgba(0, 0, 0, .22); }
+.util-top .tab-t.active .tab-chip { box-shadow: 0 3px 10px rgba(0, 0, 0, .28); }
+
+/* collapse the header once the feed scrolls — keeps just the title row + search,
+   so the body gets the full viewport (mirrors home's compacting top bar) */
+.util-top { transition: padding .25s ease, box-shadow .25s ease, border-radius .25s ease; }
+.util-sub, .util-top .rewards-strip, .util-top .tgt-mini, .util-tabs {
+  transition: max-height .25s ease, opacity .2s ease, margin .25s ease, padding .25s ease;
+  overflow: hidden;
+}
+.util-top.util-compact {
+  border-radius: 0 0 20px 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .28);
+}
+.util-top.util-compact .util-toprow { margin-bottom: 12px; }
+.util-top.util-compact .util-sub {
+  max-height: 0; opacity: 0; visibility: hidden;
+}
+.util-top.util-compact .rewards-strip,
+.util-top.util-compact .tgt-mini,
+.util-top.util-compact .util-tabs {
+  max-height: 0; opacity: 0; margin-top: 0; margin-bottom: 0;
+  padding-top: 0; padding-bottom: 0; border-width: 0;
+  visibility: hidden; pointer-events: none;
+}
+
+/* quiz engagement banner — dark "card-room" break, mirrors home's quiz night */
+.util-quiz {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  margin: 22px 0 0; padding: 16px; border: none; cursor: pointer; font-family: inherit; text-align: left;
+  border-radius: 20px; color: #fff;
+  background: radial-gradient(130% 150% at 0% 0%, #1d2c4d 0%, #0f1a33 58%, #0a1326 100%);
+  box-shadow: 0 12px 28px rgba(10, 19, 38, .34), inset 0 1px 0 rgba(255, 255, 255, .06);
+  -webkit-tap-highlight-color: transparent; transition: transform .14s ease;
+}
+.util-quiz:active { transform: scale(.985); }
+.util-quiz-bd { flex: 1; min-width: 0; }
+.util-quiz-k { display: inline-block; font-size: 9.5px; font-weight: 900; letter-spacing: .8px; color: var(--gold-9); margin-bottom: 4px; }
+.util-quiz-cta {
+  flex: none; display: inline-flex; align-items: center; gap: 4px;
+  background: var(--gold-9); color: #2b2200; font-size: 12px; font-weight: 800;
+  border-radius: 999px; padding: 9px 13px;
+}
+
 /* ===== SPS BoM calculator — 3D / tactile ===== */
 .sc-card {
   background: #fff; border: 1px solid var(--gray-3); border-radius: 18px;
@@ -6043,3 +6103,16 @@ button.lg-link {
 .wb-stile { position: relative; min-height: 112px; }
 .wb-cat-imgwrap { position: relative; display: block; }
 .wb-cat-chip { position: absolute; top: 6px; left: 6px; z-index: 1; background: var(--green-9); color: #fff; font-size: 9px; font-weight: 800; border-radius: 999px; padding: 2px 7px; }
+
+/* ---------- BOM creation: per-line discounts ---------- */
+.bom-lines { max-height: 38vh; overflow-y: auto; overscroll-behavior: contain; margin-top: 6px; }
+.bom-line { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--gray-3); }
+.bom-line:last-child { border-bottom: none; }
+.bom-line > img { width: 38px; height: 38px; border-radius: 9px; object-fit: cover; flex: none; }
+.bom-line-tx { flex: 1; min-width: 0; }
+.bom-disc { display: flex; align-items: center; gap: 2px; flex: none; background: var(--gray-3); border-radius: 9px; padding: 4px 8px; }
+.bom-disc span { font-size: 12px; font-weight: 700; color: var(--gray-10); }
+.bom-disc input { width: 44px; border: none; background: transparent; font-family: inherit; font-size: 16px; font-weight: 700; text-align: right; color: var(--gray-12); -moz-appearance: textfield; appearance: textfield; }
+.bom-disc input::-webkit-outer-spin-button, .bom-disc input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.bom-net { flex: none; min-width: 60px; text-align: right; }
+.bom-tot { background: var(--gray-2); border-radius: 12px; padding: 11px 12px; margin-top: 10px; }
