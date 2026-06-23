@@ -10,7 +10,7 @@ import {
   BarChartIcon, BellIcon, LockClosedIcon, ExitIcon, SewingPinIcon,
   EyeOpenIcon, ChatBubbleIcon, MobileIcon, EnvelopeClosedIcon, CalendarIcon,
   IdCardIcon, BookmarkIcon, ChevronLeftIcon, ExclamationTriangleIcon,
-  UploadIcon, DownloadIcon, Share2Icon, TrashIcon,
+  UploadIcon, DownloadIcon, Share2Icon, TrashIcon, RowsIcon,
 } from '@radix-ui/react-icons'
 import {
   FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
@@ -29,7 +29,7 @@ import { useSkyTheme, useNextFrame, useSheetA11y, useCountUp } from './hooks.js'
 import { QtyCtx, PdpCtx, CartCtx, CartItemsCtx } from './contexts.js'
 import { Img } from './components/Img.jsx'
 import { PageExit, SkyLayer, CartGlyph, DealTimer, SectionHead, AddControl, btnish } from './components/ui.jsx'
-import { ProductCard, FlashCard, ComboCard } from './components/cards.jsx'
+import { ProductCard, ProductRow, FlashCard, ComboCard } from './components/cards.jsx'
 import { Shelf, RecoStrip } from './components/feed.jsx'
 import { TplCard, ColorRow } from './components/estpdf.jsx'
 import { bulkTier, unitPriceFor, lineTotal } from './money.js'
@@ -579,6 +579,7 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
 
   const railImg = (PLP_RAIL.find(r => r[1] === cat) || PLP_RAIL[0])[0]
   const pageReady = useNextFrame()
+  const [plpView, setPlpView] = usePersisted('qc-plp-view', 'list')
   const gridKey = `${cat}|${b}|${JSON.stringify(f)}`
   const summary = [
     `${products.length} item${products.length === 1 ? '' : 's'}`,
@@ -675,15 +676,24 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
             <Img src={img(railImg, 200)} alt="" />
           </button>
 
-          <Box pt="2" pb="1">
+          <Flex align="center" justify="between" pt="2" pb="1">
             <Text size="1" color="gray">{summary}</Text>
-          </Box>
+            <div className="view-toggle">
+              <button className={plpView === 'list' ? 'on' : ''} onClick={() => setPlpView('list')} aria-label="List view"><RowsIcon width={15} height={15} /></button>
+              <button className={plpView === 'grid' ? 'on' : ''} onClick={() => setPlpView('grid')} aria-label="Grid view"><DashboardIcon width={15} height={15} /></button>
+            </div>
+          </Flex>
 
           {!pageReady ? (
             <Grid columns="2" gapX="3" gapY="4" pt="1">
               {[0, 1, 2, 3].map(i => <div className="skel" key={`pk${i}`} />)}
             </Grid>
           ) : products.length > 0 ? (
+            plpView === 'list' ? (
+              <div className="plp-list" key={gridKey}>
+                {products.map(p => <ProductRow key={`pl-${p.id}`} p={p} onChange={onChange} />)}
+              </div>
+            ) : (
             <Grid columns="2" gapX="3" gapY="4" pt="1" key={gridKey}>
               {cells.map((c, i) =>
                 c.merchIdx != null ? (
@@ -705,6 +715,7 @@ function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBran
                 ),
               )}
             </Grid>
+            )
           ) : (
             <Flex direction="column" align="center" py="8" gap="2">
               <Text size="2" weight="bold" color="gray">Nothing matches these filters</Text>
@@ -5945,7 +5956,6 @@ function AcctBoms({ onSettings }) {
 
 function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced, onClear }) {
   const a11y = useSheetA11y(onClose)
-  const openQty = useContext(QtyCtx)
   const items = Object.values(cart.items)
   const [clearConfirm, setClearConfirm] = useState(false)
   const [addrs, setAddrs] = useState(loadAddrs)
@@ -5988,9 +5998,7 @@ function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced
   const nextSlab = SCHEMES.find(s => cart.total < s.min)
   const schemeOff = slab ? Math.round((cart.total * slab.off) / 100) : 0
   const toPay = Math.max(0, cart.total - schemeOff - couponOff + fee)
-  const saving = mrpSave + bulkSave + schemeOff + couponOff
   const addr = addrs.find(a => a.id === sel) || addrs[0]
-  const deals = applyF(DEALS, { ...DEFAULT_F, sort: 3 }, 'ALL').filter(d => !cart.items[d.id]).slice(0, 6)
   const tPct = Math.min(100, Math.round(((TARGETS.monthly.done + cart.total) / TARGETS.monthly.target) * 100))
 
   return (
@@ -6015,13 +6023,6 @@ function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced
           </Box>
         ) : (
           <>
-            {saving > 0 && (
-              <div className="cp-save">
-                <StarFilledIcon width={13} height={13} style={{ flex: 'none' }} />
-                You're saving ₹{saving.toLocaleString('en-IN')} on this order
-              </div>
-            )}
-
             <Flex align="center" justify="between" mt="2" mb="1" px="1">
               <Text size="1" weight="bold" className="u-seclabel" as="div">{cart.count} ITEM{cart.count === 1 ? '' : 'S'} IN CART</Text>
               <button className="cart-clear" onClick={() => setClearConfirm(true)}>
@@ -6081,37 +6082,6 @@ function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced
                     )
                   })}
                 </Flex>
-              </div>
-            )}
-
-            {deals.length > 0 && (
-              <div className="cp-card cp-flash">
-                <Flex align="center" justify="between">
-                  <Text size="2" weight="bold" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <LightningBoltIcon width={14} height={14} style={{ color: 'var(--gold-9)' }} /> Flash deals before you checkout
-                  </Text>
-                  <DealTimer />
-                </Flex>
-                <div className="cp-deals">
-                  {deals.map(d => (
-                    <div key={`cpd-${d.id}`} className="cp-deal">
-                      <div style={{ position: 'relative' }}>
-                        <Img src={img(d.ph, 160)} alt="" />
-                        {d.mrp && <span className="flash-off" style={{ top: 4, left: 4 }}>-{Math.round(((d.mrp - d.price) / d.mrp) * 100)}%</span>}
-                      </div>
-                      <Text as="div" weight="bold" className="clamp2" style={{ fontSize: 10.5, lineHeight: 1.25, height: 27, marginTop: 4 }}>{d.name}</Text>
-                      <Flex align="center" justify="between" mt="1">
-                        <Text size="1" weight="bold">₹{d.price.toLocaleString('en-IN')}</Text>
-                        <Button
-                          size="1" color="green" radius="full" style={{ fontWeight: 800, height: 22, padding: '0 10px' }}
-                          onClick={() => openQty && openQty(d, null, { noReco: true })}
-                        >
-                          ADD
-                        </Button>
-                      </Flex>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
 
