@@ -158,16 +158,6 @@ function TopBar({ compact, dp, cond, brand, onBrand, onSearch, cartCount, plain,
         </TextField.Slot>
       </TextField.Root>
 
-      <div className="rewards-strip" {...btnish(() => scrollToId('leaderboard'))}>
-        <StarFilledIcon width={14} height={14} color="var(--amber-9)" style={{ flex: 'none' }} />
-        <span className="tier-mini" style={{ background: '#98A2B3' }} />
-        <Text size="1" weight="bold" truncate style={{ flex: 1, minWidth: 0 }}>
-          Silver dealer · ahead of {Math.round(((MY_RANK.of - MY_RANK.rank) / MY_RANK.of) * 100)}% in your region
-        </Text>
-        <Text size="1" weight="bold" color="amber" style={{ flex: 'none' }}>View journey</Text>
-        <ChevronRightIcon width={13} height={13} color="var(--amber-11)" style={{ flex: 'none' }} />
-      </div>
-
       {plain && (
         <div className="tgt-mini" onClick={onTargets}>
           <Text size="1" weight="bold" style={{ color: '#fff', flex: 'none' }}>Monthly target</Text>
@@ -7160,10 +7150,6 @@ export default function App() {
 
         <CategoryGrid onPick={openCategory} onSeeAll={() => setPlp('All')} />
 
-        <BestSellers onCat={(c) => setPlp(c)} />
-
-        {brand === 'ALL' && <KitBanner onOpen={() => setKitOpen(true)} />}
-
         {homeMode === 'brand' ? (
           <>
             {bf(NEW_EBCO).length > 0 && (
@@ -7185,12 +7171,7 @@ export default function App() {
               />
             )}
           </>
-        ) : (
-          <>
-            {catShelf(0)}
-            {catShelf(1)}
-          </>
-        )}
+        ) : null}
 
         <EndlessFeed onChange={changeCart} pool={pool} />
 
