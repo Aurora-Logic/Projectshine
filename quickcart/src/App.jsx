@@ -2435,7 +2435,7 @@ function EndlessFeed({ onChange, pool }) {
 
   return (
     <Box pt="5">
-      <SectionHead title="You might also like" />
+      <SectionHead title="Categories" />
       <Grid columns="3" gapX="3" gapY="4" px="4">
         {items.map(it => <ProductCard key={it.k} p={it.p} grid onChange={onChange} />)}
         {loading && [0, 1, 2].map(i => <div className="skel" key={`sk${i}`} />)}

@@ -271,7 +271,7 @@ body {
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
-  margin: calc((1 - var(--hdr-p, 0)) * 14px) -16px 0;
+  margin: calc((1 - var(--hdr-p, 0)) * 12px) -16px 0;
   padding: 0 12px;
   max-height: calc((1 - var(--hdr-p, 0)) * 120px);
   opacity: clamp(0, calc(1 - var(--hdr-p, 0) * 1.6), 1);
@@ -1760,7 +1760,7 @@ button.padd::after { content: ''; position: absolute; inset: -6px; }
 
 /* ---------- Mini target strip (fest header) ---------- */
 .tgt-mini {
-  margin-top: 10px;
+  margin-top: 12px;
   background: rgba(255, 255, 255, .13);
   border: 1px solid rgba(255, 255, 255, .18);
   border-radius: 100px;
