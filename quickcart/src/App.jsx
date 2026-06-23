@@ -748,6 +748,7 @@ function SearchSheet({ sheet, onClose, onChange, recoStrip, onRecoClose }) {
   const [f, setF] = useState(DEFAULT_F)
   const [fOpen, setFOpen] = useState(null)
   const [pageReady, setPageReady] = useState(false)
+  const [plpView, setPlpView] = usePersisted('qc-plp-view', 'list')
   useEffect(() => { setQ(sheet?.query || ''); setB('ALL'); setCat('All'); setF(DEFAULT_F); setFOpen(null) }, [sheet])
   useEffect(() => {
     setPageReady(false)
@@ -814,8 +815,8 @@ function SearchSheet({ sheet, onClose, onChange, recoStrip, onRecoClose }) {
               </button>
             ))}
           </div>
-          <Box pt="2">
-            <Text size="1" color="gray">
+          <Flex align="center" justify="between" pt="2" gap="2">
+            <Text size="1" color="gray" style={{ flex: 1, minWidth: 0 }}>
               {fallback
                 ? `No exact matches for “${q}” — showing everything${cat !== 'All' ? ` in ${cat}` : ''}`
                 : [
@@ -825,7 +826,11 @@ function SearchSheet({ sheet, onClose, onChange, recoStrip, onRecoClose }) {
                     sheet.title,
                   ].filter(Boolean).join(' · ')}
             </Text>
-          </Box>
+            <div className="view-toggle">
+              <button className={plpView === 'list' ? 'on' : ''} onClick={() => setPlpView('list')} aria-label="List view"><RowsIcon width={15} height={15} /></button>
+              <button className={plpView === 'grid' ? 'on' : ''} onClick={() => setPlpView('grid')} aria-label="Grid view"><DashboardIcon width={15} height={15} /></button>
+            </div>
+          </Flex>
           {pageReady && shown.length === 0 ? (
             <Flex direction="column" align="center" py="8" gap="2">
               <Text size="2" weight="bold" color="gray">Nothing matches these filters</Text>
@@ -833,11 +838,17 @@ function SearchSheet({ sheet, onClose, onChange, recoStrip, onRecoClose }) {
                 Clear filters
               </Button>
             </Flex>
+          ) : !pageReady ? (
+            <Grid columns="2" gapX="3" gapY="4" pt="3" pb="9">
+              {[0, 1, 2, 3].map(i => <div className="skel" key={`sk${i}`} />)}
+            </Grid>
+          ) : plpView === 'list' ? (
+            <div className="plp-list" style={{ paddingTop: 6, paddingBottom: 36 }}>
+              {shown.map(p => <ProductRow key={`s-${p.id}`} p={p} onChange={onChange} />)}
+            </div>
           ) : (
             <Grid columns="2" gapX="3" gapY="4" pt="3" pb="9">
-              {pageReady
-                ? shown.map(p => <ProductCard key={`s-${p.id}`} p={p} grid onChange={onChange} />)
-                : [0, 1, 2, 3].map(i => <div className="skel" key={`sk${i}`} />)}
+              {shown.map(p => <ProductCard key={`s-${p.id}`} p={p} grid onChange={onChange} />)}
             </Grid>
           )}
         </div>
@@ -2389,7 +2400,7 @@ function BrandDay({ onShop }) {
 function CategoryGrid({ onPick, onSeeAll }) {
   return (
     <Box pt="5">
-      <SectionHead title="Shop by category" onSeeAll={onSeeAll} />
+      <SectionHead title="Categories" onSeeAll={onSeeAll} />
       <Grid columns="3" gapX="3" gapY="4" px="4">
         {CATEGORIES.map(([ph, label, count]) => (
           <div className="cat-tile" key={label} {...btnish(() => onPick(label))}>
@@ -6754,10 +6765,6 @@ export default function App() {
     return m[1] && CAT_RULES[m[1]] ? m[1] : 'All'
   })
   const bf = (items) => (brand === 'ALL' ? items : items.filter(p => p.brand === brand))
-  const pool = useMemo(
-    () => (brand === 'ALL' ? FEED_POOL : FEED_POOL.filter(p => p.brand === brand)),
-    [brand],
-  )
   const openCategory = (label) => setPlp(label)
 
   // Any overlay up -> the page behind must not scroll
@@ -7143,8 +7150,6 @@ export default function App() {
             )}
           </>
         ) : null}
-
-        <EndlessFeed onChange={changeCart} pool={pool} />
 
         <QuizDialog
           open={quizOpen} onOpenChange={setQuizOpen}
