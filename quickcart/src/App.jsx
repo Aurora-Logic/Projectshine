@@ -6956,10 +6956,11 @@ export default function App() {
   // Theme vars go on :root so portaled dialogs (quiz popup) inherit the sky too
   useEffect(() => {
     const r = document.documentElement.style
-    r.setProperty('--hdr-a', T.a)
-    r.setProperty('--hdr-b', T.b)
-    r.setProperty('--hdr-c', T.c)
-    r.setProperty('--hdr-d', T.d)
+    // pinned to one fixed blue-shades gradient — no time/weather colour shift
+    r.setProperty('--hdr-a', '#2F6BE0')
+    r.setProperty('--hdr-b', '#1F4FB5')
+    r.setProperty('--hdr-c', '#163A93')
+    r.setProperty('--hdr-d', '#112C72')
   }, [T])
 
   // rAF-throttled with hysteresis (on >110, off <70) so the header never flaps mid-scroll.
