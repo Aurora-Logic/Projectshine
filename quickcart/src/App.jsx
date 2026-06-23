@@ -7003,11 +7003,7 @@ export default function App() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Quiz auto-pops 15s after open (once per session, skipped if already played)
-  useEffect(() => {
-    const t = setTimeout(() => { if (!playedRef.current) setQuizOpen(true) }, 15000)
-    return () => clearTimeout(t)
-  }, [])
+  // (quiz auto-popup removed — quiz is opt-in via Utilities)
 
   const [reco, setReco] = useState(null)
   const [recoStrip, setRecoStrip] = useState(null)
@@ -7136,7 +7132,12 @@ export default function App() {
           />
         )}
 
-        <BestSellers onCat={(c) => setPlp(c)} />
+        {/* Flash sale leads — the urgency band sits up top */}
+        <FlashSale
+          items={applyF(bf(DEALS), { ...DEFAULT_F, sort: 3 }, 'ALL')}
+          onChange={changeCart}
+          onSeeAll={() => setSheet({ items: bf(DEALS), title: 'Flash sale' })}
+        />
 
         {brand !== 'ALL' && (
           <div className="filter-strip">
@@ -7157,42 +7158,20 @@ export default function App() {
           />
         )}
 
-        {heroVariant === 'classic' && <TargetsCard />}
-
         <CategoryGrid onPick={openCategory} onSeeAll={() => setPlp('All')} />
 
-        <FlashSale
-          items={applyF(bf(DEALS), { ...DEFAULT_F, sort: 3 }, 'ALL')}
-          onChange={changeCart}
-          onSeeAll={() => setSheet({ items: bf(DEALS), title: 'Flash sale' })}
-        />
+        <BestSellers onCat={(c) => setPlp(c)} />
 
-        {/* engagement break #1: timed quiz right after the urgency band */}
-        <QuizCard onFinish={markPlayed} skin={quizSkin} />
-
-        {brand === 'ALL' && <ComboDeals onChange={changeCart} />}
         {brand === 'ALL' && <KitBanner onOpen={() => setKitOpen(true)} />}
-
-        {brand === 'ALL' && (
-          <BrandDay onShop={() => setSheet({ items: FEED_POOL, query: BRAND_DAY.query, title: 'Product of the day' })} />
-        )}
-        {brand === 'ALL' && (
-          <InspoStrip onOpen={(id) => { inspoStart.current = id; setInspoOpen(true) }} />
-        )}
-
-        {homeMode === 'brand' && bf(NEW_EBCO).length > 0 && (
-          <Shelf
-            title="New from Ebco" items={bf(NEW_EBCO)} onChange={changeCart} band="band-green"
-            onSeeAll={() => setSheet({ items: bf(NEW_EBCO), title: 'New from Ebco' })}
-          />
-        )}
-        {homeMode === 'category' && catShelf(0)}
-
-        {/* engagement break #2: daily spin + streak check-in mid-page */}
-        <GameRow onSpin={() => setWheelOpen(true)} />
 
         {homeMode === 'brand' ? (
           <>
+            {bf(NEW_EBCO).length > 0 && (
+              <Shelf
+                title="New from Ebco" items={bf(NEW_EBCO)} onChange={changeCart} band="band-green"
+                onSeeAll={() => setSheet({ items: bf(NEW_EBCO), title: 'New from Ebco' })}
+              />
+            )}
             {bf(WORKSMART).length > 0 && (
               <Shelf
                 title="Worksmart picks" items={bf(WORKSMART)} onChange={changeCart} sub="Office fittings by Ebco"
@@ -7208,26 +7187,8 @@ export default function App() {
           </>
         ) : (
           <>
+            {catShelf(0)}
             {catShelf(1)}
-            {catShelf(2)}
-          </>
-        )}
-
-        {/* engagement break #3: the status race, deep enough to reward scrolling */}
-        <Leaderboard />
-
-        {homeMode === 'brand' ? (
-          bf(ZIPCO_PEKO).length > 0 && (
-            <Shelf
-              title="Zipco & Peka corner" items={bf(ZIPCO_PEKO)} onChange={changeCart} band="band-pink"
-              onSeeAll={() => setSheet({ items: bf(ZIPCO_PEKO), title: 'Zipco & Peka' })}
-            />
-          )
-        ) : (
-          <>
-            {catShelf(3)}
-            {catShelf(4)}
-            {catShelf(5)}
           </>
         )}
 
