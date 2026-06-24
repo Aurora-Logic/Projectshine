@@ -6,3 +6,9 @@ export const QtyCtx = createContext(null)        // open the bulk qty sheet
 export const PdpCtx = createContext(null)        // open a product page
 export const CartCtx = createContext(null)       // open the cart
 export const CartItemsCtx = createContext({})    // live cart lines (source of truth)
+
+// Feature flag: 'control' | 'experiment' — set once per dealer session
+export const VariantCtx = createContext('control')
+
+// Full cart object { items, total, count } — read by NavBar, CartPage, etc.
+export const CartDataCtx = createContext({ items: {}, total: 0, count: 0 })

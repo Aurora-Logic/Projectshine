@@ -26,7 +26,9 @@ import { img, DAY, daypart, condition, sparkle, bulkNudge, scrollToId, dealSecsL
 import { LEARN } from './lib/learn.js'
 import { usePersisted, safeGet, safeSet, safeRemove, getJSON, setJSON } from './lib/storage.js'
 import { useSkyTheme, useNextFrame, useSheetA11y, useCountUp } from './hooks.js'
-import { QtyCtx, PdpCtx, CartCtx, CartItemsCtx } from './contexts.js'
+import { QtyCtx, PdpCtx, CartCtx, CartItemsCtx, VariantCtx, CartDataCtx } from './contexts.js'
+import { getVariant } from './lib/featureFlag.js'
+import { useNavigate, useLocation, useParams, Routes, Route } from 'react-router-dom'
 import { Img } from './components/Img.jsx'
 import { PageExit, SkyLayer, CartGlyph, DealTimer, SectionHead, AddControl, btnish } from './components/ui.jsx'
 import { ProductCard, FlashCard, ComboCard } from './components/cards.jsx'
@@ -6687,7 +6689,48 @@ function ProductPage({ p, onClose, onChange, cart }) {
   )
 }
 
+/* ── Thin route-adapter wrappers ── */
+function RoutedCategoryPage({ onChange, brand, recoStrip, onRecoClose }) {
+  const { cat } = useParams()
+  const navigate = useNavigate()
+  return (
+    <CategoryPage
+      cat={cat} onPick={(c) => navigate(`/category/${c}`)} onClose={() => navigate(-1)}
+      onChange={onChange} homeBrand={brand}
+      onSearch={() => navigate('/search', { state: { items: FEED_POOL } })}
+      recoStrip={recoStrip} onRecoClose={onRecoClose}
+    />
+  )
+}
+
+function RoutedSearchPage({ onChange, recoStrip, onRecoClose }) {
+  const loc = useLocation()
+  const navigate = useNavigate()
+  const sheet = loc.state || { items: FEED_POOL }
+  return (
+    <SearchSheet
+      sheet={sheet} onClose={() => navigate(-1)}
+      onChange={onChange} recoStrip={recoStrip} onRecoClose={onRecoClose}
+    />
+  )
+}
+
+function RoutedInspoPage({ onChange, lookRef }) {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  return (
+    <InspoPage
+      onClose={() => navigate(-1)} onChange={onChange}
+      startLook={id || null} lookRef={lookRef}
+    />
+  )
+}
+
 export default function App() {
+  const variant = getVariant()
+  const navigate = useNavigate()
+  const location = useLocation()
+
   const [cartItems, setCartItems] = useState({})
   // derived view keeps every existing consumer signature intact
   const cart = useMemo(() => {
@@ -7108,6 +7151,8 @@ export default function App() {
 
   return (
     <Theme accentColor="green" grayColor="slate" radius="large">
+      <VariantCtx.Provider value={variant}>
+      <CartDataCtx.Provider value={cart}>
       <QtyCtx.Provider value={openQty}>
       <PdpCtx.Provider value={openPdp}>
       <CartCtx.Provider value={openCart}>
@@ -7121,177 +7166,128 @@ export default function App() {
           onAccount={() => { acctInitSub.current = null; setAcctOpen(true) }}
         />
 
-        {heroVariant === 'fest' ? (
-          <FestHero onCat={(c) => setPlp(c)} palette={heroPal} layout={festL} />
-        ) : (
-          <div className="header-extend" style={glow ? { '--banner-glow': glow } : undefined}>
-            <BannerCarousel quizSkin={quizSkin} onGlow={setGlow} />
-          </div>
-        )}
+        <Routes>
+          {/* ── Home ── */}
+          <Route path="/" element={
+            <>
+              {heroVariant === 'fest' ? (
+                <FestHero onCat={(c) => navigate(`/category/${c}`)} palette={heroPal} layout={festL} />
+              ) : (
+                <div className="header-extend" style={glow ? { '--banner-glow': glow } : undefined}>
+                  <BannerCarousel quizSkin={quizSkin} onGlow={setGlow} />
+                </div>
+              )}
+              {order && <OrderCard order={order} onDismiss={dismissOrder} onReorder={reorder} onAddMore={() => scrollToId('deals')} />}
+              {variant === 'experiment' ? (
+                <>
+                  <FlashSale items={applyF(bf(DEALS), { ...DEFAULT_F, sort: 3 }, 'ALL')} onChange={changeCart} onSeeAll={() => navigate('/search', { state: { items: bf(DEALS), title: 'Flash sale' } })} />
+                  <CategoryGrid onPick={(c) => navigate(`/category/${c}`)} onSeeAll={() => navigate('/category/All')} />
+                </>
+              ) : (
+                <>
+                  <BestSellers onCat={(c) => navigate(`/category/${c}`)} />
+                  {brand !== 'ALL' && (
+                    <div className="filter-strip">
+                      <Text size="1" weight="bold" style={{ flex: 1 }}>Showing {brand.toUpperCase()} products only</Text>
+                      <button className="filter-clear" onClick={() => setBrand('ALL')}>Clear <Cross2Icon width={11} height={11} /></button>
+                    </div>
+                  )}
+                  {bf(BUY_AGAIN).length > 0 && (
+                    <Shelf title={`${greet}, Virag`} sub="Your regulars — from your recent orders" items={bf(BUY_AGAIN)} onChange={changeCart} onSeeAll={() => navigate('/search', { state: { items: bf(BUY_AGAIN), title: 'Your regulars' } })} />
+                  )}
+                  {heroVariant === 'classic' && <TargetsCard />}
+                  <CategoryGrid onPick={(c) => navigate(`/category/${c}`)} onSeeAll={() => navigate('/category/All')} />
+                  <FlashSale items={applyF(bf(DEALS), { ...DEFAULT_F, sort: 3 }, 'ALL')} onChange={changeCart} onSeeAll={() => navigate('/search', { state: { items: bf(DEALS), title: 'Flash sale' } })} />
+                  <QuizCard onFinish={markPlayed} skin={quizSkin} />
+                  {brand === 'ALL' && <ComboDeals onChange={changeCart} />}
+                  {brand === 'ALL' && <KitBanner onOpen={() => navigate('/kit')} />}
+                  {brand === 'ALL' && <BrandDay onShop={() => navigate('/search', { state: { items: FEED_POOL, query: BRAND_DAY.query, title: 'Product of the day' } })} />}
+                  {brand === 'ALL' && <InspoStrip onOpen={(id) => navigate(id ? `/inspo/${id}` : '/inspo')} />}
+                  {homeMode === 'brand' && bf(NEW_EBCO).length > 0 && <Shelf title="New from Ebco" items={bf(NEW_EBCO)} onChange={changeCart} band="band-green" onSeeAll={() => navigate('/search', { state: { items: bf(NEW_EBCO), title: 'New from Ebco' } })} />}
+                  {homeMode === 'category' && catShelf(0)}
+                  <GameRow onSpin={() => setWheelOpen(true)} />
+                  {homeMode === 'brand' ? (
+                    <>
+                      {bf(WORKSMART).length > 0 && <Shelf title="Worksmart picks" items={bf(WORKSMART)} onChange={changeCart} sub="Office fittings by Ebco" onSeeAll={() => navigate('/search', { state: { items: bf(WORKSMART), title: 'Worksmart picks' } })} />}
+                      {bf(LIVESMART).length > 0 && <Shelf title="Livsmart corner" items={bf(LIVESMART)} onChange={changeCart} sub="Smart living, by Ebco" onSeeAll={() => navigate('/search', { state: { items: bf(LIVESMART), title: 'Livsmart corner' } })} />}
+                    </>
+                  ) : (<>{catShelf(1)}{catShelf(2)}</>)}
+                  <Leaderboard />
+                  {homeMode === 'brand' ? (bf(ZIPCO_PEKO).length > 0 && <Shelf title="Zipco & Peka corner" items={bf(ZIPCO_PEKO)} onChange={changeCart} band="band-pink" onSeeAll={() => navigate('/search', { state: { items: bf(ZIPCO_PEKO), title: 'Zipco & Peka' } })} />) : (<>{catShelf(3)}{catShelf(4)}{catShelf(5)}</>)}
+                  <EndlessFeed onChange={changeCart} pool={pool} />
+                </>
+              )}
+              <QuizDialog open={quizOpen} onOpenChange={setQuizOpen} onFinish={markPlayed} skin={quizSkin} />
+              <SpinDialog open={wheelOpen} onOpenChange={setWheelOpen} />
+              {simEnabled && <DevSimulator dp={sky.dp} cond={sky.cond} onChange={setSim} skinName={quizSkin.name} onSkin={setSimSkin} heroPalName={heroPal.name} onHeroPal={setHeroPal} />}
+            </>
+          } />
 
-        {order && (
-          <OrderCard
-            order={order} onDismiss={dismissOrder} onReorder={reorder}
-            onAddMore={() => scrollToId('deals')}
-          />
-        )}
+          {/* ── Category ── */}
+          <Route path="/category/:cat" element={
+            <RoutedCategoryPage onChange={changeCart} brand={brand} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
+          } />
 
-        <BestSellers onCat={(c) => setPlp(c)} />
+          {/* ── Search / sheet ── */}
+          <Route path="/search" element={
+            <RoutedSearchPage onChange={changeCart} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
+          } />
 
-        {brand !== 'ALL' && (
-          <div className="filter-strip">
-            <Text size="1" weight="bold" style={{ flex: 1 }}>
-              Showing {brand.toUpperCase()} products only
-            </Text>
-            <button className="filter-clear" onClick={() => setBrand('ALL')}>
-              Clear <Cross2Icon width={11} height={11} />
-            </button>
-          </div>
-        )}
-
-        {bf(BUY_AGAIN).length > 0 && (
-          <Shelf
-            title={`${greet}, Virag`} sub="Your regulars — from your recent orders"
-            items={bf(BUY_AGAIN)} onChange={changeCart}
-            onSeeAll={() => setSheet({ items: bf(BUY_AGAIN), title: 'Your regulars' })}
-          />
-        )}
-
-        {heroVariant === 'classic' && <TargetsCard />}
-
-        <CategoryGrid onPick={openCategory} onSeeAll={() => setPlp('All')} />
-
-        <FlashSale
-          items={applyF(bf(DEALS), { ...DEFAULT_F, sort: 3 }, 'ALL')}
-          onChange={changeCart}
-          onSeeAll={() => setSheet({ items: bf(DEALS), title: 'Flash sale' })}
-        />
-
-        {/* engagement break #1: timed quiz right after the urgency band */}
-        <QuizCard onFinish={markPlayed} skin={quizSkin} />
-
-        {brand === 'ALL' && <ComboDeals onChange={changeCart} />}
-        {brand === 'ALL' && <KitBanner onOpen={() => setKitOpen(true)} />}
-
-        {brand === 'ALL' && (
-          <BrandDay onShop={() => setSheet({ items: FEED_POOL, query: BRAND_DAY.query, title: 'Product of the day' })} />
-        )}
-        {brand === 'ALL' && (
-          <InspoStrip onOpen={(id) => { inspoStart.current = id; setInspoOpen(true) }} />
-        )}
-
-        {homeMode === 'brand' && bf(NEW_EBCO).length > 0 && (
-          <Shelf
-            title="New from Ebco" items={bf(NEW_EBCO)} onChange={changeCart} band="band-green"
-            onSeeAll={() => setSheet({ items: bf(NEW_EBCO), title: 'New from Ebco' })}
-          />
-        )}
-        {homeMode === 'category' && catShelf(0)}
-
-        {/* engagement break #2: daily spin + streak check-in mid-page */}
-        <GameRow onSpin={() => setWheelOpen(true)} />
-
-        {homeMode === 'brand' ? (
-          <>
-            {bf(WORKSMART).length > 0 && (
-              <Shelf
-                title="Worksmart picks" items={bf(WORKSMART)} onChange={changeCart} sub="Office fittings by Ebco"
-                onSeeAll={() => setSheet({ items: bf(WORKSMART), title: 'Worksmart picks' })}
-              />
-            )}
-            {bf(LIVESMART).length > 0 && (
-              <Shelf
-                title="Livsmart corner" items={bf(LIVESMART)} onChange={changeCart} sub="Smart living, by Ebco"
-                onSeeAll={() => setSheet({ items: bf(LIVESMART), title: 'Livsmart corner' })}
-              />
-            )}
-          </>
-        ) : (
-          <>
-            {catShelf(1)}
-            {catShelf(2)}
-          </>
-        )}
-
-        {/* engagement break #3: the status race, deep enough to reward scrolling */}
-        <Leaderboard />
-
-        {homeMode === 'brand' ? (
-          bf(ZIPCO_PEKO).length > 0 && (
-            <Shelf
-              title="Zipco & Peka corner" items={bf(ZIPCO_PEKO)} onChange={changeCart} band="band-pink"
-              onSeeAll={() => setSheet({ items: bf(ZIPCO_PEKO), title: 'Zipco & Peka' })}
+          {/* ── Cart ── */}
+          <Route path="/cart" element={
+            <CartPage
+              cart={cart} onClose={() => navigate(-1)} onChange={changeCart} onConvertTier={convertTier} onClear={clearCart}
+              onSettings={() => { navigate('/account'); acctInitSub.current = 'estpdf' }}
+              onPlaced={(rec) => {
+                setOrder(rec)
+                safeSet('qc-order', JSON.stringify(rec))
+                try {
+                  const bills = JSON.parse(safeGet('qc-bills') || '[]')
+                  bills.push({ id: rec.id, amt: rec.bill?.toPay ?? rec.amt, due: rec.dueTs })
+                  safeSet('qc-bills', JSON.stringify(bills))
+                } catch { /* storage off */ }
+                setCartItems({})
+                navigate('/', { replace: true })
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
             />
-          )
-        ) : (
-          <>
-            {catShelf(3)}
-            {catShelf(4)}
-            {catShelf(5)}
-          </>
-        )}
+          } />
 
-        <EndlessFeed onChange={changeCart} pool={pool} />
+          {/* ── Reorder ── */}
+          <Route path="/reorder" element={<ReorderPage onChange={changeCart} lastOrder={order} />} />
 
-        <QuizDialog
-          open={quizOpen} onOpenChange={setQuizOpen}
-          onFinish={markPlayed} skin={quizSkin}
-        />
-        <SpinDialog open={wheelOpen} onOpenChange={setWheelOpen} />
-
-        {simEnabled && (
-          <DevSimulator
-            dp={sky.dp} cond={sky.cond} onChange={setSim}
-            skinName={quizSkin.name} onSkin={setSimSkin}
-            heroPalName={heroPal.name} onHeroPal={setHeroPal}
-          />
-        )}
-
-        <PageExit open={plp !== null}>
-          {plp && (
-            <CategoryPage
-              cat={plp} onPick={setPlp} onClose={closePlp}
-              onChange={changeCart} cart={cart} homeBrand={brand}
-              onSearch={() => setSheet({ items: FEED_POOL })}
-              recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)}
+          {/* ── Account ── */}
+          <Route path="/account" element={
+            <AccountPage
+              onClose={() => navigate(-1)} onChange={changeCart} lastOrder={order}
+              subRef={acctSubRef} initialSub={acctInitSub.current}
+              onCategory={(cat) => navigate(`/category/${cat}`)}
+              onGoReorder={() => navigate('/reorder')}
+              onGoKit={() => navigate('/kit')}
             />
-          )}
-        </PageExit>
+          } />
 
-        <PageExit open={sheet !== null}>
-          <SearchSheet sheet={sheet} onClose={closeSheet} onChange={changeCart} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
-        </PageExit>
+          {/* ── Kit builder ── */}
+          <Route path="/kit" element={<KitPage onClose={() => navigate(-1)} onChange={changeCart} onGoCart={() => navigate('/cart')} />} />
 
-        <PageExit open={reorderOpen}>
-          {reorderOpen && (
-            <ReorderPage onClose={closeReorder} onChange={changeCart} cart={cart} lastOrder={order} />
-          )}
-        </PageExit>
+          {/* ── Inspo ── */}
+          <Route path="/inspo" element={<InspoPage onClose={() => navigate(-1)} onChange={changeCart} startLook={null} lookRef={inspoLookRef} />} />
+          <Route path="/inspo/:id" element={<RoutedInspoPage onChange={changeCart} lookRef={inspoLookRef} />} />
 
-        <PageExit open={acctOpen}>
-          {acctOpen && (
-          <AccountPage
-            onClose={closeAcct} onChange={changeCart} lastOrder={order}
-            subRef={acctSubRef} initialSub={acctInitSub.current}
-            onCategory={(cat) => { setAcctOpen(false); setPlp(cat) }}
-            onGoReorder={() => { setAcctOpen(false); setReorderOpen(true) }}
-            onGoKit={() => { setAcctOpen(false); setKitOpen(true) }}
-          />
-          )}
-        </PageExit>
-
-        <PageExit open={kitOpen}>
-          {kitOpen && <KitPage onClose={closeKit} onChange={changeCart} onGoCart={() => setCartOpen(true)} />}
-        </PageExit>
-
-        <PageExit open={inspoOpen}>
-          {inspoOpen && (
-            <InspoPage
-              onClose={closeInspo} onChange={changeCart}
-              startLook={inspoStart.current} lookRef={inspoLookRef}
+          {/* ── Utilities ── */}
+          <Route path="/utilities" element={
+            <UtilitiesPage
+              onClose={() => navigate(-1)}
+              onSpin={() => setWheelOpen(true)}
+              onQuiz={() => setQuizOpen(true)}
+              lastOrder={order}
+              bomCount={loadBoms().length}
+              onChange={changeCart}
+              onGoReorder={() => navigate('/reorder')}
+              onGoKit={() => navigate('/kit')}
             />
-          )}
-        </PageExit>
+          } />
+        </Routes>
 
         <PageExit open={prosOpen}>
           {prosOpen && (
@@ -7315,34 +7311,6 @@ export default function App() {
         <PageExit open={qsheet !== null} variant="sheetv" dur={240}>
           <div className="sr-only" role="status" aria-live="polite">{live}</div>
           {qsheet && <QtySheet q={qsheet} onClose={closeQty} onConfirm={confirmQty} />}
-        </PageExit>
-
-        <PageExit open={cartOpen}>
-          {cartOpen && (
-          <CartPage
-            cart={cart} onClose={closeCart} onChange={changeCart} onConvertTier={convertTier} onClear={clearCart}
-            onSettings={() => { closeCart(); acctInitSub.current = 'estpdf'; setAcctOpen(true) }}
-            onPlaced={(rec) => {
-              setOrder(rec)
-              safeSet('qc-order', JSON.stringify(rec))
-              try {
-                const bills = JSON.parse(safeGet('qc-bills') || '[]')
-                bills.push({ id: rec.id, amt: rec.bill?.toPay ?? rec.amt, due: rec.dueTs })
-                safeSet('qc-bills', JSON.stringify(bills))
-              } catch { /* storage off */ }
-              setCartItems({})
-              // land on home with the tracking card in view, whatever the stack was
-              setCartOpen(false)
-              setQsheet(null)
-              setPdp(null)
-              setSheet(null)
-              setPlp(null)
-              setReorderOpen(false)
-              setAcctOpen(false)
-              window.scrollTo({ top: 0, behavior: 'smooth' })
-            }}
-          />
-          )}
         </PageExit>
 
         {!authed && (
@@ -7375,11 +7343,16 @@ export default function App() {
           <CartBar cart={cart} />
           <div className="navrow">
             <NavBar
-              onCategories={() => setPlp('All')}
-              onUtilities={() => setProsOpen(true)}
-              onReorder={() => setReorderOpen(true)}
-              onAccount={() => { acctInitSub.current = null; setAcctOpen(true) }}
-              active={acctOpen ? 'account' : reorderOpen ? 'reorder' : plp ? 'categories' : 'home'}
+              onCategories={() => navigate('/category/All')}
+              onUtilities={() => navigate('/utilities')}
+              onReorder={() => navigate('/reorder')}
+              onAccount={() => { acctInitSub.current = null; navigate('/account') }}
+              active={
+                location.pathname.startsWith('/account') ? 'account' :
+                location.pathname.startsWith('/reorder') ? 'reorder' :
+                location.pathname.startsWith('/category') || location.pathname.startsWith('/search') ? 'categories' :
+                'home'
+              }
               mini={navMini}
             />
             <button
@@ -7396,6 +7369,8 @@ export default function App() {
       </CartCtx.Provider>
       </PdpCtx.Provider>
       </QtyCtx.Provider>
+      </CartDataCtx.Provider>
+      </VariantCtx.Provider>
     </Theme>
   )
 }

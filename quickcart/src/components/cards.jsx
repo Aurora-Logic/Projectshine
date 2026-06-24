@@ -82,6 +82,48 @@ const ProductCard = memo(function ProductCard({ p, grid, onChange }) {
   )
 })
 
+/* dense list row — experiment variant: scan many SKUs + add inline */
+const ProductRow = memo(function ProductRow({ p, onChange }) {
+  const qty = useContext(CartItemsCtx)[p.id]?.n || 0
+  const openQty = useContext(QtyCtx)
+  const openPdp = useContext(PdpCtx)
+  const add = (e) => {
+    e.stopPropagation()
+    if (qty === 0 && openQty) { openQty(p); return }
+    onChange(1, p); sparkle(e)
+  }
+  const remove = (e) => { e?.stopPropagation(); onChange(-1, p) }
+  const oos = p.stock === 0
+  const off = p.mrp && p.mrp > p.price ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0
+  return (
+    <div className="prow" {...(openPdp ? btnish(() => openPdp(p)) : {})}>
+      <div className="prow-imgwrap">
+        <Img className={`prow-img ${oos ? 'oos' : ''}`} src={img(p.ph, 160)} alt={p.name} loading="lazy" />
+        {off > 0 && <span className="prow-off">{off}%</span>}
+      </div>
+      <div className="prow-mid">
+        <Text size="2" weight="bold" as="div" className="clamp1" style={{ fontSize: 13 }}>{p.name}</Text>
+        {p.qty && <Text size="1" color="gray" as="div" truncate>{p.qty}</Text>}
+        <Flex align="center" gap="2" mt="1">
+          <Text size="2" weight="bold">₹{p.price.toLocaleString('en-IN')}</Text>
+          {p.mrp && <Text size="1" color="gray" style={{ textDecoration: 'line-through' }}>₹{p.mrp.toLocaleString('en-IN')}</Text>}
+        </Flex>
+        {p.bulk && (
+          <Text size="1" as="div" weight="bold" style={{ fontSize: 10.5, color: 'var(--blue-11)' }}>Bulk: {p.bulk}</Text>
+        )}
+        {p.stock != null && (
+          <Text size="1" as="div" weight="bold" style={{ fontSize: 10, color: oos ? 'var(--red-10)' : p.stock <= 10 ? 'var(--amber-11)' : 'var(--green-10)' }}>
+            {oos ? `Out of stock · ships in ${p.lead}d` : p.stock <= 10 ? `Only ${p.stock} left` : `In stock · ${p.stock}+ pcs`}
+          </Text>
+        )}
+      </div>
+      <div className="prow-add">
+        <AddControl qty={qty} onAdd={add} onRemove={remove} onBulk={openQty ? () => openQty(p) : undefined} />
+      </div>
+    </div>
+  )
+})
+
 function ComboCard({ c, onChange }) {
   const p = { id: c.id, ph: c.ph, price: c.price, name: c.title, qty: c.items }
   const qty = useContext(CartItemsCtx)[p.id]?.n || 0
@@ -161,4 +203,4 @@ function FlashCard({ p, onChange }) {
   )
 }
 
-export { ProductCard, FlashCard, ComboCard }
+export { ProductCard, ProductRow, FlashCard, ComboCard }
