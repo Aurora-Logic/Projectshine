@@ -11,11 +11,8 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <RootLayout />,
-    // A single splat child renders Home for EVERY path, so the home feed stays
-    // mounted behind the page overlays (which RootLayout opens from the URL).
-    // This preserves the app's stacked-overlay model while giving each page a
-    // real URL. The matched route id never changes, so Home is never remounted.
     children: [
+      { index: true, element: <HomePage /> },
       { path: '*', element: <HomePage /> },
     ],
   },

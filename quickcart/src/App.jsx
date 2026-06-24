@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import {
   Theme, Box, Flex, Grid, Text, Heading, Button, TextField, Dialog,
 } from '@radix-ui/themes'
@@ -6381,44 +6381,15 @@ export default function RootLayout() {
     const m = window.location.hash.match(/#brand-(\w+)/)
     return m && BRAND_KEYS.includes(m[1]) ? m[1] : 'ALL'
   })
-  // ---- Router: each page is a real URL. Which overlay is open is DERIVED from
-  // the path (single source of truth); navigation is react-router-owned. ----
-  const navigate = useNavigate()
-  const location = useLocation()
-  const bootHashRef = useRef(window.location.hash) // legacy deep-link, captured before the shim clears it
-  const seg = location.pathname.split('/').filter(Boolean)
-  const root = (seg[0] || '').toLowerCase()
-  const plp = root === 'category' ? (seg[1] ? decodeURIComponent(seg[1]) : 'All') : null
-  const sheetOpen = root === 'search'
-  const cartOpen = root === 'cart'
-  const reorderOpen = root === 'reorder'
-  const acctOpen = root === 'account'
-  const acctSection = acctOpen ? (seg[1] || null) : null
-  const kitOpen = root === 'kit'
-  const prosOpen = root === 'utilities'
-  const inspoOpen = root === 'inspo'
-  const inspoLook = inspoOpen && seg[1] ? decodeURIComponent(seg[1]) : null
-  const pdpId = new URLSearchParams(location.search).get('p')
-  const pdp = pdpId ? FEED_POOL.find(p => p.id === pdpId) : null
-  // search-sheet content (which list to show) rides in state; the URL just says /search
-  const [sheetPayload, setSheetPayload] = useState(null)
-  const inspoLookRef = useRef(false)
+  const [sheet, setSheet] = useState(() =>
+    window.location.hash === '#search' ? { items: FEED_POOL } : null)
+  const [pdp, setPdp] = useState(() => (window.location.hash === '#pdp' ? FEED_POOL[0] : null))
+  const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
+  const [cartOpen, setCartOpen] = useState(window.location.hash === '#cart')
+  const [reorderOpen, setReorderOpen] = useState(['#reorder', '#pastorder'].includes(window.location.hash))
+  const [acctOpen, setAcctOpen] = useState(['#account', '#dash', '#credit', '#lists', '#orders', '#site', '#ordpg', '#claims', '#brand'].includes(window.location.hash))
   const acctSubRef = useRef(false)
-
-  // Close any overlay → step back one history entry (or home if we're at the root).
-  const goBack = useCallback(() => {
-    const idx = window.history.state?.idx
-    if (typeof idx === 'number' && idx > 0) navigate(-1)
-    else navigate('/')
-  }, [navigate])
-  const openCategory = useCallback((cat, opts) => {
-    navigate('/category' + (cat && cat !== 'All' ? '/' + encodeURIComponent(cat) : ''), opts)
-  }, [navigate])
-  const openSearch = useCallback((payload) => {
-    setSheetPayload(payload || { items: FEED_POOL })
-    navigate('/search')
-  }, [navigate])
-
+  const acctInitSub = useRef(null)
   const [authed, setAuthed] = useState(() => {
     if (window.location.hash === '#login') return false
     if (window.location.hash) return true
@@ -6437,42 +6408,175 @@ export default function RootLayout() {
   const dismissOrder = () => { setOrder(null); safeRemove('qc-order') }
   const reorder = () => {
     order?.items?.forEach(({ p, n }) => changeCart(n, p, { noReco: true }))
-    navigate('/cart')
+    setCartOpen(true)
   }
-  const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
+  const [kitOpen, setKitOpen] = useState(window.location.hash === '#kit')
+  const [prosOpen, setProsOpen] = useState(window.location.hash === '#pros')
+  const [inspoOpen, setInspoOpen] = useState(window.location.hash.startsWith('#inspo'))
+  const inspoStart = useRef((window.location.hash.match(/^#inspo-(\w+)/) || [])[1] || null)
+  const inspoLookRef = useRef(false)
+  const [plp, setPlp] = useState(() => {
+    if (window.location.hash.startsWith('#fsheet')) return 'Hinges'
+    if (window.location.hash === '#strip') return 'All'
+    const m = window.location.hash.match(/^#plp(?:-(\w+))?$/)
+    if (!m) return null
+    return m[1] && CAT_RULES[m[1]] ? m[1] : 'All'
+  })
 
   // Any overlay up -> the page behind must not scroll
-  const overlayUp = !!(sheetOpen || pdp || qsheet || cartOpen || reorderOpen || acctOpen || plp || kitOpen || prosOpen || inspoOpen)
+  const overlayUp = !!(sheet || pdp || qsheet || cartOpen || reorderOpen || acctOpen || plp || kitOpen || prosOpen || inspoOpen)
   useEffect(() => {
     document.body.classList.toggle('no-scroll', overlayUp)
     return () => document.body.classList.remove('no-scroll')
   }, [overlayUp])
 
-  // The browser/phone back button now closes overlays for free: react-router pops
-  // the URL, the derived open-states above recompute, and the overlay unmounts.
-  // Every page's close button just steps back one history entry.
-  const closePlp = goBack
-  const closeSheet = goBack
-  const closeReorder = goBack
-  const closeAcct = goBack
-  const closeInspo = goBack
-  const closePros = goBack
-  const closeKit = goBack
-  const closeCart = goBack
-  const closePdp = goBack          // back drops the ?p product param
-  const closeQty = () => setQsheet(null)
+  // Browser/phone back gesture closes the topmost overlay instead of leaving the app.
+  // UI close buttons route THROUGH history.back() so the entry stack stays consistent.
+  const sheetRef = useRef(sheet)
+  sheetRef.current = sheet
+  const pdpRef = useRef(pdp)
+  pdpRef.current = pdp
+  const qtyRef = useRef(qsheet)
+  qtyRef.current = qsheet
+  const cartRef = useRef(cartOpen)
+  cartRef.current = cartOpen
+  const reorderRef = useRef(reorderOpen)
+  reorderRef.current = reorderOpen
+  const acctRef = useRef(acctOpen)
+  acctRef.current = acctOpen
+  const plpOpen = plp !== null
+  const closePlp = () => {
+    if (window.history.state?.qcPlp) window.history.back()
+    else setPlp(null)
+  }
+  useEffect(() => {
+    if (!plpOpen) return
+    if (!window.history.state?.qcPlp) window.history.pushState({ qcPlp: true }, '')
+    const onPop = () => { if (!sheetRef.current && !pdpRef.current && !qtyRef.current && !cartRef.current && !reorderRef.current) setPlp(null) }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [plpOpen])
+  const sheetOpen = sheet !== null
+  const closeSheet = () => {
+    if (window.history.state?.qcSheet) window.history.back()
+    else setSheet(null)
+  }
+  useEffect(() => {
+    if (!sheetOpen) return
+    if (!window.history.state?.qcSheet) window.history.pushState({ qcSheet: true }, '')
+    const onPop = () => { if (!pdpRef.current && !qtyRef.current && !cartRef.current) setSheet(null) }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [sheetOpen])
+  const pdpOpen = pdp !== null
+  const closePdp = () => {
+    if (window.history.state?.qcPdp) window.history.back()
+    else setPdp(null)
+  }
+  useEffect(() => {
+    if (!pdpOpen) return
+    if (!window.history.state?.qcPdp) window.history.pushState({ qcPdp: true }, '')
+    const onPop = () => { if (!qtyRef.current && !cartRef.current) setPdp(null) }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [pdpOpen])
+  const qtyOpen = qsheet !== null
+  const closeQty = () => {
+    if (window.history.state?.qcQty) window.history.back()
+    else setQsheet(null)
+  }
+  useEffect(() => {
+    if (!qtyOpen) return
+    if (!window.history.state?.qcQty) window.history.pushState({ qcQty: true }, '')
+    const onPop = () => setQsheet(null)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [qtyOpen])
+
+  const closeAcct = () => {
+    if (window.history.state?.qcAcct) window.history.back()
+    else setAcctOpen(false)
+  }
+  useEffect(() => {
+    if (!acctOpen) return
+    if (!window.history.state?.qcAcct) window.history.pushState({ qcAcct: true }, '')
+    const onPop = () => {
+      if (!pdpRef.current && !qtyRef.current && !cartRef.current && !acctSubRef.current) setAcctOpen(false)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [acctOpen])
+  const closeReorder = () => {
+    if (window.history.state?.qcReorder) window.history.back()
+    else setReorderOpen(false)
+  }
+  useEffect(() => {
+    if (!reorderOpen) return
+    if (!window.history.state?.qcReorder) window.history.pushState({ qcReorder: true }, '')
+    const onPop = () => {
+      if (!pdpRef.current && !qtyRef.current && !cartRef.current) setReorderOpen(false)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [reorderOpen])
+  const closeInspo = () => {
+    if (window.history.state?.qcInspo) window.history.back()
+    else setInspoOpen(false)
+  }
+  useEffect(() => {
+    if (!inspoOpen) return
+    if (!window.history.state?.qcInspo) window.history.pushState({ qcInspo: true }, '')
+    const onPop = () => {
+      if (!pdpRef.current && !qtyRef.current && !cartRef.current && !inspoLookRef.current) setInspoOpen(false)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [inspoOpen])
+  const closePros = () => {
+    if (window.history.state?.qcPros) window.history.back()
+    else setProsOpen(false)
+  }
+  useEffect(() => {
+    if (!prosOpen) return
+    if (!window.history.state?.qcPros) window.history.pushState({ qcPros: true }, '')
+    const onPop = () => {
+      if (!pdpRef.current && !qtyRef.current && !cartRef.current) setProsOpen(false)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [prosOpen])
+  const closeKit = () => {
+    if (window.history.state?.qcKit) window.history.back()
+    else setKitOpen(false)
+  }
+  useEffect(() => {
+    if (!kitOpen) return
+    if (!window.history.state?.qcKit) window.history.pushState({ qcKit: true }, '')
+    const onPop = () => {
+      if (!pdpRef.current && !qtyRef.current && !cartRef.current) setKitOpen(false)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [kitOpen])
+  const closeCart = () => {
+    if (window.history.state?.qcCart) window.history.back()
+    else setCartOpen(false)
+  }
+  useEffect(() => {
+    if (!cartOpen) return
+    if (!window.history.state?.qcCart) window.history.pushState({ qcCart: true }, '')
+    const onPop = () => { if (!qtyRef.current) setCartOpen(false) }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [cartOpen])
 
   // stable intents — memoized cards subscribe via context, never re-render
   const openQty = useCallback((p, apply, opts) => setQsheet({ p, apply, opts }), [])
-  const openPdp = useCallback((p) => {
-    // PDP rides on a ?p=<id> param so it stacks over whatever page is underneath
-    const had = new URLSearchParams(window.location.search).has('p')
-    if (had) PDP_SWAPF.current = true // switching products while the page is open
-    const sp = new URLSearchParams(window.location.search)
-    sp.set('p', p.id)
-    navigate({ pathname: window.location.pathname, search: '?' + sp.toString() }, { replace: had })
-  }, [navigate])
-  const openCart = useCallback(() => navigate('/cart'), [navigate])
+  const openPdp = useCallback((p) => setPdp(prev => {
+    if (prev) PDP_SWAPF.current = true
+    return p
+  }), [])
+  const openCart = useCallback(() => setCartOpen(true), [])
   const confirmQty = (n, e) => {
     const q = qsheet
     if (!q) return
@@ -6586,32 +6690,9 @@ export default function RootLayout() {
     })
   }, [])
 
-  // Legacy deep-link compatibility: translate the old page #hashes (used by the
-  // run-quickcart driver and shared links) into the new real paths, once on boot.
-  // Design-review flags (#sim, #compact, #brandhome, #hero-*, #brand-*, #order,
-  // #login, #qty, #wheel …) are NOT pages, so they're left untouched.
-  useEffect(() => {
-    const h = bootHashRef.current
-    if (!h) return
-    const exact = {
-      '#search': '/search', '#cart': '/cart', '#reorder': '/reorder', '#pastorder': '/reorder',
-      '#account': '/account', '#dash': '/account/dash', '#credit': '/account/credit',
-      '#lists': '/account/lists', '#orders': '/account/orders', '#ordpg': '/account/orders',
-      '#site': '/account/site', '#claims': '/account/claims', '#brand': '/account/brand',
-      '#kit': '/kit', '#pros': '/utilities', '#inspo': '/inspo',
-      '#strip': '/category', '#fsheet': '/category/Hinges',
-    }
-    let to = exact[h]
-    let m
-    if (!to && (m = h.match(/^#plp(?:-(\w+))?$/))) to = '/category' + (m[1] && CAT_RULES[m[1]] ? '/' + m[1] : '')
-    else if (!to && h === '#pdp') to = '/?p=' + FEED_POOL[0].id
-    else if (!to && (m = h.match(/^#inspo-(\w+)/))) to = '/inspo/' + m[1]
-    if (to) navigate(to, { replace: true })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   // #cart hash: preload a mixed cart so the sheet can be reviewed
   useEffect(() => {
-    if (bootHashRef.current !== '#cart') return
+    if (window.location.hash !== '#cart') return
     const t = setTimeout(() => {
       changeCart(12, BUY_AGAIN[0], { noReco: true })
       changeCart(2, DEALS[0], { noReco: true })
@@ -6621,14 +6702,14 @@ export default function RootLayout() {
 
   // #reco / #strip hashes: auto-add an item so recommendations can be reviewed
   useEffect(() => {
-    if (!['#reco', '#strip'].includes(bootHashRef.current)) return
+    if (!['#reco', '#strip'].includes(window.location.hash)) return
     const t = setTimeout(() => changeCart(1, BUY_AGAIN[0]), 600)
     return () => clearTimeout(t)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Values the routed page (Home) needs — handed down through the router Outlet.
   const pageCtx = {
-    changeCart, brand, setBrand, setPlp: openCategory, setSheet: openSearch,
+    changeCart, brand, setBrand, setPlp, setSheet,
     order, dismissOrder, reorder,
     heroVariant, heroPal, festL, quizSkin, glow, setGlow,
   }
@@ -6642,10 +6723,10 @@ export default function RootLayout() {
       <div className="app">
         <TopBar
           compact={scrolled} dp={sky.dp} cond={sky.cond}
-          brand={brand} onBrand={setBrand} onSearch={() => openSearch({ items: FEED_POOL })}
+          brand={brand} onBrand={setBrand} onSearch={() => setSheet({ items: FEED_POOL })}
           cartCount={cart.count} plain={heroVariant === 'fest'}
-          onTargets={() => navigate('/account/dash')}
-          onAccount={() => navigate('/account')}
+          onTargets={() => { acctInitSub.current = 'dash'; setAcctOpen(true) }}
+          onAccount={() => { acctInitSub.current = null; setAcctOpen(true) }}
         />
 
         {/* Routed page content (Home and, as they migrate, other pages) */}
@@ -6668,16 +6749,16 @@ export default function RootLayout() {
         <PageExit open={plp !== null}>
           {plp && (
             <CategoryPage
-              cat={plp} onPick={(c) => openCategory(c, { replace: true })} onClose={closePlp}
+              cat={plp} onPick={setPlp} onClose={closePlp}
               onChange={changeCart} cart={cart} homeBrand={brand}
-              onSearch={() => openSearch({ items: FEED_POOL })}
+              onSearch={() => setSheet({ items: FEED_POOL })}
               recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)}
             />
           )}
         </PageExit>
 
-        <PageExit open={sheetOpen}>
-          <SearchSheet sheet={sheetPayload || { items: FEED_POOL }} onClose={closeSheet} onChange={changeCart} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
+        <PageExit open={sheet !== null}>
+          <SearchSheet sheet={sheet} onClose={closeSheet} onChange={changeCart} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
         </PageExit>
 
         <PageExit open={reorderOpen}>
@@ -6690,23 +6771,23 @@ export default function RootLayout() {
           {acctOpen && (
           <AccountPage
             onClose={closeAcct} onChange={changeCart} lastOrder={order}
-            subRef={acctSubRef} initialSub={acctSection}
-            onCategory={(cat) => openCategory(cat)}
-            onGoReorder={() => navigate('/reorder')}
-            onGoKit={() => navigate('/kit')}
+            subRef={acctSubRef} initialSub={acctInitSub.current}
+            onCategory={(cat) => { setAcctOpen(false); setPlp(cat) }}
+            onGoReorder={() => { setAcctOpen(false); setReorderOpen(true) }}
+            onGoKit={() => { setAcctOpen(false); setKitOpen(true) }}
           />
           )}
         </PageExit>
 
         <PageExit open={kitOpen}>
-          {kitOpen && <KitPage onClose={closeKit} onChange={changeCart} onGoCart={() => navigate('/cart')} />}
+          {kitOpen && <KitPage onClose={closeKit} onChange={changeCart} onGoCart={() => setCartOpen(true)} />}
         </PageExit>
 
         <PageExit open={inspoOpen}>
           {inspoOpen && (
             <InspoPage
               onClose={closeInspo} onChange={changeCart}
-              startLook={inspoLook} lookRef={inspoLookRef}
+              startLook={inspoStart.current} lookRef={inspoLookRef}
             />
           )}
         </PageExit>
@@ -6720,8 +6801,8 @@ export default function RootLayout() {
               lastOrder={order}
               bomCount={loadBoms().length}
               onChange={changeCart}
-              onGoReorder={() => navigate('/reorder')}
-              onGoKit={() => navigate('/kit')}
+              onGoReorder={() => { setProsOpen(false); setReorderOpen(true) }}
+              onGoKit={() => { setProsOpen(false); setKitOpen(true) }}
             />
           )}
         </PageExit>
@@ -6739,7 +6820,7 @@ export default function RootLayout() {
           {cartOpen && (
           <CartPage
             cart={cart} onClose={closeCart} onChange={changeCart} onConvertTier={convertTier} onClear={clearCart}
-            onSettings={() => navigate('/account/estpdf')}
+            onSettings={() => { closeCart(); acctInitSub.current = 'estpdf'; setAcctOpen(true) }}
             onPlaced={(rec) => {
               setOrder(rec)
               safeSet('qc-order', JSON.stringify(rec))
@@ -6749,9 +6830,14 @@ export default function RootLayout() {
                 safeSet('qc-bills', JSON.stringify(bills))
               } catch { /* storage off */ }
               setCartItems({})
+              // land on home with the tracking card in view, whatever the stack was
+              setCartOpen(false)
               setQsheet(null)
-              // navigating home closes every URL-driven overlay at once
-              navigate('/')
+              setPdp(null)
+              setSheet(null)
+              setPlp(null)
+              setReorderOpen(false)
+              setAcctOpen(false)
               window.scrollTo({ top: 0, behavior: 'smooth' })
             }}
           />
@@ -6788,10 +6874,10 @@ export default function RootLayout() {
           <CartBar cart={cart} />
           <div className="navrow">
             <NavBar
-              onCategories={() => openCategory('All')}
-              onUtilities={() => navigate('/utilities')}
-              onReorder={() => navigate('/reorder')}
-              onAccount={() => navigate('/account')}
+              onCategories={() => setPlp('All')}
+              onUtilities={() => setProsOpen(true)}
+              onReorder={() => setReorderOpen(true)}
+              onAccount={() => { acctInitSub.current = null; setAcctOpen(true) }}
               active={acctOpen ? 'account' : reorderOpen ? 'reorder' : plp ? 'categories' : 'home'}
               mini={navMini}
             />
