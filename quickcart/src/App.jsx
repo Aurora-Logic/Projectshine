@@ -1,6 +1,7 @@
-import { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Theme, Box, Flex, Grid, Text, Heading, Button, IconButton, TextField, Dialog,
+  Theme, Box, Flex, Grid, Text, Heading, Button, TextField, Dialog,
 } from '@radix-ui/themes'
 import {
   MagnifyingGlassIcon, ChevronDownIcon, ChevronRightIcon, ChevronUpIcon, PersonIcon,
@@ -13,26 +14,32 @@ import {
   UploadIcon, DownloadIcon, Share2Icon, TrashIcon, RowsIcon,
 } from '@radix-ui/react-icons'
 import {
-  FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS, WORKSMART, LIVESMART, ZIPCO_PEKO,
-  FEED_POOL, CATEGORIES, BANNERS, COMBOS, QUIZ, KITS, PROS, INSPO, INSPO_ROOMS,
+  FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS,
+  FEED_POOL, CATEGORIES, COMBOS, QUIZ, KITS, PROS, INSPO, INSPO_ROOMS,
   SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
-  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, FEST, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES, REORDER, PAST_ORDERS, DASH, CREDIT, CAT_SCHEMES,
+  BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES, REORDER, PAST_ORDERS, DASH, CREDIT, CAT_SCHEMES,
+  ORDER_STAGES,
   tierSwap, tierSwapCount,
 } from './data.js'
 import { generateEstimate, EST_BRAND_DEFAULT, EST_FONTS, EST_PAPERS } from './lib/estimate.js'
 import { calculateBoM } from './lib/spsBom.js'
 import { calculateWeights } from './lib/panelWeight.js'
-import { img, DAY, daypart, condition, sparkle, bulkNudge, scrollToId, dealSecsLeft } from './lib/util.js'
+import { img, DAY, sparkle, scrollToId } from './lib/util.js'
 import { LEARN } from './lib/learn.js'
 import { usePersisted, safeGet, safeSet, safeRemove, getJSON, setJSON } from './lib/storage.js'
 import { useSkyTheme, useNextFrame, useSheetA11y, useCountUp } from './hooks.js'
 import { QtyCtx, PdpCtx, CartCtx, CartItemsCtx } from './contexts.js'
 import { Img } from './components/Img.jsx'
-import { PageExit, SkyLayer, CartGlyph, DealTimer, SectionHead, AddControl, btnish } from './components/ui.jsx'
-import { ProductCard, ProductRow, FlashCard, ComboCard } from './components/cards.jsx'
-import { Shelf, RecoStrip } from './components/feed.jsx'
+import { PageExit, SkyLayer, CartGlyph, SectionHead, btnish } from './components/ui.jsx'
+import { ProductCard, ProductRow, ComboCard } from './components/cards.jsx'
+import { RecoStrip } from './components/feed.jsx'
 import { TplCard, ColorRow } from './components/estpdf.jsx'
 import { bulkTier, unitPriceFor, lineTotal } from './money.js'
+import {
+  CAT_RULES, PLP_RAIL, catOf, recosFor, SORT_OPTIONS, SUBCATS, subcatThumb,
+  MERCH_ROWS, DEFAULT_F, MATERIALS, SIZES, matThumb,
+  applyF, fBadges, fSummary,
+} from './lib/catalog.js'
 import './App.css'
 
 
@@ -190,189 +197,12 @@ function TopBar({ compact, dp, cond, brand, onBrand, onSearch, cartCount, plain,
   )
 }
 
-/* ---------------- Banners ---------------- */
-
-function BannerCarousel({ quizSkin, onGlow }) {
-  const ref = useRef(null)
-  const [idx, setIdx] = useState(0)
-
-  // the header sheet's bottom tint follows the active banner
-  useEffect(() => {
-    const b = BANNERS[idx]
-    if (b && onGlow) onGlow(b.key === 'quiz' ? quizSkin.btn : (b.glow || null))
-  }, [idx, quizSkin, onGlow])
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      const el = ref.current
-      if (!el) return
-      const next = (Math.round(el.scrollLeft / el.clientWidth) + 1) % BANNERS.length
-      el.scrollTo({ left: next * el.clientWidth, behavior: 'smooth' })
-    }, 3800)
-    return () => clearInterval(t)
-  }, [])
-
-  const onScroll = () => {
-    const el = ref.current
-    if (el) setIdx(Math.round(el.scrollLeft / el.clientWidth))
-  }
-
-  return (
-    <Box>
-      <div className="banner-car" ref={ref} onScroll={onScroll}>
-        {BANNERS.map(b => (
-          <div className="banner-slide" key={b.key}>
-            <div className="banner-inner" style={{ background: b.key === 'quiz' ? quizSkin.bg : b.bg }}>
-              <Box flexGrow="1">
-                <Heading as="h2" size="6" style={{ color: b.dark ? '#2b2200' : '#fff', letterSpacing: '-0.4px', lineHeight: 1.15 }}>
-                  {b.title}
-                </Heading>
-                <Text size="2" weight="medium" as="div" mt="1" style={{ color: b.dark ? '#5c4a00' : 'rgba(255,255,255,.9)' }}>
-                  {b.sub}
-                </Text>
-                <Button
-                  size="2" mt="3" radius="full"
-                  color={b.dark ? 'green' : undefined}
-                  style={{ fontWeight: 700, ...(b.dark ? {} : { background: '#fff', color: 'var(--gray-12)' }) }}
-                  onClick={() => b.anchor && scrollToId(b.anchor)}
-                >
-                  {b.cta}
-                </Button>
-              </Box>
-              <Img className="banner-img" src={img(b.ph, 280)} alt="" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </Box>
-  )
-}
-
 /* ---------------- Shared bits ---------------- */
 
 /* Deal window persists across refreshes; rolls to a new 30-min window when it expires */
 
 /* ---------------- Category listing page (PLP) ---------------- */
 
-const CAT_RULES = {
-  All: () => true,
-  'Drawer Slides': p => /slide|drawer/i.test(p.name),
-  Hinges: p => /hinge/i.test(p.name),
-  Locks: p => /lock|aldrop|bolt|closer/i.test(p.name),
-  Wardrobe: p => /wardrobe/i.test(p.name),
-  Kitchen: p => /kitchen|carousel|tandem|quadro/i.test(p.name),
-  Office: p => p.brand === 'worksmart',
-  Lighting: p => /light|profile|strip/i.test(p.name),
-  Handles: p => /handle|knob/i.test(p.name),
-  Storage: p => /shelf|castor|connector|catch|pin/i.test(p.name),
-}
-
-const PLP_RAIL = [['1503387762-592deb58ef4e', 'All'], ...CATEGORIES]
-
-/* "People also add" pairing rules: added item → complementary product id */
-const RECO_RULES = [
-  [/slide|drawer/i, 'x2'],
-  [/hinge/i, 'ba1'],
-  [/lock|bolt/i, 'ba4'],
-  [/light|strip|profile|sensor|night/i, 'ls5'],
-  [/keyboard|monitor|cpu|cable|grommet/i, 'ws5'],
-]
-const catOf = (x) => Object.keys(CAT_RULES).find(k => k !== 'All' && CAT_RULES[k](x))
-function recosFor(p) {
-  const rule = RECO_RULES.find(([re]) => re.test(p.name))
-  const pairId = rule ? rule[1] : 'ba5'
-  const list = []
-  const pair = FEED_POOL.find(x => x.id === pairId && x.id !== p.id)
-  if (pair) list.push(pair)
-  FEED_POOL.filter(x => x.id !== p.id && catOf(x) === catOf(p))
-    .forEach(x => { if (!list.some(y => y.id === x.id)) list.push(x) })
-  return list.slice(0, 6)
-}
-
-const SORT_OPTIONS = ['Popular', 'Price: low → high', 'Price: high → low', 'Biggest discount']
-
-/* Subcategory level of the IA: Brand → Category (rail) → Subcategory (image chips) → Product.
-   [label, keyword matcher] — chip thumbnails resolve from the first matching product. */
-const SUBCATS = {
-  All: [],
-  'Drawer Slides': [['Telescopic', 'telescopic'], ['Ball-bearing', 'ball-bearing'], ['Heavy duty', 'heavy'], ['Tandem', 'tandem']],
-  Hinges: [['Soft-close', 'soft-close'], ['Glass', 'glass'], ['Concealed', 'concealed'], ['Clip-on', 'clip-on']],
-  Locks: [['Cam locks', 'cam lock'], ['Digital', 'digital'], ['Wardrobe', 'wardrobe'], ['Bolts', 'bolt']],
-  Wardrobe: [['Sliding systems', 'sliding'], ['Locks', 'lock']],
-  Kitchen: [['Carousels', 'carousel'], ['Deep drawers', 'deep'], ['Quadro', 'quadro']],
-  Office: [['Keyboard trays', 'keyboard'], ['Monitor arms', 'monitor'], ['CPU', 'cpu'], ['Cable', 'cable']],
-  Lighting: [['LED strips', 'strip'], ['Sensor lights', 'sensor'], ['Profiles', 'profile'], ['Night lights', 'night']],
-  Handles: [['D-Handles', 'd-handle']],
-  Storage: [['Castors', 'castor'], ['Shelf & pins', 'pin'], ['Catches', 'catch'], ['Connectors', 'connector']],
-}
-
-const subcatThumb = (kw) =>
-  FEED_POOL.find(p => `${p.name} ${p.qty}`.toLowerCase().includes(kw))?.ph
-
-/* Category-led home shelves (default) — users shop by product, not brand.
-   Brand-led layout is preserved at #brandhome (and git tag v1-brand-home). */
-const CAT_SHELVES = [
-  { t: 'Drawer slides & systems', cat: 'Drawer Slides', band: 'band-green' },
-  { t: 'Hinges & flap fittings', cat: 'Hinges' },
-  { t: 'Kitchen systems', cat: 'Kitchen' },
-  { t: 'Locks & security', cat: 'Locks', band: 'band-pink' },
-  { t: 'Lighting & smart living', cat: 'Lighting' },
-  { t: 'Office fittings', cat: 'Office' },
-]
-const catShelfSub = (cat) => (SUBCATS[cat] || []).map(s => s[0]).slice(0, 3).join(' · ')
-
-const MERCH_ROWS = [
-  { icon: 'gst', t: 'GST input credit on every invoice', s: 'Business billing built in' },
-  { icon: 'truck', t: 'Free delivery above ₹999', s: 'Straight to your site, no surge' },
-]
-
-/* ---------- Shared filter system: subcat · brand · material · load · size · deals · sort ---------- */
-
-const DEFAULT_F = { deals: false, spec: null, sort: 0, mat: null, load: 0, size: null, doorThk: null, carcassThk: null }
-const MATERIALS = [...new Set(FEED_POOL.map(p => p.mat).filter(Boolean))]
-const SIZES = [450, 500, 600]
-const matThumb = (m) => FEED_POOL.find(p => p.mat === m)?.ph
-
-function applyF(list, f, b) {
-  let out = list
-  if (b !== 'ALL') out = out.filter(p => p.brand === b)
-  if (f.spec) out = out.filter(p => `${p.name} ${p.qty}`.toLowerCase().includes(f.spec[1]))
-  if (f.mat) out = out.filter(p => p.mat === f.mat)
-  if (f.load > 0) out = out.filter(p => (p.load || 0) >= f.load)
-  if (f.size) out = out.filter(p => p.size === f.size)
-  if (f.doorThk) out = out.filter(p => p.doorThk === f.doorThk)
-  if (f.carcassThk) out = out.filter(p => p.carcassThk === f.carcassThk)
-  if (f.deals) out = out.filter(p => p.tag || (p.mrp && p.mrp > p.price))
-  out = [...out]
-  if (f.sort === 1) out.sort((x, y) => x.price - y.price)
-  if (f.sort === 2) out.sort((x, y) => y.price - x.price)
-  if (f.sort === 3) out.sort((x, y) => ((y.mrp || y.price) - y.price) / (y.mrp || y.price) - ((x.mrp || x.price) - x.price) / (x.mrp || x.price))
-  return out
-}
-
-const fBadges = (f, b) => ({
-  sub: f.spec ? 1 : 0,
-  brand: b !== 'ALL' ? 1 : 0,
-  material: f.mat ? 1 : 0,
-  load: f.load > 0 ? 1 : 0,
-  size: f.size ? 1 : 0,
-  doorThk: f.doorThk ? 1 : 0,
-  carcassThk: f.carcassThk ? 1 : 0,
-  deal: f.deals ? 1 : 0,
-  sort: f.sort > 0 ? 1 : 0,
-})
-
-const fSummary = (f, b) => [
-  b !== 'ALL' && b.charAt(0).toUpperCase() + b.slice(1),
-  f.spec && f.spec[0],
-  f.mat,
-  f.load > 0 && `≥ ${f.load} kg`,
-  f.size && `${f.size}mm`,
-  f.doorThk && `${f.doorThk}mm door`,
-  f.carcassThk && `${f.carcassThk}mm carcass`,
-  f.deals && 'Deals only',
-  f.sort > 0 && SORT_OPTIONS[f.sort],
-].filter(Boolean)
 
 function FilterSheet({ group, onGroup, cat = 'All', b, setB, f, setF, count }) {
   const a11y = useSheetA11y(() => onGroup(null), !!group)
@@ -2277,60 +2107,6 @@ function BestSellers({ onCat }) {
   )
 }
 
-/* Hero v2: client "fest" takeover — promo card + 2x2 category tiles, scalloped edge */
-function FestHero({ onCat, palette, layout = 'a' }) {
-  return (
-    <div className="fest-wrap">
-      <div className={`fest-grid f-${layout}`}>
-        <button className="fest-promo" onClick={() => onCat(FEST.cat)}>
-          <Text as="div" weight="bold" style={{ fontSize: 21, lineHeight: 1.15, color: '#2b2200' }}>{FEST.title}</Text>
-          <Text as="div" weight="bold" style={{ fontSize: 19, color: '#2b2200' }}>{FEST.off}</Text>
-          <span className="fest-cta">{FEST.cta}</span>
-          <Img className="fest-promo-img" src={img(FEST.ph, 300)} alt="" />
-        </button>
-        <div className="fest-tiles">
-          {FEST.tiles.map(t => (
-            <button key={t.l} className="fest-tile" onClick={() => onCat(t.cat)}>
-              <Img src={img(t.ph, 300)} alt={t.l} loading="lazy" />
-              <span className="fest-tl">{t.l}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className={`fest-edge ${palette?.edge || 'scallop'}`} />
-      <div className={`fest-dots d-${palette?.dot || 'dot'}`}>
-        {Array.from({ length: 12 }, (_, i) => <span key={i} />)}
-      </div>
-    </div>
-  )
-}
-
-/* Flash Sale — Deal of the day + Clearance merged: timer, discounts, selling-fast bars */
-function FlashSale({ items, onChange, onSeeAll }) {
-  if (items.length === 0) return null
-  return (
-    <div className="band-flash cv" id="deals">
-      <Flex align="center" justify="between" px="4">
-        <Flex align="center" gap="3" style={{ minWidth: 0 }}>
-          <Heading as="h2" size="4" style={{ color: '#fff', letterSpacing: '-0.2px', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <LightningBoltIcon width={17} height={17} style={{ color: 'var(--gold-9)' }} /> Flash sale
-        </Heading>
-          <DealTimer />
-        </Flex>
-        <Text size="2" weight="bold" style={{ color: 'rgba(255,255,255,.9)', cursor: 'pointer', flex: 'none' }} onClick={onSeeAll}>
-          See all
-        </Text>
-      </Flex>
-      <Box px="4" mt="1" mb="3">
-        <Text size="1" style={{ color: 'rgba(255,255,255,.8)' }}>Deals + clearance · up to 60% off · last units</Text>
-      </Box>
-      <div className="hscroll">
-        {items.map(p => <FlashCard key={`fl-${p.id}`} p={p} onChange={onChange} />)}
-      </div>
-    </div>
-  )
-}
-
 /* Dealer targets dashboard: monthly / quarterly / yearly purchase progress */
 const fmtL = (n) => (n >= 100000 ? `₹${(n / 100000).toFixed(2)}L` : `₹${n.toLocaleString('en-IN')}`)
 
@@ -2393,27 +2169,6 @@ function BrandDay({ onShop }) {
           </Button>
         </Flex>
       </div>
-    </Box>
-  )
-}
-
-function CategoryGrid({ onPick, onSeeAll }) {
-  return (
-    <Box pt="5">
-      <SectionHead title="Categories" onSeeAll={onSeeAll} />
-      <Grid columns="3" gapX="3" gapY="4" px="4">
-        {CATEGORIES.map(([ph, label, count]) => (
-          <div className="cat-tile" key={label} {...btnish(() => onPick(label))}>
-            <Img className="cat-img" src={img(ph, 280)} alt={label} loading="lazy" />
-            <Text size="1" weight="bold" as="div" align="center" mt="2" truncate>
-              {label}
-            </Text>
-            <Text as="div" align="center" style={{ fontSize: 10.5, color: 'var(--gray-9)', fontWeight: 600 }}>
-              {count} items
-            </Text>
-          </div>
-        ))}
-      </Grid>
     </Box>
   )
 }
@@ -5584,103 +5339,6 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
   )
 }
 
-/* ---------------- Live order status card (home, after placing) ---------------- */
-
-const ORDER_STAGES = [['Placed', 0], ['Packed', 45], ['On the way', 150], ['Delivered', 300]]
-
-function OrderCard({ order, onDismiss, onReorder, onAddMore }) {
-  const [now, setNow] = useState(() => Date.now())
-  const doneAt = order.ts + ORDER_STAGES[ORDER_STAGES.length - 1][1] * 1000
-  useEffect(() => {
-    if (Date.now() >= doneAt) return undefined
-    const t = setInterval(() => {
-      setNow(Date.now())
-      if (Date.now() >= doneAt) clearInterval(t)
-    }, 1000)
-    return () => clearInterval(t)
-  }, [doneAt])
-  const [rated, setRated] = useState(order.rated || 0)
-  const elapsed = Math.max(0, (now - order.ts) / 1000)
-  let si = 0
-  ORDER_STAGES.forEach(([, t], i) => { if (elapsed >= t) si = i })
-  const nextT = ORDER_STAGES[si + 1]?.[1]
-  const frac = nextT ? Math.min(1, (elapsed - ORDER_STAGES[si][1]) / (nextT - ORDER_STAGES[si][1])) : 1
-  const fill = ((si + frac) / (ORDER_STAGES.length - 1)) * 100
-  const delivered = si === ORDER_STAGES.length - 1
-  const windowLeft = Math.max(0, 300 - Math.floor(elapsed))
-  const mmss = `${Math.floor(windowLeft / 60)}:${String(windowLeft % 60).padStart(2, '0')}`
-  const head = delivered ? 'Order delivered' : si === 2 ? 'Out for delivery' : si === 1 ? 'Order packed' : 'Order placed'
-  const eta = delivered
-    ? 'Delivered — invoice sent on email'
-    : si === 2
-      ? (order.promise ? `Arriving · ${order.promise}` : 'Arriving today by 6 PM')
-      : si === 1 ? 'Packed at depot — rider assigning' : 'Confirmed at depot'
-  const rate = (n) => {
-    setRated(n)
-    safeSet('qc-order', JSON.stringify({ ...order, rated: n }))
-  }
-  return (
-    <Box px="4" pt="4">
-      <div className="ocard">
-        <Flex align="center" justify="between">
-          <Flex align="center" gap="2">
-            <span className={`oc-pulse ${delivered ? 'done' : ''}`} />
-            <Text size="2" weight="bold">{head}</Text>
-          </Flex>
-          <Text size="1" weight="bold" color="gray">PO {order.id}</Text>
-        </Flex>
-        <Text size="1" color="gray" as="div" mt="1">{eta} · {order.addrLabel}</Text>
-        <div className="oc-track">
-          <div className="oc-line"><div style={{ width: `${fill}%` }} /></div>
-          <div className="oc-steps">
-            {ORDER_STAGES.map(([label], i) => (
-              <div key={label} className="oc-step">
-                <span className={`oc-dot ${i <= si ? 'on' : ''}`} />
-                <Text style={{ fontSize: 9.5 }} color={i <= si ? undefined : 'gray'} weight={i === si ? 'bold' : 'regular'}>
-                  {label}
-                </Text>
-              </div>
-            ))}
-          </div>
-        </div>
-        <Flex align="center" gap="2" mt="3">
-          <Flex>
-            {(order.items || []).slice(0, 3).map(({ p }) => (
-              <Img key={`oc-${p.id}`} className="thumb" src={img(p.ph, 80)} alt="" />
-            ))}
-          </Flex>
-          <Text size="1" weight="bold" style={{ whiteSpace: 'nowrap' }}>
-            {order.count} items · ₹{order.amt.toLocaleString('en-IN')}
-          </Text>
-          <Text size="1" color="gray" style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}>Target at {order.tPct}%</Text>
-        </Flex>
-        {!delivered && windowLeft > 0 && (
-          <button className="oc-window" onClick={onAddMore}>
-            Forgot something? Reorder window open · {mmss} left
-          </button>
-        )}
-        {delivered && (
-          <Flex align="center" gap="2" mt="3">
-            <div className="oc-stars">
-              {[1, 2, 3, 4, 5].map(n => (
-                <button key={n} className={`oc-star ${n <= rated ? 'on' : ''}`} onClick={() => rate(n)} aria-label={`${n} stars`}>
-                  <StarFilledIcon width={17} height={17} />
-                </button>
-              ))}
-            </div>
-            <Button size="1" color="green" radius="full" style={{ fontWeight: 800, marginLeft: 'auto', flex: 'none' }} onClick={onReorder}>
-              Reorder
-            </Button>
-            <button className="reco-x" onClick={onDismiss} aria-label="Dismiss">
-              <Cross2Icon width={13} height={13} />
-            </button>
-          </Flex>
-        )}
-      </div>
-    </Box>
-  )
-}
-
 /* ---------------- Cart page — items, schemes, address, instructions ---------------- */
 
 function loadAddrs() {
@@ -6658,7 +6316,7 @@ function ProductPage({ p, onClose, onChange, cart }) {
   )
 }
 
-export default function App() {
+export default function RootLayout() {
   const [cartItems, setCartItems] = useState({})
   // derived view keeps every existing consumer signature intact
   const cart = useMemo(() => {
@@ -6723,15 +6381,44 @@ export default function App() {
     const m = window.location.hash.match(/#brand-(\w+)/)
     return m && BRAND_KEYS.includes(m[1]) ? m[1] : 'ALL'
   })
-  const [sheet, setSheet] = useState(() =>
-    window.location.hash === '#search' ? { items: FEED_POOL } : null)
-  const [pdp, setPdp] = useState(() => (window.location.hash === '#pdp' ? FEED_POOL[0] : null))
-  const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
-  const [cartOpen, setCartOpen] = useState(window.location.hash === '#cart')
-  const [reorderOpen, setReorderOpen] = useState(['#reorder', '#pastorder'].includes(window.location.hash))
-  const [acctOpen, setAcctOpen] = useState(['#account', '#dash', '#credit', '#lists', '#orders', '#site', '#ordpg', '#claims', '#brand'].includes(window.location.hash))
+  // ---- Router: each page is a real URL. Which overlay is open is DERIVED from
+  // the path (single source of truth); navigation is react-router-owned. ----
+  const navigate = useNavigate()
+  const location = useLocation()
+  const bootHashRef = useRef(window.location.hash) // legacy deep-link, captured before the shim clears it
+  const seg = location.pathname.split('/').filter(Boolean)
+  const root = (seg[0] || '').toLowerCase()
+  const plp = root === 'category' ? (seg[1] ? decodeURIComponent(seg[1]) : 'All') : null
+  const sheetOpen = root === 'search'
+  const cartOpen = root === 'cart'
+  const reorderOpen = root === 'reorder'
+  const acctOpen = root === 'account'
+  const acctSection = acctOpen ? (seg[1] || null) : null
+  const kitOpen = root === 'kit'
+  const prosOpen = root === 'utilities'
+  const inspoOpen = root === 'inspo'
+  const inspoLook = inspoOpen && seg[1] ? decodeURIComponent(seg[1]) : null
+  const pdpId = new URLSearchParams(location.search).get('p')
+  const pdp = pdpId ? FEED_POOL.find(p => p.id === pdpId) : null
+  // search-sheet content (which list to show) rides in state; the URL just says /search
+  const [sheetPayload, setSheetPayload] = useState(null)
+  const inspoLookRef = useRef(false)
   const acctSubRef = useRef(false)
-  const acctInitSub = useRef(null)
+
+  // Close any overlay → step back one history entry (or home if we're at the root).
+  const goBack = useCallback(() => {
+    const idx = window.history.state?.idx
+    if (typeof idx === 'number' && idx > 0) navigate(-1)
+    else navigate('/')
+  }, [navigate])
+  const openCategory = useCallback((cat, opts) => {
+    navigate('/category' + (cat && cat !== 'All' ? '/' + encodeURIComponent(cat) : ''), opts)
+  }, [navigate])
+  const openSearch = useCallback((payload) => {
+    setSheetPayload(payload || { items: FEED_POOL })
+    navigate('/search')
+  }, [navigate])
+
   const [authed, setAuthed] = useState(() => {
     if (window.location.hash === '#login') return false
     if (window.location.hash) return true
@@ -6750,177 +6437,42 @@ export default function App() {
   const dismissOrder = () => { setOrder(null); safeRemove('qc-order') }
   const reorder = () => {
     order?.items?.forEach(({ p, n }) => changeCart(n, p, { noReco: true }))
-    setCartOpen(true)
+    navigate('/cart')
   }
-  const [kitOpen, setKitOpen] = useState(window.location.hash === '#kit')
-  const [prosOpen, setProsOpen] = useState(window.location.hash === '#pros')
-  const [inspoOpen, setInspoOpen] = useState(window.location.hash.startsWith('#inspo'))
-  const inspoStart = useRef((window.location.hash.match(/^#inspo-(\w+)/) || [])[1] || null)
-  const inspoLookRef = useRef(false)
-  const [plp, setPlp] = useState(() => {
-    if (window.location.hash.startsWith('#fsheet')) return 'Hinges'
-    if (window.location.hash === '#strip') return 'All'
-    const m = window.location.hash.match(/^#plp(?:-(\w+))?$/)
-    if (!m) return null
-    return m[1] && CAT_RULES[m[1]] ? m[1] : 'All'
-  })
-  const bf = (items) => (brand === 'ALL' ? items : items.filter(p => p.brand === brand))
-  const openCategory = (label) => setPlp(label)
+  const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
 
   // Any overlay up -> the page behind must not scroll
-  const overlayUp = !!(sheet || pdp || qsheet || cartOpen || reorderOpen || acctOpen || plp || kitOpen || prosOpen || inspoOpen)
+  const overlayUp = !!(sheetOpen || pdp || qsheet || cartOpen || reorderOpen || acctOpen || plp || kitOpen || prosOpen || inspoOpen)
   useEffect(() => {
     document.body.classList.toggle('no-scroll', overlayUp)
     return () => document.body.classList.remove('no-scroll')
   }, [overlayUp])
 
-  // Browser/phone back gesture closes the topmost overlay instead of leaving the app.
-  // UI close buttons route THROUGH history.back() so the entry stack stays consistent.
-  const sheetRef = useRef(sheet)
-  sheetRef.current = sheet
-  const pdpRef = useRef(pdp)
-  pdpRef.current = pdp
-  const qtyRef = useRef(qsheet)
-  qtyRef.current = qsheet
-  const cartRef = useRef(cartOpen)
-  cartRef.current = cartOpen
-  const reorderRef = useRef(reorderOpen)
-  reorderRef.current = reorderOpen
-  const acctRef = useRef(acctOpen)
-  acctRef.current = acctOpen
-  const plpOpen = plp !== null
-  const closePlp = () => {
-    if (window.history.state?.qcPlp) window.history.back()
-    else setPlp(null)
-  }
-  useEffect(() => {
-    if (!plpOpen) return
-    if (!window.history.state?.qcPlp) window.history.pushState({ qcPlp: true }, '')
-    const onPop = () => { if (!sheetRef.current && !pdpRef.current && !qtyRef.current && !cartRef.current && !reorderRef.current) setPlp(null) }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [plpOpen])
-  const sheetOpen = sheet !== null
-  const closeSheet = () => {
-    if (window.history.state?.qcSheet) window.history.back()
-    else setSheet(null)
-  }
-  useEffect(() => {
-    if (!sheetOpen) return
-    if (!window.history.state?.qcSheet) window.history.pushState({ qcSheet: true }, '')
-    const onPop = () => { if (!pdpRef.current && !qtyRef.current && !cartRef.current) setSheet(null) }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [sheetOpen])
-  const pdpOpen = pdp !== null
-  const closePdp = () => {
-    if (window.history.state?.qcPdp) window.history.back()
-    else setPdp(null)
-  }
-  useEffect(() => {
-    if (!pdpOpen) return
-    if (!window.history.state?.qcPdp) window.history.pushState({ qcPdp: true }, '')
-    const onPop = () => { if (!qtyRef.current && !cartRef.current) setPdp(null) }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [pdpOpen])
-  const qtyOpen = qsheet !== null
-  const closeQty = () => {
-    if (window.history.state?.qcQty) window.history.back()
-    else setQsheet(null)
-  }
-  useEffect(() => {
-    if (!qtyOpen) return
-    if (!window.history.state?.qcQty) window.history.pushState({ qcQty: true }, '')
-    const onPop = () => setQsheet(null)
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [qtyOpen])
-
-  const closeAcct = () => {
-    if (window.history.state?.qcAcct) window.history.back()
-    else setAcctOpen(false)
-  }
-  useEffect(() => {
-    if (!acctOpen) return
-    if (!window.history.state?.qcAcct) window.history.pushState({ qcAcct: true }, '')
-    const onPop = () => {
-      if (!pdpRef.current && !qtyRef.current && !cartRef.current && !acctSubRef.current) setAcctOpen(false)
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [acctOpen])
-  const closeReorder = () => {
-    if (window.history.state?.qcReorder) window.history.back()
-    else setReorderOpen(false)
-  }
-  useEffect(() => {
-    if (!reorderOpen) return
-    if (!window.history.state?.qcReorder) window.history.pushState({ qcReorder: true }, '')
-    const onPop = () => {
-      if (!pdpRef.current && !qtyRef.current && !cartRef.current) setReorderOpen(false)
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [reorderOpen])
-  const closeInspo = () => {
-    if (window.history.state?.qcInspo) window.history.back()
-    else setInspoOpen(false)
-  }
-  useEffect(() => {
-    if (!inspoOpen) return
-    if (!window.history.state?.qcInspo) window.history.pushState({ qcInspo: true }, '')
-    const onPop = () => {
-      if (!pdpRef.current && !qtyRef.current && !cartRef.current && !inspoLookRef.current) setInspoOpen(false)
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [inspoOpen])
-  const closePros = () => {
-    if (window.history.state?.qcPros) window.history.back()
-    else setProsOpen(false)
-  }
-  useEffect(() => {
-    if (!prosOpen) return
-    if (!window.history.state?.qcPros) window.history.pushState({ qcPros: true }, '')
-    const onPop = () => {
-      if (!pdpRef.current && !qtyRef.current && !cartRef.current) setProsOpen(false)
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [prosOpen])
-  const closeKit = () => {
-    if (window.history.state?.qcKit) window.history.back()
-    else setKitOpen(false)
-  }
-  useEffect(() => {
-    if (!kitOpen) return
-    if (!window.history.state?.qcKit) window.history.pushState({ qcKit: true }, '')
-    const onPop = () => {
-      if (!pdpRef.current && !qtyRef.current && !cartRef.current) setKitOpen(false)
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [kitOpen])
-  const closeCart = () => {
-    if (window.history.state?.qcCart) window.history.back()
-    else setCartOpen(false)
-  }
-  useEffect(() => {
-    if (!cartOpen) return
-    if (!window.history.state?.qcCart) window.history.pushState({ qcCart: true }, '')
-    const onPop = () => { if (!qtyRef.current) setCartOpen(false) }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [cartOpen])
+  // The browser/phone back button now closes overlays for free: react-router pops
+  // the URL, the derived open-states above recompute, and the overlay unmounts.
+  // Every page's close button just steps back one history entry.
+  const closePlp = goBack
+  const closeSheet = goBack
+  const closeReorder = goBack
+  const closeAcct = goBack
+  const closeInspo = goBack
+  const closePros = goBack
+  const closeKit = goBack
+  const closeCart = goBack
+  const closePdp = goBack          // back drops the ?p product param
+  const closeQty = () => setQsheet(null)
 
   // stable intents — memoized cards subscribe via context, never re-render
   const openQty = useCallback((p, apply, opts) => setQsheet({ p, apply, opts }), [])
-  const openPdp = useCallback((p) => setPdp(prev => {
-    if (prev) PDP_SWAPF.current = true
-    return p
-  }), [])
-  const openCart = useCallback(() => setCartOpen(true), [])
+  const openPdp = useCallback((p) => {
+    // PDP rides on a ?p=<id> param so it stacks over whatever page is underneath
+    const had = new URLSearchParams(window.location.search).has('p')
+    if (had) PDP_SWAPF.current = true // switching products while the page is open
+    const sp = new URLSearchParams(window.location.search)
+    sp.set('p', p.id)
+    navigate({ pathname: window.location.pathname, search: '?' + sp.toString() }, { replace: had })
+  }, [navigate])
+  const openCart = useCallback(() => navigate('/cart'), [navigate])
   const confirmQty = (n, e) => {
     const q = qsheet
     if (!q) return
@@ -7034,9 +6586,32 @@ export default function App() {
     })
   }, [])
 
+  // Legacy deep-link compatibility: translate the old page #hashes (used by the
+  // run-quickcart driver and shared links) into the new real paths, once on boot.
+  // Design-review flags (#sim, #compact, #brandhome, #hero-*, #brand-*, #order,
+  // #login, #qty, #wheel …) are NOT pages, so they're left untouched.
+  useEffect(() => {
+    const h = bootHashRef.current
+    if (!h) return
+    const exact = {
+      '#search': '/search', '#cart': '/cart', '#reorder': '/reorder', '#pastorder': '/reorder',
+      '#account': '/account', '#dash': '/account/dash', '#credit': '/account/credit',
+      '#lists': '/account/lists', '#orders': '/account/orders', '#ordpg': '/account/orders',
+      '#site': '/account/site', '#claims': '/account/claims', '#brand': '/account/brand',
+      '#kit': '/kit', '#pros': '/utilities', '#inspo': '/inspo',
+      '#strip': '/category', '#fsheet': '/category/Hinges',
+    }
+    let to = exact[h]
+    let m
+    if (!to && (m = h.match(/^#plp(?:-(\w+))?$/))) to = '/category' + (m[1] && CAT_RULES[m[1]] ? '/' + m[1] : '')
+    else if (!to && h === '#pdp') to = '/?p=' + FEED_POOL[0].id
+    else if (!to && (m = h.match(/^#inspo-(\w+)/))) to = '/inspo/' + m[1]
+    if (to) navigate(to, { replace: true })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // #cart hash: preload a mixed cart so the sheet can be reviewed
   useEffect(() => {
-    if (window.location.hash !== '#cart') return
+    if (bootHashRef.current !== '#cart') return
     const t = setTimeout(() => {
       changeCart(12, BUY_AGAIN[0], { noReco: true })
       changeCart(2, DEALS[0], { noReco: true })
@@ -7046,28 +6621,16 @@ export default function App() {
 
   // #reco / #strip hashes: auto-add an item so recommendations can be reviewed
   useEffect(() => {
-    if (!['#reco', '#strip'].includes(window.location.hash)) return
+    if (!['#reco', '#strip'].includes(bootHashRef.current)) return
     const t = setTimeout(() => changeCart(1, BUY_AGAIN[0]), 600)
     return () => clearTimeout(t)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const h = new Date().getHours()
-  const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
-
-  // Home merchandising mode: category-led default; brand-led preserved at #brandhome
-  const homeMode = window.location.hash === '#brandhome' ? 'brand' : 'category'
-  const catShelf = (i) => {
-    const c = CAT_SHELVES[i]
-    if (!c) return null
-    const items = bf(FEED_POOL.filter(CAT_RULES[c.cat]))
-    if (items.length === 0) return null
-    return (
-      <Shelf
-        title={c.t} items={items} onChange={changeCart} band={c.band}
-        sub={catShelfSub(c.cat)} light={false}
-        onSeeAll={() => setPlp(c.cat)}
-      />
-    )
+  // Values the routed page (Home) needs — handed down through the router Outlet.
+  const pageCtx = {
+    changeCart, brand, setBrand, setPlp: openCategory, setSheet: openSearch,
+    order, dismissOrder, reorder,
+    heroVariant, heroPal, festL, quizSkin, glow, setGlow,
   }
 
   return (
@@ -7079,77 +6642,14 @@ export default function App() {
       <div className="app">
         <TopBar
           compact={scrolled} dp={sky.dp} cond={sky.cond}
-          brand={brand} onBrand={setBrand} onSearch={() => setSheet({ items: FEED_POOL })}
+          brand={brand} onBrand={setBrand} onSearch={() => openSearch({ items: FEED_POOL })}
           cartCount={cart.count} plain={heroVariant === 'fest'}
-          onTargets={() => { acctInitSub.current = 'dash'; setAcctOpen(true) }}
-          onAccount={() => { acctInitSub.current = null; setAcctOpen(true) }}
+          onTargets={() => navigate('/account/dash')}
+          onAccount={() => navigate('/account')}
         />
 
-        {heroVariant === 'fest' ? (
-          <FestHero onCat={(c) => setPlp(c)} palette={heroPal} layout={festL} />
-        ) : (
-          <div className="header-extend" style={glow ? { '--banner-glow': glow } : undefined}>
-            <BannerCarousel quizSkin={quizSkin} onGlow={setGlow} />
-          </div>
-        )}
-
-        {order && (
-          <OrderCard
-            order={order} onDismiss={dismissOrder} onReorder={reorder}
-            onAddMore={() => scrollToId('deals')}
-          />
-        )}
-
-        {/* Flash sale leads — the urgency band sits up top */}
-        <FlashSale
-          items={applyF(bf(DEALS), { ...DEFAULT_F, sort: 3 }, 'ALL')}
-          onChange={changeCart}
-          onSeeAll={() => setSheet({ items: bf(DEALS), title: 'Flash sale' })}
-        />
-
-        {brand !== 'ALL' && (
-          <div className="filter-strip">
-            <Text size="1" weight="bold" style={{ flex: 1 }}>
-              Showing {brand.toUpperCase()} products only
-            </Text>
-            <button className="filter-clear" onClick={() => setBrand('ALL')}>
-              Clear <Cross2Icon width={11} height={11} />
-            </button>
-          </div>
-        )}
-
-        {bf(BUY_AGAIN).length > 0 && (
-          <Shelf
-            title={`${greet}, Virag`} sub="Your regulars — from your recent orders"
-            items={bf(BUY_AGAIN)} onChange={changeCart}
-            onSeeAll={() => setSheet({ items: bf(BUY_AGAIN), title: 'Your regulars' })}
-          />
-        )}
-
-        <CategoryGrid onPick={openCategory} onSeeAll={() => setPlp('All')} />
-
-        {homeMode === 'brand' ? (
-          <>
-            {bf(NEW_EBCO).length > 0 && (
-              <Shelf
-                title="New from Ebco" items={bf(NEW_EBCO)} onChange={changeCart} band="band-green"
-                onSeeAll={() => setSheet({ items: bf(NEW_EBCO), title: 'New from Ebco' })}
-              />
-            )}
-            {bf(WORKSMART).length > 0 && (
-              <Shelf
-                title="Worksmart picks" items={bf(WORKSMART)} onChange={changeCart} sub="Office fittings by Ebco"
-                onSeeAll={() => setSheet({ items: bf(WORKSMART), title: 'Worksmart picks' })}
-              />
-            )}
-            {bf(LIVESMART).length > 0 && (
-              <Shelf
-                title="Livsmart corner" items={bf(LIVESMART)} onChange={changeCart} sub="Smart living, by Ebco"
-                onSeeAll={() => setSheet({ items: bf(LIVESMART), title: 'Livsmart corner' })}
-              />
-            )}
-          </>
-        ) : null}
+        {/* Routed page content (Home and, as they migrate, other pages) */}
+        <Outlet context={pageCtx} />
 
         <QuizDialog
           open={quizOpen} onOpenChange={setQuizOpen}
@@ -7168,16 +6668,16 @@ export default function App() {
         <PageExit open={plp !== null}>
           {plp && (
             <CategoryPage
-              cat={plp} onPick={setPlp} onClose={closePlp}
+              cat={plp} onPick={(c) => openCategory(c, { replace: true })} onClose={closePlp}
               onChange={changeCart} cart={cart} homeBrand={brand}
-              onSearch={() => setSheet({ items: FEED_POOL })}
+              onSearch={() => openSearch({ items: FEED_POOL })}
               recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)}
             />
           )}
         </PageExit>
 
-        <PageExit open={sheet !== null}>
-          <SearchSheet sheet={sheet} onClose={closeSheet} onChange={changeCart} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
+        <PageExit open={sheetOpen}>
+          <SearchSheet sheet={sheetPayload || { items: FEED_POOL }} onClose={closeSheet} onChange={changeCart} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
         </PageExit>
 
         <PageExit open={reorderOpen}>
@@ -7190,23 +6690,23 @@ export default function App() {
           {acctOpen && (
           <AccountPage
             onClose={closeAcct} onChange={changeCart} lastOrder={order}
-            subRef={acctSubRef} initialSub={acctInitSub.current}
-            onCategory={(cat) => { setAcctOpen(false); setPlp(cat) }}
-            onGoReorder={() => { setAcctOpen(false); setReorderOpen(true) }}
-            onGoKit={() => { setAcctOpen(false); setKitOpen(true) }}
+            subRef={acctSubRef} initialSub={acctSection}
+            onCategory={(cat) => openCategory(cat)}
+            onGoReorder={() => navigate('/reorder')}
+            onGoKit={() => navigate('/kit')}
           />
           )}
         </PageExit>
 
         <PageExit open={kitOpen}>
-          {kitOpen && <KitPage onClose={closeKit} onChange={changeCart} onGoCart={() => setCartOpen(true)} />}
+          {kitOpen && <KitPage onClose={closeKit} onChange={changeCart} onGoCart={() => navigate('/cart')} />}
         </PageExit>
 
         <PageExit open={inspoOpen}>
           {inspoOpen && (
             <InspoPage
               onClose={closeInspo} onChange={changeCart}
-              startLook={inspoStart.current} lookRef={inspoLookRef}
+              startLook={inspoLook} lookRef={inspoLookRef}
             />
           )}
         </PageExit>
@@ -7220,8 +6720,8 @@ export default function App() {
               lastOrder={order}
               bomCount={loadBoms().length}
               onChange={changeCart}
-              onGoReorder={() => { setProsOpen(false); setReorderOpen(true) }}
-              onGoKit={() => { setProsOpen(false); setKitOpen(true) }}
+              onGoReorder={() => navigate('/reorder')}
+              onGoKit={() => navigate('/kit')}
             />
           )}
         </PageExit>
@@ -7239,7 +6739,7 @@ export default function App() {
           {cartOpen && (
           <CartPage
             cart={cart} onClose={closeCart} onChange={changeCart} onConvertTier={convertTier} onClear={clearCart}
-            onSettings={() => { closeCart(); acctInitSub.current = 'estpdf'; setAcctOpen(true) }}
+            onSettings={() => navigate('/account/estpdf')}
             onPlaced={(rec) => {
               setOrder(rec)
               safeSet('qc-order', JSON.stringify(rec))
@@ -7249,14 +6749,9 @@ export default function App() {
                 safeSet('qc-bills', JSON.stringify(bills))
               } catch { /* storage off */ }
               setCartItems({})
-              // land on home with the tracking card in view, whatever the stack was
-              setCartOpen(false)
               setQsheet(null)
-              setPdp(null)
-              setSheet(null)
-              setPlp(null)
-              setReorderOpen(false)
-              setAcctOpen(false)
+              // navigating home closes every URL-driven overlay at once
+              navigate('/')
               window.scrollTo({ top: 0, behavior: 'smooth' })
             }}
           />
@@ -7293,10 +6788,10 @@ export default function App() {
           <CartBar cart={cart} />
           <div className="navrow">
             <NavBar
-              onCategories={() => setPlp('All')}
-              onUtilities={() => setProsOpen(true)}
-              onReorder={() => setReorderOpen(true)}
-              onAccount={() => { acctInitSub.current = null; setAcctOpen(true) }}
+              onCategories={() => openCategory('All')}
+              onUtilities={() => navigate('/utilities')}
+              onReorder={() => navigate('/reorder')}
+              onAccount={() => navigate('/account')}
               active={acctOpen ? 'account' : reorderOpen ? 'reorder' : plp ? 'categories' : 'home'}
               mini={navMini}
             />

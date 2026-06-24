@@ -491,3 +491,6 @@ export const tierSwap = (id, target) => {
 }
 // how many cart lines would actually change for a given target (for the UI hint)
 export const tierSwapCount = (ids, target) => ids.filter(id => tierSwap(id, target) !== id).length
+
+// Live order tracking stages: [label, seconds-from-placement]
+export const ORDER_STAGES = [['Placed', 0], ['Packed', 45], ['On the way', 150], ['Delivered', 300]]

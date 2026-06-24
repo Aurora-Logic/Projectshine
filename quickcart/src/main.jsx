@@ -1,8 +1,9 @@
 import { Component } from 'react'
 import { createRoot } from 'react-dom/client'
+import { RouterProvider } from 'react-router-dom'
 import '@radix-ui/themes/styles.css'
 import './index.css'
-import App from './App.jsx'
+import { router } from './router.jsx'
 
 // One render error anywhere must never mean a blank white page.
 class ErrorBoundary extends Component {
@@ -75,6 +76,6 @@ class ErrorBoundary extends Component {
 // performance in demos. Re-enable when hardening for production.
 createRoot(document.getElementById('root')).render(
   <ErrorBoundary>
-    <App />
+    <RouterProvider router={router} />
   </ErrorBoundary>,
 )
