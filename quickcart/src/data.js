@@ -494,3 +494,9 @@ export const tierSwapCount = (ids, target) => ids.filter(id => tierSwap(id, targ
 
 // Live order tracking stages: [label, seconds-from-placement]
 export const ORDER_STAGES = [['Placed', 0], ['Packed', 45], ['On the way', 150], ['Delivered', 300]]
+
+// Brand tab keys for filtering (ALL = no brand filter)
+export const BRAND_KEYS = ['ALL', 'ebco', 'zipco', 'peka', 'worksmart', 'livsmart']
+
+// Brand display names (full labels for spec tables etc.)
+export const BRAND_NAMES = { ebco: 'Ebco', zipco: 'Zipco', peka: 'Peka', worksmart: 'Worksmart by Ebco', livsmart: 'Livsmart by Ebco' }

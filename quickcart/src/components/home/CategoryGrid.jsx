@@ -1,8 +1,8 @@
 import { Box, Grid, Text } from '@radix-ui/themes'
 import { CATEGORIES } from '../../data.js'
-import { img } from '../../lib/util.js'
+import { img, btnish } from '../../lib/util.js'
 import { Img } from '../Img.jsx'
-import { SectionHead, btnish } from '../ui.jsx'
+import { SectionHead } from '../ui.jsx'
 
 /* Category grid — the "Categories" section on home */
 export function CategoryGrid({ onPick, onSeeAll }) {

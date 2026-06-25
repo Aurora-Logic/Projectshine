@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   Theme, Box, Flex, Grid, Text, Heading, Button, TextField, Dialog,
 } from '@radix-ui/themes'
@@ -14,8 +14,8 @@ import {
   UploadIcon, DownloadIcon, Share2Icon, TrashIcon, RowsIcon,
 } from '@radix-ui/react-icons'
 import {
-  FREE_DELIVERY_AT, FEED_CAP, BUY_AGAIN, NEW_EBCO, DEALS,
-  FEED_POOL, CATEGORIES, COMBOS, QUIZ, KITS, PROS, INSPO, INSPO_ROOMS,
+  FREE_DELIVERY_AT, BUY_AGAIN, NEW_EBCO, DEALS, BRAND_KEYS,
+  FEED_POOL, CATEGORIES, QUIZ, KITS, PROS, INSPO, INSPO_ROOMS,
   SEARCH_HINTS, HEADER_TABS, WHEEL, QUIZ_SECONDS, SKY, QUIZ_SKINS, BRAND_LOGOS,
   BRAND_DAY, CAMPAIGN_HEADERS, MY_RANK, TARGETS, HERO_PALETTES, TIERS, SCHEMES, ADDRESSES, REORDER, PAST_ORDERS, DASH, CREDIT, CAT_SCHEMES,
   ORDER_STAGES,
@@ -24,20 +24,24 @@ import {
 import { generateEstimate, EST_BRAND_DEFAULT, EST_FONTS, EST_PAPERS } from './lib/estimate.js'
 import { calculateBoM } from './lib/spsBom.js'
 import { calculateWeights } from './lib/panelWeight.js'
-import { img, DAY, sparkle, scrollToId } from './lib/util.js'
+import { img, DAY, sparkle, scrollToId, btnish } from './lib/util.js'
 import { LEARN } from './lib/learn.js'
 import { usePersisted, safeGet, safeSet, safeRemove, getJSON, setJSON } from './lib/storage.js'
+import { loadLists, saveLists } from './lib/lists.js'
 import { useSkyTheme, useNextFrame, useSheetA11y, useCountUp } from './hooks.js'
 import { QtyCtx, PdpCtx, CartCtx, CartItemsCtx } from './contexts.js'
 import { Img } from './components/Img.jsx'
-import { PageExit, SkyLayer, CartGlyph, SectionHead, btnish } from './components/ui.jsx'
-import { ProductCard, ProductRow, ComboCard } from './components/cards.jsx'
+import { PageExit, SkyLayer, CartGlyph, SectionHead, CartBar } from './components/ui.jsx'
+import { ProductCard, ProductRow } from './components/cards.jsx'
 import { RecoStrip } from './components/feed.jsx'
 import { TplCard, ColorRow } from './components/estpdf.jsx'
+import { FilterSheet } from './components/category/FilterSheet.jsx'
+import { CategoryPage } from './pages/category/index.jsx'
+import { ProductPage } from './pages/product/index.jsx'
+import { PDP_SWAPF } from './pages/product/swap.js'
 import { bulkTier, unitPriceFor, lineTotal } from './money.js'
 import {
-  CAT_RULES, PLP_RAIL, catOf, recosFor, SORT_OPTIONS, SUBCATS, subcatThumb,
-  MERCH_ROWS, DEFAULT_F, MATERIALS, SIZES, matThumb,
+  CAT_RULES, PLP_RAIL, recosFor, DEFAULT_F,
   applyF, fBadges, fSummary,
 } from './lib/catalog.js'
 import './App.css'
@@ -88,7 +92,6 @@ function DevSimulator({ dp, cond, onChange, skinName, onSkin, heroPalName, onHer
 /* Bulk-tier nudge: "Add N more → X% off" — the dealer upsell loop */
 
 
-const BRAND_NAMES = { ebco: 'Ebco', zipco: 'Zipco', peka: 'Peka', worksmart: 'Worksmart by Ebco', livsmart: 'Livsmart by Ebco' }
 
 /* Parse "10+ @ ₹350/pc" into a usable tier: threshold, bulk price, % off */
 // money math lives in money.js (pure, unit-tested)
@@ -123,7 +126,6 @@ function creditState() {
 /* Image with blur-up fade-in (gray well → photo) */
 // neutral packshot placeholder shown when a product image fails to load
 // (Unsplash rate-limit, offline, hotlink block) instead of an invisible gray box
-const BRAND_KEYS = ['ALL', 'ebco', 'zipco', 'peka', 'worksmart', 'livsmart']
 
 /* ---------------- Header (seasonal monsoon skin) ---------------- */
 
@@ -201,374 +203,6 @@ function TopBar({ compact, dp, cond, brand, onBrand, onSearch, cartCount, plain,
 
 /* Deal window persists across refreshes; rolls to a new 30-min window when it expires */
 
-/* ---------------- Category listing page (PLP) ---------------- */
-
-
-function FilterSheet({ group, onGroup, cat = 'All', b, setB, f, setF, count }) {
-  const a11y = useSheetA11y(() => onGroup(null), !!group)
-  if (!group) return null
-  const set = (patch) => setF(cur => ({ ...cur, ...patch }))
-  const badges = fBadges(f, b)
-  const groups = [
-    ['sub', 'Subcategory'], ['brand', 'Brand'], ['material', 'Material'],
-    // spec filters appear only where the category carries the spec
-    ...(cat === 'Hinges' ? [['doorThk', 'Door thk'], ['carcassThk', 'Carcass']] : []),
-    ['load', 'Load'], ['size', 'Size'], ['deal', 'Deals'], ['sort', 'Sort'],
-  ]
-  return (
-    <div className="bsheet-overlay" onClick={() => onGroup(null)}>
-      <div
-        className="bsheet fsheet" role="dialog" aria-modal="true" aria-label="Filters and sorting" tabIndex={-1}
-        ref={a11y} onClick={(e) => e.stopPropagation()}
-      >
-        <Flex align="center" justify="between" px="4" pt="4" pb="3">
-          <Heading as="h2" size="4">Filters & sorting</Heading>
-          <Text size="2" weight="bold" color="red" style={{ cursor: 'pointer' }}
-            onClick={() => { setB('ALL'); setF(DEFAULT_F) }}>
-            Clear all
-          </Text>
-        </Flex>
-        <div className="fs-body">
-          <div className="fs-rail">
-            {groups.map(([k, l]) => (
-              <div key={k} className={`fs-group ${group === k ? 'on' : ''}`} onClick={() => onGroup(k)}>
-                {badges[k] > 0 && <span className="fs-badge">{badges[k]}</span>}
-                <Text size="1" weight="bold">{l}</Text>
-              </div>
-            ))}
-          </div>
-          <div className="fs-pane">
-            {group === 'sub' && (
-              cat === 'All' ? (
-                <Text size="2" color="gray">
-                  Pick a category first — subcategories live inside each category.
-                </Text>
-              ) : (
-                <div className="fs-tiles">
-                  {(SUBCATS[cat] || []).map(([label, kw]) => {
-                    const th = subcatThumb(kw)
-                    const on = f.spec?.[1] === kw
-                    return (
-                      <button key={kw} className={`fs-tile ${on ? 'on' : ''}`} onClick={() => set({ spec: on ? null : [label, kw] })}>
-                        {th && <Img className="ph" src={img(th, 220)} alt="" />}
-                        <div className="fs-cap"><Text size="2" weight="bold">{label}</Text></div>
-                      </button>
-                    )
-                  })}
-                </div>
-              )
-            )}
-            {group === 'brand' && (
-              <div className="fs-tiles">
-                <button className={`fs-tile ${b === 'ALL' ? 'on' : ''}`} onClick={() => setB('ALL')}>
-                  <div className="media">
-                    <DashboardIcon width={26} height={26} color="var(--gray-11)" />
-                  </div>
-                  <div className="fs-cap"><Text size="2" weight="bold">All brands</Text></div>
-                </button>
-                {BRAND_KEYS.slice(1).map(k => (
-                  <button key={k} className={`fs-tile ${b === k ? 'on' : ''}`} onClick={() => setB(cur => (cur === k ? 'ALL' : k))}>
-                    <div className="media">
-                      <img className="lg" src={BRAND_LOGOS[k]} alt={k} />
-                    </div>
-                    <div className="fs-cap"><Text size="2" weight="bold">{k.charAt(0).toUpperCase() + k.slice(1)}</Text></div>
-                  </button>
-                ))}
-              </div>
-            )}
-            {group === 'material' && (
-              <div className="fs-tiles">
-                {MATERIALS.map(m => {
-                  const th = matThumb(m)
-                  const on = f.mat === m
-                  return (
-                    <button key={m} className={`fs-tile ${on ? 'on' : ''}`} onClick={() => set({ mat: on ? null : m })}>
-                      {th && <Img className="ph" src={img(th, 220)} alt="" />}
-                      <div className="fs-cap"><Text size="2" weight="bold">{m}</Text></div>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-            {group === 'load' && (
-              <Box>
-                <Flex align="center" justify="between">
-                  <Text size="2" weight="bold">Min load capacity</Text>
-                  <Text size="2" weight="bold" style={{ color: 'var(--green-11)' }}>
-                    {f.load > 0 ? `≥ ${f.load} kg` : 'Any'}
-                  </Text>
-                </Flex>
-                <input
-                  type="range" className="ldr" min="0" max="60" step="5" value={f.load}
-                  aria-label="Minimum load rating"
-                  aria-valuetext={f.load ? `${f.load} kg or more` : 'Any load'}
-                  onChange={(e) => set({ load: +e.target.value })}
-                />
-                <Flex align="center" justify="between">
-                  <Text size="1" color="gray">Any</Text>
-                  <Text size="1" color="gray">60 kg</Text>
-                </Flex>
-                <Text size="1" color="gray" as="div" mt="3">
-                  Filters slides, systems & arms by rated load. Unrated items hide when set.
-                </Text>
-              </Box>
-            )}
-            {group === 'size' && (
-              <div className="fs-tiles">
-                {SIZES.map(sz => {
-                  const on = f.size === sz
-                  return (
-                    <button key={sz} className={`fs-tile ${on ? 'on' : ''}`} onClick={() => set({ size: on ? null : sz })}>
-                      <div className="media"><Text weight="bold" style={{ fontSize: 24 }}>{sz}<span style={{ fontSize: 13 }}>mm</span></Text></div>
-                      <div className="fs-cap"><Text size="2" weight="bold">{sz} mm</Text></div>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-            {group === 'doorThk' && (
-              <div className="fs-tiles">
-                {[16, 18, 19, 25].map(v => {
-                  const on = f.doorThk === v
-                  return (
-                    <button key={v} className={`fs-tile ${on ? 'on' : ''}`} onClick={() => set({ doorThk: on ? null : v })}>
-                      <div className="media"><Text weight="bold" style={{ fontSize: 24 }}>{v}<span style={{ fontSize: 13 }}>mm</span></Text></div>
-                      <div className="fs-cap"><Text size="2" weight="bold">{v} mm door</Text></div>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-            {group === 'carcassThk' && (
-              <div className="fs-tiles">
-                {[16, 18].map(v => {
-                  const on = f.carcassThk === v
-                  return (
-                    <button key={v} className={`fs-tile ${on ? 'on' : ''}`} onClick={() => set({ carcassThk: on ? null : v })}>
-                      <div className="media"><Text weight="bold" style={{ fontSize: 24 }}>{v}<span style={{ fontSize: 13 }}>mm</span></Text></div>
-                      <div className="fs-cap"><Text size="2" weight="bold">{v} mm board</Text></div>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-            {group === 'deal' && (
-              <div className="fs-tiles">
-                <button className={`fs-tile ${!f.deals ? 'on' : ''}`} onClick={() => set({ deals: false })}>
-                  <div className="media media-ic"><DashboardIcon width={26} height={26} /></div>
-                  <div className="fs-cap"><Text size="2" weight="bold">All items</Text></div>
-                </button>
-                <button className={`fs-tile ${f.deals ? 'on' : ''}`} onClick={() => set({ deals: true })}>
-                  <div className="media media-ic"><LightningBoltIcon width={26} height={26} /></div>
-                  <div className="fs-cap"><Text size="2" weight="bold">Deals only</Text></div>
-                </button>
-              </div>
-            )}
-            {group === 'sort' && SORT_OPTIONS.map((o, i) => (
-              <button key={o} className="bsheet-row" onClick={() => set({ sort: i })}>
-                <span className={`radio ${i === f.sort ? 'on' : ''}`} />
-                <Text size="2" weight={i === f.sort ? 'bold' : 'medium'}>{o}</Text>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="fs-foot">
-          <Button size="3" variant="soft" color="gray" radius="full" onClick={() => onGroup(null)}>
-            Close
-          </Button>
-          <Button size="3" color="green" radius="full" style={{ flex: 1, fontWeight: 800 }} onClick={() => onGroup(null)}>
-            Show {count} result{count === 1 ? '' : 's'}
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function CategoryPage({ cat, onPick, onClose, onChange, onSearch, cart, homeBrand = 'ALL', recoStrip, onRecoClose }) {
-  const [b, setB] = useState(homeBrand)
-  const [f, setF] = useState(DEFAULT_F)
-  // #fsheet hash opens the filter sheet for design review
-  const [fOpen, setFOpen] = useState(() => {
-    const m = window.location.hash.match(/^#fsheet(?:-(\w+))?$/)
-    return m ? (m[1] || 'sub') : null
-  })
-  const mainRef = useRef(null)
-  const badgeTotal = Object.values(fBadges(f, b)).reduce((a, x) => a + x, 0)
-
-  // rail hop → back to top, and subcategories are category-specific so they reset
-  useEffect(() => {
-    mainRef.current?.scrollTo({ top: 0 })
-    setF(cur => ({ ...cur, spec: null }))
-  }, [cat])
-
-  const inCat = useMemo(() => FEED_POOL.filter(CAT_RULES[cat] || (() => true)), [cat])
-  const dealsAvail = inCat.filter(p => p.tag).length
-
-  const products = useMemo(() => applyF(inCat, f, b), [inCat, f, b])
-
-  const railImg = (PLP_RAIL.find(r => r[1] === cat) || PLP_RAIL[0])[0]
-  const pageReady = useNextFrame()
-  const [plpView, setPlpView] = usePersisted('qc-plp-view', 'list')
-  const gridKey = `${cat}|${b}|${JSON.stringify(f)}`
-  const summary = [
-    `${products.length} item${products.length === 1 ? '' : 's'}`,
-    ...fSummary(f, b),
-  ].join(' · ')
-
-  // merch strip after every 6th product breaks grid monotony
-  const cells = []
-  products.forEach((p, i) => {
-    if (i > 0 && i % 6 === 0) cells.push({ merchIdx: (i / 6 - 1) % MERCH_ROWS.length })
-    cells.push(p)
-  })
-
-  return (
-    <div className="plp">
-      <div className="plp-head">
-        <button className="sheet-back" onClick={onClose} aria-label="Back">
-          <ArrowLeftIcon width={18} height={18} />
-        </button>
-        <Box style={{ flex: 1, textAlign: 'center' }}>
-          <Heading as="h2" size="4" style={{ letterSpacing: '-0.2px' }}>
-            {cat === 'All' ? 'All fittings' : cat}
-          </Heading>
-          {b !== 'ALL' && (
-            <Text size="1" color="gray" as="div" style={{ marginTop: 1 }}>
-              {b.charAt(0).toUpperCase() + b.slice(1)} store
-            </Text>
-          )}
-        </Box>
-        <button className="sheet-back" onClick={onSearch} aria-label="Search">
-          <MagnifyingGlassIcon width={18} height={18} />
-        </button>
-      </div>
-      <div className="plp-body">
-        <div className="plp-rail">
-          {PLP_RAIL.map(([ph, label]) => (
-            <div key={label} className={`rail-item ${label === cat ? 'on' : ''}`} {...btnish(() => onPick(label))}>
-              <Img src={img(ph, 140)} alt={label} loading="lazy" />
-              <span className="rl">{label}</span>
-            </div>
-          ))}
-        </div>
-        <div className="plp-main" ref={mainRef}>
-          <div className="plp-sticky">
-            <div className="plp-chips">
-              <button className={`pchip ${badgeTotal > 0 ? 'on' : ''}`} onClick={() => setFOpen(cat === 'All' ? 'material' : 'sub')}>
-                <MixerHorizontalIcon width={13} height={13} />
-                Filters{badgeTotal > 0 ? ` · ${badgeTotal}` : ''}
-              </button>
-              <button className={`pchip ${f.sort > 0 ? 'on' : ''}`} onClick={() => setFOpen('sort')}>
-                {f.sort > 0 ? SORT_OPTIONS[f.sort] : 'Sort'} <ChevronDownIcon width={13} height={13} />
-              </button>
-              <button className={`pchip ${f.deals ? 'on' : ''}`} onClick={() => setF(cur => ({ ...cur, deals: !cur.deals }))}>
-                Deals only
-              </button>
-              {(SUBCATS[cat] || []).map(([label, kw]) => {
-                const th = subcatThumb(kw)
-                return (
-                  <button
-                    key={kw} className={`pchip ${f.spec?.[1] === kw ? 'on' : ''}`}
-                    onClick={() => setF(cur => ({ ...cur, spec: cur.spec?.[1] === kw ? null : [label, kw] }))}
-                  >
-                    {th && <Img className="pi" src={img(th, 80)} alt="" />}
-                    {label}
-                  </button>
-                )
-              })}
-              {BRAND_KEYS.slice(1).map(k => (
-                <button key={k} className={`pchip ${b === k ? 'on' : ''}`} onClick={() => setB(cur => (cur === k ? 'ALL' : k))}>
-                  <img className="pi-logo" src={BRAND_LOGOS[k]} alt="" />
-                  {k.charAt(0).toUpperCase() + k.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button
-            className="plp-banner"
-            onClick={() => dealsAvail > 0 && setF(cur => ({ ...cur, deals: !cur.deals }))}
-            style={{ cursor: dealsAvail > 0 ? 'pointer' : 'default' }}
-          >
-            <Box flexGrow="1">
-              <Text size="3" weight="bold" as="div" style={{ color: '#5c3a10', letterSpacing: '-0.2px' }}>
-                {dealsAvail > 0
-                  ? (f.deals ? 'Showing deals only' : `${dealsAvail} deal${dealsAvail === 1 ? '' : 's'} live in ${cat === 'All' ? 'fittings' : cat.toLowerCase()}`)
-                  : `Pro picks: ${cat === 'All' ? 'every fitting' : cat.toLowerCase()}`}
-              </Text>
-              <Text size="1" weight="medium" as="div" mt="1" style={{ color: '#7a5420' }}>
-                {dealsAvail > 0
-                  ? (f.deals ? 'Tap to see everything again' : 'Trade prices · tap to show only deals')
-                  : 'Trade prices · GST billing · 90-min delivery'}
-              </Text>
-            </Box>
-            <Img src={img(railImg, 200)} alt="" />
-          </button>
-
-          <Flex align="center" justify="between" pt="2" pb="1">
-            <Text size="1" color="gray">{summary}</Text>
-            <div className="view-toggle">
-              <button className={plpView === 'list' ? 'on' : ''} onClick={() => setPlpView('list')} aria-label="List view"><RowsIcon width={15} height={15} /></button>
-              <button className={plpView === 'grid' ? 'on' : ''} onClick={() => setPlpView('grid')} aria-label="Grid view"><DashboardIcon width={15} height={15} /></button>
-            </div>
-          </Flex>
-
-          {!pageReady ? (
-            <Grid columns="2" gapX="3" gapY="4" pt="1">
-              {[0, 1, 2, 3].map(i => <div className="skel" key={`pk${i}`} />)}
-            </Grid>
-          ) : products.length > 0 ? (
-            plpView === 'list' ? (
-              <div className="plp-list" key={gridKey}>
-                {products.map(p => <ProductRow key={`pl-${p.id}`} p={p} onChange={onChange} />)}
-              </div>
-            ) : (
-            <Grid columns="2" gapX="3" gapY="4" pt="1" key={gridKey}>
-              {cells.map((c, i) =>
-                c.merchIdx != null ? (
-                  <div className="merch-row cardin" key={`m${i}`} style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}>
-                    <span className="merch-ic">
-                      {MERCH_ROWS[c.merchIdx].icon === 'gst'
-                        ? <FileTextIcon width={18} height={18} />
-                        : <RocketIcon width={18} height={18} />}
-                    </span>
-                    <Box>
-                      <Text size="1" weight="bold" as="div" style={{ color: 'var(--blue-11)' }}>{MERCH_ROWS[c.merchIdx].t}</Text>
-                      <Text as="div" style={{ fontSize: 11, color: 'var(--blue-11)', opacity: .8 }}>{MERCH_ROWS[c.merchIdx].s}</Text>
-                    </Box>
-                  </div>
-                ) : (
-                  <div className="cardin" key={`plp-${c.id}`} style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}>
-                    <ProductCard p={c} grid onChange={onChange} />
-                  </div>
-                ),
-              )}
-            </Grid>
-            )
-          ) : (
-            <Flex direction="column" align="center" py="8" gap="2">
-              <Text size="2" weight="bold" color="gray">Nothing matches these filters</Text>
-              <Button size="1" radius="full" variant="soft" onClick={() => { setB('ALL'); setF(DEFAULT_F) }}>
-                Clear filters
-              </Button>
-            </Flex>
-          )}
-        </div>
-      </div>
-      <div className="plp-cartwrap">
-        <RecoStrip items={recoStrip} onClose={onRecoClose} onChange={onChange} />
-        <CartBar cart={cart} />
-      </div>
-
-      <FilterSheet
-        group={fOpen} onGroup={setFOpen} cat={cat}
-        b={b} setB={setB} f={f} setF={setF} count={products.length}
-      />
-    </div>
-  )
-}
-
 /* Full-screen search / listing sheet — live filtering with category rail + brand chips */
 function SearchSheet({ sheet, onClose, onChange, recoStrip, onRecoClose }) {
   const a11y = useSheetA11y(onClose)
@@ -579,8 +213,10 @@ function SearchSheet({ sheet, onClose, onChange, recoStrip, onRecoClose }) {
   const [fOpen, setFOpen] = useState(null)
   const [pageReady, setPageReady] = useState(false)
   const [plpView, setPlpView] = usePersisted('qc-plp-view', 'list')
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reset filters when the sheet prop changes
   useEffect(() => { setQ(sheet?.query || ''); setB('ALL'); setCat('All'); setF(DEFAULT_F); setFOpen(null) }, [sheet])
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- re-arm the first-paint gate per sheet
     setPageReady(false)
     if (!sheet) return
     const id = requestAnimationFrame(() => setPageReady(true))
@@ -696,45 +332,9 @@ function SearchSheet({ sheet, onClose, onChange, recoStrip, onRecoClose }) {
 
 /* ---------------- Seasonal: combos + monsoon store ---------------- */
 
-function ComboDeals({ onChange }) {
-  return (
-    <Box pt="5">
-      <SectionHead title="Combo kits" extra={<span className="save-pill">BUNDLE & SAVE</span>} />
-      <div className="hscroll">
-        {COMBOS.map(c => <ComboCard key={c.id} c={c} onChange={onChange} />)}
-      </div>
-    </Box>
-  )
-}
 
 /* ---------------- B10/B11 · Inspiration — shop the look ---------------- */
 
-function InspoStrip({ onOpen }) {
-  return (
-    <Box pt="5">
-      <SectionHead
-        title="Shop the look" extra={<span className="save-pill">UPDATED WEEKLY</span>}
-        onSeeAll={() => onOpen(null)}
-      />
-      <div className="hscroll">
-        {INSPO.slice(0, 4).map(lk => (
-          <div key={lk.id} className="insp-mini" {...btnish(() => onOpen(lk.id))}>
-            <Img src={img(lk.ph, 360)} alt="" />
-            {lk.fresh && <span className="insp-new">NEW</span>}
-            <span className="insp-mini-cap">
-              <b>{lk.title}</b>
-              <i>{lk.room} · {lk.products.length} products</i>
-            </span>
-          </div>
-        ))}
-        <div className="insp-mini more" {...btnish(() => onOpen(null))}>
-          <span>See all<br />looks</span>
-          <ChevronRightIcon width={16} height={16} />
-        </div>
-      </div>
-    </Box>
-  )
-}
 
 function InspoPage({ onClose, onChange, startLook, lookRef }) {
   useSheetA11y(onClose)
@@ -1322,6 +922,7 @@ function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit, onS
           <TextField.Slot><MagnifyingGlassIcon width={17} height={17} /></TextField.Slot>
         </TextField.Root>
 
+        {/* eslint-disable-next-line react-hooks/refs -- scrollSec runs on click, not during render */}
         <div className="rewards-strip" {...btnish(() => scrollSec('journey'))}>
           <StarFilledIcon width={14} height={14} color="var(--amber-9)" style={{ flex: 'none' }} />
           <span className="tier-mini" style={{ background: '#98A2B3' }} />
@@ -1332,6 +933,7 @@ function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit, onS
           <ChevronRightIcon width={13} height={13} color="var(--amber-11)" style={{ flex: 'none' }} />
         </div>
 
+        {/* eslint-disable-next-line react-hooks/refs -- scrollSec runs on click, not during render */}
         <div className="tgt-mini" {...btnish(() => scrollSec('journey'))}>
           <Text size="1" weight="bold" style={{ color: '#fff', flex: 'none' }}>Monthly target</Text>
           <div className="tgt-mini-bar">
@@ -1476,24 +1078,6 @@ function UtilitiesPage({ onClose, lastOrder, onChange, onGoReorder, onGoKit, onS
 
 /* ---------------- B1 · Project Kit Builder ---------------- */
 
-function KitBanner({ onOpen }) {
-  return (
-    <div className="kit-banner" {...btnish(onOpen)}>
-      <Img src={img(KITS[0].ph, 640)} alt="" />
-      <div className="kit-scrim" />
-      <div className="kit-copy">
-        <span className="kit-eyebrow">KITCHEN · WARDROBE · OFFICE</span>
-        <Text size="3" weight="bold" as="div" style={{ color: '#fff', letterSpacing: '-0.3px', lineHeight: 1.2 }}>
-          Fitting out a full site?
-        </Text>
-        <Text as="div" style={{ fontSize: 11.5, color: 'rgba(255, 255, 255, .85)', marginTop: 3, lineHeight: 1.4 }}>
-          The complete fittings list, sized to your project
-        </Text>
-        <span className="kit-cta">Build a project kit <ChevronRightIcon width={13} height={13} /></span>
-      </div>
-    </div>
-  )
-}
 
 function KitPage({ onClose, onChange, onGoCart }) {
   useSheetA11y(onClose)
@@ -1528,6 +1112,7 @@ function KitPage({ onClose, onChange, onGoCart }) {
   const saveAsList = () => {
     const lists = loadLists()
     saveLists([...lists, {
+      // eslint-disable-next-line react-hooks/purity -- event-time ID, not render
       id: `l${Date.now()}`,
       name: `${kit.label} kit`,
       items: live.map(r => ({ id: r.p.id, n: r.n })),
@@ -1676,6 +1261,7 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
   // 10s countdown per question — time out counts as a miss
   useEffect(() => {
     if (stage !== 'playing' || picked !== null) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- arm the per-question countdown
     setTleft(QUIZ_SECONDS)
     const iv = setInterval(() => setTleft(t => Math.max(0, t - 0.1)), 100)
     return () => clearInterval(iv)
@@ -1683,6 +1269,7 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
 
   useEffect(() => {
     if (stage === 'playing' && picked === null && tleft === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- timeout counts as a miss
       setPicked(-1)
       setTimeout(() => advance(), 900)
     }
@@ -1774,13 +1361,6 @@ function QuizFlow({ onFinish, onLeaderboard, autoStart, skin }) {
   )
 }
 
-function QuizCard({ onFinish, skin }) {
-  return (
-    <div className={`quiz-card czn cz-${skin.name.toLowerCase()}`} id="quiz">
-      <QuizFlow skin={skin} onFinish={onFinish} onLeaderboard={() => scrollToId('leaderboard')} />
-    </div>
-  )
-}
 
 function QuizDialog({ open, onOpenChange, onFinish, skin }) {
   return (
@@ -2056,205 +1636,15 @@ function Leaderboard() {
 
 /* ---------------- Categories / feed / chrome ---------------- */
 
-/* Bestsellers: 2×2 collage cards per category, scroll progress, → PLP */
-const BESTS = [
-  ['Hinges', 'Hinges & Channels'],
-  ['Drawer Slides', 'Slides & Channels'],
-  ['Locks', 'Locks & Latches'],
-  ['Kitchen', 'Kitchen Systems'],
-  ['Lighting', 'Lighting & Smart'],
-]
-
-function BestSellers({ onCat }) {
-  const ref = useRef(null)
-  const [idx, setIdx] = useState(0)
-  const onScroll = () => {
-    const el = ref.current
-    if (el) setIdx(Math.min(BESTS.length - 1, Math.round(el.scrollLeft / 180)))
-  }
-  return (
-    <Box pt="5" className="cv">
-      <SectionHead title="Bestsellers" onSeeAll={() => onCat('All')} />
-      <div className="hscroll" ref={ref} onScroll={onScroll}>
-        {BESTS.map(([cat, label]) => {
-          // four DISTINCT photos per collage (several products share context shots)
-          const imgs = []
-          const seen = new Set()
-          for (const p of [...FEED_POOL.filter(CAT_RULES[cat]), ...FEED_POOL]) {
-            if (imgs.length >= 4) break
-            if (!seen.has(p.ph)) { seen.add(p.ph); imgs.push(p) }
-          }
-          const count = (CATEGORIES.find(c => c[1] === cat) || [])[2] || 99
-          return (
-            <button key={cat} className="bs-card" onClick={() => onCat(cat)}>
-              <div className="bs-gridwrap">
-                <div className="bs-grid">
-                  {imgs.map(p => <Img key={p.id} src={img(p.ph, 180)} alt="" loading="lazy" />)}
-                </div>
-                <span className="bs-more">+{count} more</span>
-              </div>
-              <Text as="div" weight="bold" style={{ fontSize: 15, letterSpacing: '-0.2px', padding: '14px 4px 2px' }}>
-                {label}
-              </Text>
-            </button>
-          )
-        })}
-      </div>
-      <div className="bs-prog">
-        {BESTS.map((_, i) => <span key={i} className={i === idx ? 'on' : ''} />)}
-      </div>
-    </Box>
-  )
-}
 
 /* Dealer targets dashboard: monthly / quarterly / yearly purchase progress */
 const fmtL = (n) => (n >= 100000 ? `₹${(n / 100000).toFixed(2)}L` : `₹${n.toLocaleString('en-IN')}`)
 
-function TargetsCard() {
-  const [per, setPer] = useState('monthly')
-  const t = TARGETS[per]
-  const pct = Math.min(100, Math.round((t.done / t.target) * 100))
-  return (
-    <Box px="4" pt="5">
-      <div className="tgt">
-        <Flex align="center" justify="between">
-          <Heading as="h2" size="4" style={{ letterSpacing: '-0.2px' }}>Your targets</Heading>
-          <span className="save-pill">FY 2026–27</span>
-        </Flex>
-        <div className="seg">
-          {Object.keys(TARGETS).map(k => (
-            <button key={k} className={`seg-b ${per === k ? 'on' : ''}`} onClick={() => setPer(k)}>
-              {TARGETS[k].label}
-            </button>
-          ))}
-        </div>
-        <Flex align="baseline" gap="2" mt="3">
-          <Text weight="bold" style={{ fontSize: 28, letterSpacing: '-0.5px' }}>{pct}%</Text>
-          <Text size="1" color="gray">achieved</Text>
-          <Text size="2" weight="bold" style={{ marginLeft: 'auto' }}>
-            {fmtL(t.done)} <Text size="1" color="gray" weight="medium">of {fmtL(t.target)}</Text>
-          </Text>
-        </Flex>
-        <div className="tbar">
-          <div className="tbar-fill" style={{ width: `${pct}%` }} />
-        </div>
-        <Flex align="center" justify="between" mt="2">
-          <Text size="1" color="gray">{fmtL(t.target - t.done)} to go · ends {t.ends}</Text>
-          <Text size="1" weight="bold" style={{ color: 'var(--amber-11)' }}>{t.note}</Text>
-        </Flex>
-      </div>
-    </Box>
-  )
-}
 
 /* Maggi-style brand promo card — for launches or stock clearing */
-function BrandDay({ onShop }) {
-  return (
-    <Box px="4" pt="5">
-      <div className="bday">
-        <div className="bday-top">
-          <Img className="bday-img" src={img(BRAND_DAY.ph, 720)} alt={BRAND_DAY.name} loading="lazy" />
-          <span className="bday-badge">{BRAND_DAY.badge}</span>
-        </div>
-        <Flex className="bday-foot" align="center" gap="3">
-          <span className="lgchip" style={{ padding: '5px 7px' }}>
-            <img src={BRAND_DAY.logo} alt="" style={{ height: 22, maxWidth: 54, objectFit: 'contain' }} />
-          </span>
-          <Box flexGrow="1" style={{ minWidth: 0 }}>
-            <Text size="2" weight="bold" as="div" truncate>{BRAND_DAY.name}</Text>
-            <Text size="1" color="gray" as="div" truncate>{BRAND_DAY.sub}</Text>
-          </Box>
-          <Button size="2" color="green" radius="full" style={{ fontWeight: 800, flex: 'none' }} onClick={onShop}>
-            {BRAND_DAY.cta}
-          </Button>
-        </Flex>
-      </div>
-    </Box>
-  )
-}
 
-function EndlessFeed({ onChange, pool }) {
-  // the batch lives in the render key only — the same SKU stays one cart line
-  const [items, setItems] = useState(() => pool.slice(0, 6).map(p => ({ p, k: `f0-${p.id}` })))
-  const [loading, setLoading] = useState(false)
-  const sentinel = useRef(null)
-  const batch = useRef(1)
 
-  // brand filter changed → restart the feed from the new pool
-  useEffect(() => {
-    setItems(pool.slice(0, 6).map(p => ({ p, k: `f0-${p.id}` })))
-    batch.current = 1
-  }, [pool])
-
-  const loadMore = useCallback(() => {
-    if (loading || items.length >= FEED_CAP || pool.length === 0) return
-    setLoading(true)
-    setTimeout(() => {
-      const b = batch.current++
-      const start = (b * 6) % pool.length
-      const next = [...pool, ...pool].slice(start, start + 6)
-        .map(p => ({ p, k: `f${b}-${p.id}` }))
-      setItems(cur => [...cur, ...next])
-      setLoading(false)
-    }, 700)
-  }, [loading, items.length, pool])
-
-  useEffect(() => {
-    const ob = new IntersectionObserver(
-      entries => { if (entries[0].isIntersecting) loadMore() },
-      { rootMargin: '600px' },
-    )
-    if (sentinel.current) ob.observe(sentinel.current)
-    return () => ob.disconnect()
-  }, [loadMore])
-
-  const done = items.length >= FEED_CAP
-
-  return (
-    <Box pt="5">
-      <SectionHead title="Categories" />
-      <Grid columns="3" gapX="3" gapY="4" px="4">
-        {items.map(it => <ProductCard key={it.k} p={it.p} grid onChange={onChange} />)}
-        {loading && [0, 1, 2].map(i => <div className="skel" key={`sk${i}`} />)}
-      </Grid>
-      <div ref={sentinel} />
-      {done && (
-        <Flex direction="column" align="center" py="6" gap="1">
-          <Text size="2" weight="bold" color="gray">You’re all caught up</Text>
-          <Text size="1" color="gray">Fresh picks land every morning</Text>
-        </Flex>
-      )}
-    </Box>
-  )
-}
-
-function CartBar({ cart }) {
-  const openCart = useContext(CartCtx)
-  const note = cart.total >= FREE_DELIVERY_AT
-    ? 'FREE delivery unlocked'
-    : `Add ₹${FREE_DELIVERY_AT - cart.total} more for FREE delivery`
-  return (
-    <div className={`cartbar ${cart.count > 0 ? 'show' : ''}`} onClick={openCart || undefined}>
-      <Flex>
-        {cart.photos.slice(-3).map(ph => (
-          <Img key={ph} className="thumb" src={img(ph, 120)} alt="" />
-        ))}
-      </Flex>
-      <Box flexGrow="1">
-        <Text key={cart.count} className="linepop" size="2" weight="bold" as="div">
-          {cart.count} item{cart.count === 1 ? '' : 's'} · ₹{cart.total.toLocaleString('en-IN')}
-        </Text>
-        <Text size="1" weight="medium" as="div" style={{ color: 'var(--green-4)' }}>{note}</Text>
-      </Box>
-      <Flex align="center" gap="1">
-        <Text size="2" weight="bold">View cart</Text>
-        <ChevronRightIcon width={16} height={16} />
-      </Flex>
-    </div>
-  )
-}
-
-function NavBar({ onCategories, onUtilities, onReorder, onAccount, active = 'home', mini = false }) {
+function NavBar({ onCategories, onUtilities, onReorder, active = 'home', mini = false }) {
   const items = [
     { icon: HomeIcon, label: 'Home', key: 'home', go: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
     { icon: DashboardIcon, label: 'Categories', key: 'categories', go: onCategories },
@@ -2278,21 +1668,6 @@ function NavBar({ onCategories, onUtilities, onReorder, onAccount, active = 'hom
 }
 
 /* ---------------- App ---------------- */
-
-/* ---------------- Project lists (per-site job baskets) ---------------- */
-
-const LIST_SEED = [
-  { id: 'l1', name: 'Sharma kitchen site', items: [{ id: 'ba1', n: 20 }, { id: 'ba2', n: 30 }, { id: 'dl1', n: 12 }] },
-]
-
-function loadLists() {
-  try {
-    const s = JSON.parse(safeGet('qc-lists') || 'null')
-    if (Array.isArray(s)) return s
-  } catch { /* seed below */ }
-  return LIST_SEED
-}
-const saveLists = (l) => safeSet('qc-lists', JSON.stringify(l))
 
 /* Structured Indian address form: line 1/2, landmark, city, pincode */
 function AddrFields({ onSave, cta = 'Save address' }) {
@@ -2325,80 +1700,6 @@ function AddrFields({ onSave, cta = 'Save address' }) {
       <Button size="2" color="green" style={{ fontWeight: 800, width: '100%' }} disabled={!valid} onClick={save}>
         {cta}
       </Button>
-    </div>
-  )
-}
-
-/* Save-to-list sheet, opened from the product page bookmark */
-function ListSheet({ p, onClose }) {
-  const [lists, setLists] = useState(loadLists)
-  const [adding, setAdding] = useState(false)
-  const [name, setName] = useState('')
-  const [savedTo, setSavedTo] = useState(null)
-  const commit = (next, label) => {
-    setLists(next)
-    saveLists(next)
-    setSavedTo(label)
-    setTimeout(onClose, 850)
-  }
-  const pick = (l) => {
-    commit(lists.map(x => x.id !== l.id ? x : {
-      ...x,
-      items: x.items.some(i => i.id === p.id)
-        ? x.items.map(i => (i.id === p.id ? { ...i, n: i.n + 1 } : i))
-        : [...x.items, { id: p.id, n: 1 }],
-    }), l.name)
-  }
-  const create = () => {
-    commit([...lists, { id: `l${Date.now()}`, name: name.trim(), items: [{ id: p.id, n: 1 }] }], name.trim())
-  }
-  return (
-    <div className="qsheet-overlay" onClick={onClose}>
-      <div className="qsheet" onClick={(e) => e.stopPropagation()}>
-        <div className="qsheet-grab" />
-        <Heading as="h2" size="4" style={{ letterSpacing: '-0.3px' }}>Save to project list</Heading>
-        <Text size="1" color="gray" as="div" mt="1" className="clamp1">{p.name}</Text>
-        {savedTo ? (
-          <div className="calc-out" style={{ marginTop: 14 }}>
-            <Flex align="center" gap="2">
-              <CheckIcon width={14} height={14} color="var(--green-11)" />
-              <Text size="2" weight="bold" style={{ color: 'var(--green-11)' }}>Saved to {savedTo}</Text>
-            </Flex>
-          </div>
-        ) : (
-          <>
-            <div className="addr-list">
-              {lists.map(l => (
-                <button key={l.id} className="addr-row" onClick={() => pick(l)}>
-                  <span className="mrow-ic" style={{ background: 'var(--plum-3)', color: 'var(--plum-11)', width: 30, height: 30 }}>
-                    <BookmarkIcon width={14} height={14} />
-                  </span>
-                  <span style={{ minWidth: 0, flex: 1 }}>
-                    <Text size="2" weight="bold" as="div">{l.name}</Text>
-                    <Text size="1" color="gray" as="div">{l.items.length} items</Text>
-                  </span>
-                  <PlusIcon width={14} height={14} color="var(--gray-9)" />
-                </button>
-              ))}
-            </div>
-            {adding ? (
-              <div className="addr-form">
-                <input
-                  className="cp-input" placeholder="List name — e.g. Mehta wardrobe job" autoFocus
-                  value={name} onChange={(e) => setName(e.target.value)}
-                />
-                <Button size="2" color="green" style={{ fontWeight: 800, width: '100%' }} disabled={!name.trim()} onClick={create}>
-                  Create & save here
-                </Button>
-              </div>
-            ) : (
-              <button className="addr-add" onClick={() => setAdding(true)}>
-                <PlusIcon width={14} height={14} /> New project list
-              </button>
-            )}
-          </>
-        )}
-      </div>
     </div>
   )
 }
@@ -2897,12 +2198,14 @@ function Bars({ data }) {
 /* category donut: tap the legend to read the center */
 function Donut({ cats }) {
   const [sel, setSel] = useState(0)
-  let acc = 0
-  const stops = cats.map(([, pct, c]) => {
-    const s = `${c} ${acc}% ${acc + pct}%`
-    acc += pct
-    return s
-  }).join(', ')
+  const stops = cats
+    .reduce((out, [, pct, c]) => {
+      const acc = out.length ? out[out.length - 1].end : 0
+      out.push({ s: `${c} ${acc}% ${acc + pct}%`, end: acc + pct })
+      return out
+    }, [])
+    .map(x => x.s)
+    .join(', ')
   return (
     <Flex gap="4" align="center" mt="3">
       <div className="donut" style={{ background: `conic-gradient(${stops})` }}>
@@ -3311,7 +2614,8 @@ function OrderDetailPage({ order, onClose, onChange }) {
 
 function AcctOrders({ lastOrder, onChange }) {
   const [view, setView] = useState(null)
-  ordPgRef.current = view !== null
+  // mirror "order detail open" to the module mailbox after render, not during
+  useEffect(() => { ordPgRef.current = view !== null })
   useEffect(() => {
     if (!view) return
     if (!window.history.state?.qcOrdPg) window.history.pushState({ qcOrdPg: true }, '')
@@ -3325,6 +2629,7 @@ function AcctOrders({ lastOrder, onChange }) {
   }
   // #ordpg: open the first receipt for design review
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time deep-link open
     if (window.location.hash === '#ordpg' && hist[0]) setView(hist[0])
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [preset, setPreset] = useState('fy')
@@ -3340,7 +2645,7 @@ function AcctOrders({ lastOrder, onChange }) {
       items: o.items.map(([id, n, unit]) => ({ p: FEED_POOL.find(p => p.id === id), n, unit })).filter(x => x.p),
     })),
   ]
-  const nowTs = Date.now()
+  const [nowTs] = useState(() => Date.now()) // report "as of" time — pinned at mount
   let f0 = 0
   let t0 = Infinity
   if (preset === 'custom') {
@@ -3818,7 +3123,7 @@ function VisitRow({ r, now, kind }) {
 function VisitForm({ kind }) {
   const storeKey = kind === 'site' ? 'qc-visits-site' : 'qc-visits-display'
   const [reqs, setReqs] = usePersisted(storeKey, [])
-  const [now, setNow] = useState(Date.now())
+  const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 5000)
     return () => clearInterval(t)
@@ -4154,13 +3459,15 @@ function AcctClaims({ lastOrder }) {
   }
   const submit = (e) => {
     sparkle(e)
+    // eslint-disable-next-line react-hooks/purity -- event-time stamp, not render
+    const ts = Date.now()
     setClaims([{
-      id: `CL${String(Date.now()).slice(-5)}`,
+      id: `CL${String(ts).slice(-5)}`,
       orderId: order.id, orderDate: order.date, type,
       items: order.items
         .filter(it => (picked[it.p.id] || 0) > 0)
         .map(it => ({ name: it.p.name, n: picked[it.p.id] })),
-      photos: photos.length, notes: notes.trim(), ts: Date.now(),
+      photos: photos.length, notes: notes.trim(), ts,
     }, ...claims])
     setFormOpen(false)
     setOrderId(null)
@@ -4718,7 +4025,7 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
   // a stack so back goes up ONE level (e.g. estpdf -> boms) instead of exiting outright
   const [subStack, setSubStack] = useState(() => {
     const h = window.location.hash
-    let init = null
+    let init
     if (h === '#dash') init = 'dash'
     else if (h === '#credit') init = 'credit'
     else if (h === '#lists') init = 'lists'
@@ -4736,7 +4043,8 @@ function AccountPage({ onClose, onChange, lastOrder, subRef, initialSub, onCateg
     setSubStack(st => [...st, s])
   }
   const [lo, setLo] = useState(null) // null | 'confirm' | 'out'
-  subRef.current = sub !== null
+  // sync the parent's "a sub-screen is open" mirror ref after render (not during)
+  useEffect(() => { subRef.current = sub !== null })
   const backSub = () => {
     if (window.history.state?.qcAcctSub) window.history.back()
     else setSubStack(st => (st.length > 1 ? st.slice(0, -1) : []))
@@ -5195,6 +4503,7 @@ function ReorderPage({ onClose, onChange, cart, lastOrder }) {
   useEffect(() => {
     if (window.location.hash === '#pastorder') {
       const o = PAST_ORDERS[0]
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time deep-link open
       setView({ ...o, items: o.items.map(([id, n, unit]) => ({ p: FEED_POOL.find(p => p.id === id), n, unit })).filter(x => x.p) })
     }
   }, [])
@@ -5652,7 +4961,7 @@ function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced
   const baseFee = coupon?.kind === 'freedel' || cart.total >= FREE_DELIVERY_AT || cart.total === 0 ? 0 : 49
   const fee = baseFee + (express ? 200 : 0)
   const credit = creditState()
-  const dueTs = Date.now() + 30 * 864e5
+  const [dueTs] = useState(() => Date.now() + 30 * 864e5) // payment due date — pinned at mount
   const dueLabel = new Date(dueTs).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
   const bulkSave = items.reduce((s, { p, n }) => {
     const t = bulkTier(p)
@@ -5994,327 +5303,6 @@ function CartPage({ cart, onClose, onChange, onConvertTier, onSettings, onPlaced
   )
 }
 
-/* ---------------- Product details page ---------------- */
-
-let PDP_DIR = 0 // swipe direction handoff to the next ProductPage mount (slide-in side)
-const PDP_SWAPF = { current: false } // product switched while the page was already open
-
-function ProductPage({ p, onClose, onChange, cart }) {
-  useSheetA11y(onClose) // Escape-to-close; page manages its own focus
-  const openQty = useContext(QtyCtx)
-  const openPdp = useContext(PdpCtx)
-  const openCart = useContext(CartCtx)
-  const added = useContext(CartItemsCtx)[p.id]?.n || 0
-  const [listSheet, setListSheet] = useState(false)
-  // Zara-style gestures: horizontal swipe anywhere on the page moves to the
-  // prev/next product in this range; vertical swipe (or tap) on the photo
-  // cycles through photo crops. touch-action: pan-x on the hero hands
-  // vertical drags there to us instead of the page scroll.
-  const [shot, setShot] = useState(0)
-  const shots = useMemo(() => [
-    img(p.ph, 720),
-    `${img(p.ph, 720)}&h=720&crop=entropy`,
-    `${img(p.ph, 720)}&h=900&crop=edges`,
-  ], [p])
-  const sibs = useMemo(() => {
-    const c = catOf(p)
-    const list = FEED_POOL.filter(x => catOf(x) === c)
-    return list.length > 1 ? list : FEED_POOL
-  }, [p])
-  const sibNext = (dir) => {
-    const i = sibs.findIndex(x => x.id === p.id)
-    const next = sibs[(i + dir + sibs.length) % sibs.length]
-    return next && next.id !== p.id ? next : null
-  }
-  const rootRef = useRef(null)
-  const [enter] = useState(() => {
-    const d = PDP_DIR
-    PDP_DIR = 0
-    const sw = PDP_SWAPF.current
-    PDP_SWAPF.current = false
-    return d === 1 ? 'pdp-in-r' : d === -1 ? 'pdp-in-l' : sw ? 'pdp-swap' : ''
-  })
-  const touch = useRef(null)
-  const onTouchStart = (e) => {
-    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, axis: null }
-  }
-  // the page follows the finger (damped) during a horizontal drag — attached
-  // non-passive so preventDefault can freeze vertical scroll while the gesture
-  // is horizontal (otherwise the page bobs up and down during the swipe)
-  const bodyRef = useRef(null)
-  useEffect(() => {
-    const el = bodyRef.current
-    if (!el) return
-    const onMove = (e) => {
-      const t = touch.current
-      if (!t) return
-      const dx = e.touches[0].clientX - t.x
-      const dy = e.touches[0].clientY - t.y
-      if (!t.axis) {
-        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
-        t.axis = Math.abs(dx) > 1.2 * Math.abs(dy) ? 'h' : 'v'
-      }
-      if (t.axis !== 'h') return
-      e.preventDefault()
-      const r = rootRef.current
-      if (r) {
-        r.style.transition = 'none'
-        r.style.transform = `translateX(${dx * 0.4}px)`
-        r.style.opacity = String(Math.max(0.65, 1 - Math.abs(dx) / 700))
-      }
-    }
-    el.addEventListener('touchmove', onMove, { passive: false })
-    return () => el.removeEventListener('touchmove', onMove)
-  }, [])
-  const settleBack = () => {
-    const el = rootRef.current
-    if (!el) return
-    el.style.transition = 'transform .3s cubic-bezier(.22, 1, .36, 1), opacity .3s ease'
-    el.style.transform = 'translateX(0)'
-    el.style.opacity = '1'
-  }
-  const onTouchEnd = (e) => {
-    const t = touch.current
-    touch.current = null
-    if (!t) return
-    const dx = e.changedTouches[0].clientX - t.x
-    const next = t.axis === 'h' && Math.abs(dx) > 70 ? sibNext(dx < 0 ? 1 : -1) : null
-    if (next && openPdp) {
-      const dir = dx < 0 ? 1 : -1
-      const el = rootRef.current
-      if (el) {
-        el.style.transition = 'transform .16s ease-in, opacity .16s ease-in'
-        el.style.transform = `translateX(${dir === 1 ? '-64px' : '64px'})`
-        el.style.opacity = '0'
-        setTimeout(() => { PDP_DIR = dir; openPdp(next) }, 140)
-      } else { PDP_DIR = dir; openPdp(next) }
-    } else settleBack()
-  }
-  const onTouchCancel = settleBack
-  const onHeroEnd = (e) => {
-    const t = touch.current
-    if (!t || t.axis === 'h') return
-    const dx = e.changedTouches[0].clientX - t.x
-    const dy = e.changedTouches[0].clientY - t.y
-    if (Math.abs(dy) > 45 && Math.abs(dy) > 1.5 * Math.abs(dx)) {
-      e.stopPropagation()
-      touch.current = null
-      setShot(s => (s + (dy < 0 ? 1 : -1) + shots.length) % shots.length)
-    }
-  }
-  const recos = useMemo(() => recosFor(p), [p])
-  // size variants: lengths available in this range, linking sibling products
-  const sizes = useMemo(() => {
-    if (!p.size) return []
-    const map = new Map()
-    FEED_POOL.filter(x => x.size && catOf(x) === catOf(p))
-      .sort((a, b) => a.size - b.size)
-      .forEach(x => { if (!map.has(x.size)) map.set(x.size, x) })
-    if (map.has(p.size)) map.set(p.size, p)
-    return [...map.entries()]
-  }, [p])
-  const club = recos[0]
-  // 3×3 recommendations: same-range first, padded from the pool
-  const more = useMemo(() => {
-    const list = recos.slice(1)
-    for (const x of FEED_POOL) {
-      if (list.length >= 9) break
-      if (x.id !== p.id && (!club || x.id !== club.id) && !list.some(y => y.id === x.id)) list.push(x)
-    }
-    return list.slice(0, 9)
-  }, [recos, p, club])
-  const tier = bulkTier(p)
-  const off = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0
-  const oos = p.stock === 0
-  const specs = [
-    ['Brand', BRAND_NAMES[p.brand] || p.brand],
-    p.mat && ['Material / finish', p.mat],
-    p.load && ['Load capacity', `${p.load} kg`],
-    p.size && ['Size', `${p.size} mm`],
-    p.qty && ['Pack contents', p.qty],
-    p.bulk && ['Bulk pricing', p.bulk],
-    ['Item code', p.id.toUpperCase()],
-    [oos ? 'Lead time' : 'Availability', oos ? `Ships in ${p.lead} days` : `In stock · ${p.stock}+ pcs`],
-  ].filter(Boolean)
-  return (
-    <>
-    <div className="pdp-back" />
-    <div ref={rootRef} className={`pdp ${enter}`}>
-      <div className="pdp-head">
-        <button className="sheet-back" onClick={onClose} aria-label="Back"><ArrowLeftIcon /></button>
-        <Text size="3" weight="bold" style={{ flex: 1, minWidth: 0, letterSpacing: '-0.2px' }} truncate>Product details</Text>
-        <button className="sheet-back" style={{ width: 36, height: 36 }} onClick={() => setListSheet(true)} aria-label="Save to list">
-          <BookmarkIcon width={16} height={16} />
-        </button>
-        {BRAND_LOGOS[p.brand] && <img src={BRAND_LOGOS[p.brand]} alt={p.brand} style={{ height: 16, flex: 'none' }} />}
-      </div>
-      <div ref={bodyRef} className="pdp-body" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={onTouchCancel}>
-        <div className="pdp-hero" onTouchEnd={onHeroEnd} onClick={() => setShot(s => (s + 1) % shots.length)}>
-          {shots.map((s, i) => (
-            <Img key={i} src={s} alt={p.name} className={`pdp-shot ${i === shot ? 'cur' : ''}`} />
-          ))}
-          {(p.tag || off > 0) && <span className="pbadge" style={{ top: 14, left: 14 }}>{p.tag || `${off}% OFF`}</span>}
-          <div className="pdp-dots">
-            {shots.map((_, i) => <span key={i} className={i === shot ? 'on' : ''} />)}
-          </div>
-          <span className="pdp-shotn">{shot + 1}/{shots.length}</span>
-        </div>
-        <Box px="4" pt="4">
-          <Heading as="h2" size="5" style={{ letterSpacing: '-0.3px', lineHeight: 1.25 }}>{p.name}</Heading>
-          {p.qty && <Text size="2" color="gray" as="div" mt="1">{p.qty}</Text>}
-          {(p.rating || p.buys) && (
-            <Flex align="center" gap="3" mt="2">
-              {p.rating && <span className="pdp-rate"><StarFilledIcon width={11} height={11} /> {p.rating}</span>}
-              {p.buys && (
-                <Flex align="center" gap="1">
-                  <LightningBoltIcon width={11} height={11} color="var(--amber-11)" />
-                  <Text size="1" weight="bold">{p.buys}</Text>
-                </Flex>
-              )}
-            </Flex>
-          )}
-          {p.stock != null && (
-            <Text size="1" as="div" mt="2" weight="bold" style={{
-              color: oos ? 'var(--red-10)' : p.stock <= 10 ? 'var(--amber-11)' : 'var(--green-10)',
-            }}>
-              {oos
-                ? `Out of stock · ships in ${p.lead} days`
-                : p.stock <= 10 ? `Only ${p.stock} left` : `In stock · ${p.stock}+ pcs · same-day dispatch`}
-            </Text>
-          )}
-          <Flex align="center" gap="2" mt="3">
-            <Text weight="bold" style={{ fontSize: 24, letterSpacing: '-0.4px' }}>₹{p.price.toLocaleString('en-IN')}</Text>
-            {p.mrp && <Text size="2" color="gray" style={{ textDecoration: 'line-through' }}>₹{p.mrp.toLocaleString('en-IN')}</Text>}
-            {off > 0 && <span className="off-pill">{off}% OFF</span>}
-            {off === 0 && !tier && <span className="st-chip ok">DEALER PRICE</span>}
-          </Flex>
-          <Text size="1" color="gray" as="div" mt="1">GST included · input credit itemised on your invoice</Text>
-          {sizes.length > 1 && (
-            <Box mt="3">
-              <Text size="1" weight="bold" as="div" className="u-seclabel">
-                AVAILABLE LENGTHS · THIS RANGE
-              </Text>
-              <Flex gap="2" mt="1">
-                {sizes.map(([sz, prod]) => (
-                  <button
-                    key={sz} className={`size-chip ${sz === p.size ? 'on' : ''}`}
-                    onClick={() => { if (sz !== p.size && openPdp) openPdp(prod) }}
-                  >
-                    {sz} mm
-                  </button>
-                ))}
-              </Flex>
-            </Box>
-          )}
-          {tier && (
-            <div className="bulk-box">
-              <div className="bulk-row">
-                <Text size="1" weight="bold" style={{ color: 'var(--green-11)', fontSize: 10.5, letterSpacing: '.5px' }}>
-                  DEALER BULK PRICING
-                </Text>
-                <Text size="1" color="gray">per pc / set</Text>
-              </div>
-              <div className="bulk-row">
-                <Text size="2">1–{tier.thr - 1} pcs</Text>
-                <Text size="2" weight="bold">₹{p.price.toLocaleString('en-IN')}</Text>
-              </div>
-              <div className="bulk-row hot">
-                <Flex align="center" gap="2">
-                  <Text size="2" weight="bold">{tier.thr}+ pcs</Text>
-                  <span className="off-pill">{tier.pct}% OFF</span>
-                </Flex>
-                <Text size="2" weight="bold" style={{ color: 'var(--green-11)' }}>₹{tier.bp.toLocaleString('en-IN')}</Text>
-              </div>
-            </div>
-          )}
-        </Box>
-
-        {club && (
-          <Box px="4" pt="5">
-            <SectionHead title="Buy it with" sub="Dealers usually club these together" />
-            <div className="club">
-              <Img src={img(p.ph, 160)} alt="" />
-              <div className="club-plus"><PlusIcon width={14} height={14} /></div>
-              <Img src={img(club.ph, 160)} alt={club.name} />
-              <Box flexGrow="1" style={{ minWidth: 0 }}>
-                <Text size="1" weight="bold" as="div" className="clamp2" style={{ lineHeight: 1.3 }}>{club.name}</Text>
-                <Text size="2" weight="bold" as="div" mt="1">
-                  ₹{(p.price + club.price).toLocaleString('en-IN')} <Text size="1" color="gray" weight="medium">for both</Text>
-                </Text>
-                <Button
-                  size="1" color="green" radius="full" mt="2" style={{ fontWeight: 800 }}
-                  onClick={(e) => {
-                    onChange(1, p, { noReco: true }); onChange(1, club, { noReco: true })
-                    sparkle(e)
-                  }}
-                >
-                  Add both
-                </Button>
-              </Box>
-            </div>
-          </Box>
-        )}
-
-        <Box px="4" pt="5">
-          <SectionHead title="Specifications" />
-          <div className="spec-card">
-            {specs.map(([k, v]) => (
-              <div className="spec-row" key={k}>
-                <Text size="2" color="gray" style={{ flex: 'none' }}>{k}</Text>
-                <Text size="2" weight="bold" style={{ textAlign: 'right', minWidth: 0 }}>{v}</Text>
-              </div>
-            ))}
-          </div>
-        </Box>
-
-        {more.length > 0 && (
-          <Box pt="5" pb="4">
-            <SectionHead title="You may also like" sub="More from this range" />
-            <div className="pdp-grid">
-              {more.map(x => <ProductCard key={`pd-${x.id}`} p={x} grid onChange={onChange} />)}
-            </div>
-          </Box>
-        )}
-      </div>
-      <div className="pdp-cta">
-        {added > 0 ? (
-          <>
-            <button
-              className="qs-cta ghost" style={{ marginTop: 0, flex: 1, justifyContent: 'center' }}
-              onClick={() => openQty && openQty(p)}
-            >
-              Add more
-            </button>
-            <button
-              className="qs-cta" style={{ marginTop: 0, flex: 1.35, justifyContent: 'space-between' }}
-              onClick={() => openCart && openCart()}
-            >
-              <span>Go to cart</span>
-              <span className="cta-count">{cart ? cart.count : added}</span>
-            </button>
-          </>
-        ) : (
-          <>
-            <Box style={{ minWidth: 0, flex: 'none' }}>
-              <Text size="3" weight="bold" as="div">₹{p.price.toLocaleString('en-IN')}</Text>
-              <Text size="1" color="gray" as="div" truncate>
-                {p.mrp ? `MRP ₹${p.mrp.toLocaleString('en-IN')}` : 'per unit'}
-              </Text>
-            </Box>
-            <button
-              className="qs-cta" style={{ marginTop: 0, flex: 1, justifyContent: 'center' }}
-              onClick={() => openQty && openQty(p)}
-            >
-              Add to cart
-            </button>
-          </>
-        )}
-      </div>
-      {listSheet && <ListSheet p={p} onClose={() => setListSheet(false)} />}
-    </div>
-    </>
-  )
-}
 
 export default function RootLayout() {
   const [cartItems, setCartItems] = useState({})
@@ -6373,23 +5361,54 @@ export default function RootLayout() {
   const T = useMemo(() => (heroVariant === 'fest'
     ? { ...heroPal }
     : ((campaign && !sim) ? campaign : SKY[sky.dp][sky.cond])), [heroVariant, heroPal, campaign, sim, sky])
-  // Quiz edition rotates daily, independent of weather — novelty is the hook
-  const quizSkin = simSkin ?? QUIZ_SKINS[Math.floor(Date.now() / 86400000) % QUIZ_SKINS.length]
+  // Quiz edition rotates daily, independent of weather — novelty is the hook.
+  // Pinned at mount (lazy useState) so it stays pure across re-renders.
+  const [dailySkin] = useState(() => QUIZ_SKINS[Math.floor(Date.now() / 86400000) % QUIZ_SKINS.length])
+  const quizSkin = simSkin ?? dailySkin
 
   // Brand tab filtering + search/listing sheet (#brand-<key> hash for design review)
   const [brand, setBrand] = useState(() => {
     const m = window.location.hash.match(/#brand-(\w+)/)
     return m && BRAND_KEYS.includes(m[1]) ? m[1] : 'ALL'
   })
-  const [sheet, setSheet] = useState(() =>
-    window.location.hash === '#search' ? { items: FEED_POOL } : null)
-  const [pdp, setPdp] = useState(() => (window.location.hash === '#pdp' ? FEED_POOL[0] : null))
-  const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
-  const [cartOpen, setCartOpen] = useState(window.location.hash === '#cart')
-  const [reorderOpen, setReorderOpen] = useState(['#reorder', '#pastorder'].includes(window.location.hash))
-  const [acctOpen, setAcctOpen] = useState(['#account', '#dash', '#credit', '#lists', '#orders', '#site', '#ordpg', '#claims', '#brand'].includes(window.location.hash))
+  // ---- Router: each page is a real URL. Which overlay is open is DERIVED from
+  // the path (single source of truth); navigation is react-router-owned. ----
+  const navigate = useNavigate()
+  const location = useLocation()
+  const bootHashRef = useRef(window.location.hash) // legacy deep-link, captured before the shim clears it
+  const seg = location.pathname.split('/').filter(Boolean)
+  const root = (seg[0] || '').toLowerCase()
+  const plp = root === 'category' ? (seg[1] ? decodeURIComponent(seg[1]) : 'All') : null
+  const sheetOpen = root === 'search'
+  const cartOpen = root === 'cart'
+  const reorderOpen = root === 'reorder'
+  const acctOpen = root === 'account'
+  const acctSection = acctOpen ? (seg[1] || null) : null
+  const kitOpen = root === 'kit'
+  const prosOpen = root === 'utilities'
+  const inspoOpen = root === 'inspo'
+  const inspoLook = inspoOpen && seg[1] ? decodeURIComponent(seg[1]) : null
+  const pdpId = new URLSearchParams(location.search).get('p')
+  const pdp = pdpId ? FEED_POOL.find(p => p.id === pdpId) : null
+  // search-sheet content (which list to show) rides in state; the URL just says /search
+  const [sheetPayload, setSheetPayload] = useState(null)
+  const inspoLookRef = useRef(false)
   const acctSubRef = useRef(false)
-  const acctInitSub = useRef(null)
+
+  // Close any overlay → step back one history entry (or home if we're at the root).
+  const goBack = useCallback(() => {
+    const idx = window.history.state?.idx
+    if (typeof idx === 'number' && idx > 0) navigate(-1)
+    else navigate('/')
+  }, [navigate])
+  const openCategory = useCallback((cat, opts) => {
+    navigate('/category' + (cat && cat !== 'All' ? '/' + encodeURIComponent(cat) : ''), opts)
+  }, [navigate])
+  const openSearch = useCallback((payload) => {
+    setSheetPayload(payload || { items: FEED_POOL })
+    navigate('/search')
+  }, [navigate])
+
   const [authed, setAuthed] = useState(() => {
     if (window.location.hash === '#login') return false
     if (window.location.hash) return true
@@ -6408,175 +5427,43 @@ export default function RootLayout() {
   const dismissOrder = () => { setOrder(null); safeRemove('qc-order') }
   const reorder = () => {
     order?.items?.forEach(({ p, n }) => changeCart(n, p, { noReco: true }))
-    setCartOpen(true)
+    navigate('/cart')
   }
-  const [kitOpen, setKitOpen] = useState(window.location.hash === '#kit')
-  const [prosOpen, setProsOpen] = useState(window.location.hash === '#pros')
-  const [inspoOpen, setInspoOpen] = useState(window.location.hash.startsWith('#inspo'))
-  const inspoStart = useRef((window.location.hash.match(/^#inspo-(\w+)/) || [])[1] || null)
-  const inspoLookRef = useRef(false)
-  const [plp, setPlp] = useState(() => {
-    if (window.location.hash.startsWith('#fsheet')) return 'Hinges'
-    if (window.location.hash === '#strip') return 'All'
-    const m = window.location.hash.match(/^#plp(?:-(\w+))?$/)
-    if (!m) return null
-    return m[1] && CAT_RULES[m[1]] ? m[1] : 'All'
-  })
+  const [qsheet, setQsheet] = useState(() => (window.location.hash === '#qty' ? { p: BUY_AGAIN[0] } : null))
 
   // Any overlay up -> the page behind must not scroll
-  const overlayUp = !!(sheet || pdp || qsheet || cartOpen || reorderOpen || acctOpen || plp || kitOpen || prosOpen || inspoOpen)
+  const overlayUp = !!(sheetOpen || pdp || qsheet || cartOpen || reorderOpen || acctOpen || plp || kitOpen || prosOpen || inspoOpen)
   useEffect(() => {
     document.body.classList.toggle('no-scroll', overlayUp)
     return () => document.body.classList.remove('no-scroll')
   }, [overlayUp])
 
-  // Browser/phone back gesture closes the topmost overlay instead of leaving the app.
-  // UI close buttons route THROUGH history.back() so the entry stack stays consistent.
-  const sheetRef = useRef(sheet)
-  sheetRef.current = sheet
-  const pdpRef = useRef(pdp)
-  pdpRef.current = pdp
-  const qtyRef = useRef(qsheet)
-  qtyRef.current = qsheet
-  const cartRef = useRef(cartOpen)
-  cartRef.current = cartOpen
-  const reorderRef = useRef(reorderOpen)
-  reorderRef.current = reorderOpen
-  const acctRef = useRef(acctOpen)
-  acctRef.current = acctOpen
-  const plpOpen = plp !== null
-  const closePlp = () => {
-    if (window.history.state?.qcPlp) window.history.back()
-    else setPlp(null)
-  }
-  useEffect(() => {
-    if (!plpOpen) return
-    if (!window.history.state?.qcPlp) window.history.pushState({ qcPlp: true }, '')
-    const onPop = () => { if (!sheetRef.current && !pdpRef.current && !qtyRef.current && !cartRef.current && !reorderRef.current) setPlp(null) }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [plpOpen])
-  const sheetOpen = sheet !== null
-  const closeSheet = () => {
-    if (window.history.state?.qcSheet) window.history.back()
-    else setSheet(null)
-  }
-  useEffect(() => {
-    if (!sheetOpen) return
-    if (!window.history.state?.qcSheet) window.history.pushState({ qcSheet: true }, '')
-    const onPop = () => { if (!pdpRef.current && !qtyRef.current && !cartRef.current) setSheet(null) }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [sheetOpen])
-  const pdpOpen = pdp !== null
-  const closePdp = () => {
-    if (window.history.state?.qcPdp) window.history.back()
-    else setPdp(null)
-  }
-  useEffect(() => {
-    if (!pdpOpen) return
-    if (!window.history.state?.qcPdp) window.history.pushState({ qcPdp: true }, '')
-    const onPop = () => { if (!qtyRef.current && !cartRef.current) setPdp(null) }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [pdpOpen])
-  const qtyOpen = qsheet !== null
-  const closeQty = () => {
-    if (window.history.state?.qcQty) window.history.back()
-    else setQsheet(null)
-  }
-  useEffect(() => {
-    if (!qtyOpen) return
-    if (!window.history.state?.qcQty) window.history.pushState({ qcQty: true }, '')
-    const onPop = () => setQsheet(null)
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [qtyOpen])
-
-  const closeAcct = () => {
-    if (window.history.state?.qcAcct) window.history.back()
-    else setAcctOpen(false)
-  }
-  useEffect(() => {
-    if (!acctOpen) return
-    if (!window.history.state?.qcAcct) window.history.pushState({ qcAcct: true }, '')
-    const onPop = () => {
-      if (!pdpRef.current && !qtyRef.current && !cartRef.current && !acctSubRef.current) setAcctOpen(false)
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [acctOpen])
-  const closeReorder = () => {
-    if (window.history.state?.qcReorder) window.history.back()
-    else setReorderOpen(false)
-  }
-  useEffect(() => {
-    if (!reorderOpen) return
-    if (!window.history.state?.qcReorder) window.history.pushState({ qcReorder: true }, '')
-    const onPop = () => {
-      if (!pdpRef.current && !qtyRef.current && !cartRef.current) setReorderOpen(false)
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [reorderOpen])
-  const closeInspo = () => {
-    if (window.history.state?.qcInspo) window.history.back()
-    else setInspoOpen(false)
-  }
-  useEffect(() => {
-    if (!inspoOpen) return
-    if (!window.history.state?.qcInspo) window.history.pushState({ qcInspo: true }, '')
-    const onPop = () => {
-      if (!pdpRef.current && !qtyRef.current && !cartRef.current && !inspoLookRef.current) setInspoOpen(false)
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [inspoOpen])
-  const closePros = () => {
-    if (window.history.state?.qcPros) window.history.back()
-    else setProsOpen(false)
-  }
-  useEffect(() => {
-    if (!prosOpen) return
-    if (!window.history.state?.qcPros) window.history.pushState({ qcPros: true }, '')
-    const onPop = () => {
-      if (!pdpRef.current && !qtyRef.current && !cartRef.current) setProsOpen(false)
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [prosOpen])
-  const closeKit = () => {
-    if (window.history.state?.qcKit) window.history.back()
-    else setKitOpen(false)
-  }
-  useEffect(() => {
-    if (!kitOpen) return
-    if (!window.history.state?.qcKit) window.history.pushState({ qcKit: true }, '')
-    const onPop = () => {
-      if (!pdpRef.current && !qtyRef.current && !cartRef.current) setKitOpen(false)
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [kitOpen])
-  const closeCart = () => {
-    if (window.history.state?.qcCart) window.history.back()
-    else setCartOpen(false)
-  }
-  useEffect(() => {
-    if (!cartOpen) return
-    if (!window.history.state?.qcCart) window.history.pushState({ qcCart: true }, '')
-    const onPop = () => { if (!qtyRef.current) setCartOpen(false) }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [cartOpen])
+  // The browser/phone back button closes overlays for free: react-router pops the
+  // URL, the derived open-states recompute, and the overlay unmounts. Every page's
+  // close button just steps back one history entry.
+  const closePlp = goBack
+  const closeSheet = goBack
+  const closeReorder = goBack
+  const closeAcct = goBack
+  const closeInspo = goBack
+  const closePros = goBack
+  const closeKit = goBack
+  const closeCart = goBack
+  const closePdp = goBack          // back drops the ?p product param
+  const closeQty = () => setQsheet(null)
 
   // stable intents — memoized cards subscribe via context, never re-render
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- intentional stable identity (setQsheet is stable)
   const openQty = useCallback((p, apply, opts) => setQsheet({ p, apply, opts }), [])
-  const openPdp = useCallback((p) => setPdp(prev => {
-    if (prev) PDP_SWAPF.current = true
-    return p
-  }), [])
-  const openCart = useCallback(() => setCartOpen(true), [])
+  const openPdp = useCallback((p) => {
+    // PDP rides on a ?p=<id> param so it stacks over whatever page is underneath
+    const had = new URLSearchParams(window.location.search).has('p')
+    if (had) PDP_SWAPF.current = true // switching products while the page is open
+    const sp = new URLSearchParams(window.location.search)
+    sp.set('p', p.id)
+    navigate({ pathname: window.location.pathname, search: '?' + sp.toString() }, { replace: had })
+  }, [navigate])
+  const openCart = useCallback(() => navigate('/cart'), [navigate])
   const confirmQty = (n, e) => {
     const q = qsheet
     if (!q) return
@@ -6640,6 +5527,7 @@ export default function RootLayout() {
   // stable identity so memoized ProductCards skip re-render on cart changes
   const recoSrc = useRef(null)
   const [live, setLive] = useState('') // screen-reader announcements
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- intentional stable identity for memoized cards (setters are stable)
   const changeCart = useCallback((delta, p, opts) => {
     setLive(delta > 0 ? `Added ${p.name} to cart` : `Removed ${p.name} from cart`)
     setCartItems(items => {
@@ -6668,6 +5556,7 @@ export default function RootLayout() {
     }
   }, [])
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- intentional stable identity (setters are stable)
   const clearCart = useCallback(() => {
     setCartItems({})
     recoSrc.current = null
@@ -6690,9 +5579,32 @@ export default function RootLayout() {
     })
   }, [])
 
-  // #cart hash: preload a mixed cart so the sheet can be reviewed
+  // Legacy deep-link compatibility: translate the old page #hashes (used by the
+  // run-quickcart driver and shared links) into the new real paths, once on boot.
+  // Design-review flags (#sim, #compact, #brandhome, #hero-*, #brand-*, #order,
+  // #login, #qty, #wheel …) are NOT pages, so they're left untouched.
   useEffect(() => {
-    if (window.location.hash !== '#cart') return
+    const h = bootHashRef.current
+    if (!h) return
+    const exact = {
+      '#search': '/search', '#cart': '/cart', '#reorder': '/reorder', '#pastorder': '/reorder',
+      '#account': '/account', '#dash': '/account/dash', '#credit': '/account/credit',
+      '#lists': '/account/lists', '#orders': '/account/orders', '#ordpg': '/account/orders',
+      '#site': '/account/site', '#claims': '/account/claims', '#brand': '/account/brand',
+      '#kit': '/kit', '#pros': '/utilities', '#inspo': '/inspo',
+      '#strip': '/category', '#fsheet': '/category/Hinges',
+    }
+    let to = exact[h]
+    let m
+    if (!to && (m = h.match(/^#plp(?:-(\w+))?$/))) to = '/category' + (m[1] && CAT_RULES[m[1]] ? '/' + m[1] : '')
+    else if (!to && h === '#pdp') to = '/?p=' + FEED_POOL[0].id
+    else if (!to && (m = h.match(/^#inspo-(\w+)/))) to = '/inspo/' + m[1]
+    if (to) navigate(to, { replace: true })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // #cart deep-link: preload a mixed cart so the sheet can be reviewed
+  useEffect(() => {
+    if (bootHashRef.current !== '#cart') return
     const t = setTimeout(() => {
       changeCart(12, BUY_AGAIN[0], { noReco: true })
       changeCart(2, DEALS[0], { noReco: true })
@@ -6700,16 +5612,16 @@ export default function RootLayout() {
     return () => clearTimeout(t)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // #reco / #strip hashes: auto-add an item so recommendations can be reviewed
+  // #reco / #strip deep-links: auto-add an item so recommendations can be reviewed
   useEffect(() => {
-    if (!['#reco', '#strip'].includes(window.location.hash)) return
+    if (!['#reco', '#strip'].includes(bootHashRef.current)) return
     const t = setTimeout(() => changeCart(1, BUY_AGAIN[0]), 600)
     return () => clearTimeout(t)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Values the routed page (Home) needs — handed down through the router Outlet.
   const pageCtx = {
-    changeCart, brand, setBrand, setPlp, setSheet,
+    changeCart, brand, setBrand, setPlp: openCategory, setSheet: openSearch,
     order, dismissOrder, reorder,
     heroVariant, heroPal, festL, quizSkin, glow, setGlow,
   }
@@ -6723,10 +5635,10 @@ export default function RootLayout() {
       <div className="app">
         <TopBar
           compact={scrolled} dp={sky.dp} cond={sky.cond}
-          brand={brand} onBrand={setBrand} onSearch={() => setSheet({ items: FEED_POOL })}
+          brand={brand} onBrand={setBrand} onSearch={() => openSearch({ items: FEED_POOL })}
           cartCount={cart.count} plain={heroVariant === 'fest'}
-          onTargets={() => { acctInitSub.current = 'dash'; setAcctOpen(true) }}
-          onAccount={() => { acctInitSub.current = null; setAcctOpen(true) }}
+          onTargets={() => navigate('/account/dash')}
+          onAccount={() => navigate('/account')}
         />
 
         {/* Routed page content (Home and, as they migrate, other pages) */}
@@ -6749,16 +5661,16 @@ export default function RootLayout() {
         <PageExit open={plp !== null}>
           {plp && (
             <CategoryPage
-              cat={plp} onPick={setPlp} onClose={closePlp}
+              cat={plp} onPick={(c) => openCategory(c, { replace: true })} onClose={closePlp}
               onChange={changeCart} cart={cart} homeBrand={brand}
-              onSearch={() => setSheet({ items: FEED_POOL })}
+              onSearch={() => openSearch({ items: FEED_POOL })}
               recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)}
             />
           )}
         </PageExit>
 
-        <PageExit open={sheet !== null}>
-          <SearchSheet sheet={sheet} onClose={closeSheet} onChange={changeCart} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
+        <PageExit open={sheetOpen}>
+          <SearchSheet sheet={sheetPayload || { items: FEED_POOL }} onClose={closeSheet} onChange={changeCart} recoStrip={recoStrip} onRecoClose={() => setRecoStrip(null)} />
         </PageExit>
 
         <PageExit open={reorderOpen}>
@@ -6771,23 +5683,23 @@ export default function RootLayout() {
           {acctOpen && (
           <AccountPage
             onClose={closeAcct} onChange={changeCart} lastOrder={order}
-            subRef={acctSubRef} initialSub={acctInitSub.current}
-            onCategory={(cat) => { setAcctOpen(false); setPlp(cat) }}
-            onGoReorder={() => { setAcctOpen(false); setReorderOpen(true) }}
-            onGoKit={() => { setAcctOpen(false); setKitOpen(true) }}
+            subRef={acctSubRef} initialSub={acctSection}
+            onCategory={(cat) => openCategory(cat)}
+            onGoReorder={() => navigate('/reorder')}
+            onGoKit={() => navigate('/kit')}
           />
           )}
         </PageExit>
 
         <PageExit open={kitOpen}>
-          {kitOpen && <KitPage onClose={closeKit} onChange={changeCart} onGoCart={() => setCartOpen(true)} />}
+          {kitOpen && <KitPage onClose={closeKit} onChange={changeCart} onGoCart={() => navigate('/cart')} />}
         </PageExit>
 
         <PageExit open={inspoOpen}>
           {inspoOpen && (
             <InspoPage
               onClose={closeInspo} onChange={changeCart}
-              startLook={inspoStart.current} lookRef={inspoLookRef}
+              startLook={inspoLook} lookRef={inspoLookRef}
             />
           )}
         </PageExit>
@@ -6801,8 +5713,8 @@ export default function RootLayout() {
               lastOrder={order}
               bomCount={loadBoms().length}
               onChange={changeCart}
-              onGoReorder={() => { setProsOpen(false); setReorderOpen(true) }}
-              onGoKit={() => { setProsOpen(false); setKitOpen(true) }}
+              onGoReorder={() => navigate('/reorder')}
+              onGoKit={() => navigate('/kit')}
             />
           )}
         </PageExit>
@@ -6820,7 +5732,7 @@ export default function RootLayout() {
           {cartOpen && (
           <CartPage
             cart={cart} onClose={closeCart} onChange={changeCart} onConvertTier={convertTier} onClear={clearCart}
-            onSettings={() => { closeCart(); acctInitSub.current = 'estpdf'; setAcctOpen(true) }}
+            onSettings={() => navigate('/account/estpdf')}
             onPlaced={(rec) => {
               setOrder(rec)
               safeSet('qc-order', JSON.stringify(rec))
@@ -6830,14 +5742,9 @@ export default function RootLayout() {
                 safeSet('qc-bills', JSON.stringify(bills))
               } catch { /* storage off */ }
               setCartItems({})
-              // land on home with the tracking card in view, whatever the stack was
-              setCartOpen(false)
               setQsheet(null)
-              setPdp(null)
-              setSheet(null)
-              setPlp(null)
-              setReorderOpen(false)
-              setAcctOpen(false)
+              // navigating home closes every URL-driven overlay at once
+              navigate('/')
               window.scrollTo({ top: 0, behavior: 'smooth' })
             }}
           />
@@ -6874,10 +5781,9 @@ export default function RootLayout() {
           <CartBar cart={cart} />
           <div className="navrow">
             <NavBar
-              onCategories={() => setPlp('All')}
-              onUtilities={() => setProsOpen(true)}
-              onReorder={() => setReorderOpen(true)}
-              onAccount={() => { acctInitSub.current = null; setAcctOpen(true) }}
+              onCategories={() => openCategory('All')}
+              onUtilities={() => navigate('/utilities')}
+              onReorder={() => navigate('/reorder')}
               active={acctOpen ? 'account' : reorderOpen ? 'reorder' : plp ? 'categories' : 'home'}
               mini={navMini}
             />

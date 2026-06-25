@@ -3,8 +3,8 @@ import { Text, Flex } from '@radix-ui/themes'
 import { LightningBoltIcon, StarFilledIcon, CheckIcon } from '@radix-ui/react-icons'
 import { CartItemsCtx, QtyCtx, PdpCtx } from '../contexts.js'
 import { Img } from './Img.jsx'
-import { AddControl, btnish } from './ui.jsx'
-import { img, sparkle, bulkNudge } from '../lib/util.js'
+import { AddControl } from './ui.jsx'
+import { img, sparkle, bulkNudge, btnish } from '../lib/util.js'
 
 /* product / flash / combo cards — extracted from App.jsx (A5.1) */
 

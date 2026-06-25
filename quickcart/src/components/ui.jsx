@@ -1,7 +1,10 @@
-import { memo, useState, useEffect, useRef } from 'react'
+import { memo, useState, useEffect, useRef, useContext } from 'react'
 import { Box, Flex, Heading, Text, Button, IconButton } from '@radix-ui/themes'
-import { MinusIcon, PlusIcon } from '@radix-ui/react-icons'
-import { dealSecsLeft } from '../lib/util.js'
+import { MinusIcon, PlusIcon, ChevronRightIcon } from '@radix-ui/react-icons'
+import { dealSecsLeft, img } from '../lib/util.js'
+import { FREE_DELIVERY_AT } from '../data.js'
+import { CartCtx } from '../contexts.js'
+import { Img } from './Img.jsx'
 
 /* shared leaf UI components — extracted from App.jsx (A5.1 components phase) */
 
@@ -159,16 +162,6 @@ function SectionHead({ title, extra, light, sub, onSeeAll }) {
   )
 }
 
-/* keyboard-operable div: role+tabIndex+Enter/Space, one spread */
-const btnish = (fn) => ({
-  role: 'button',
-  tabIndex: 0,
-  onClick: fn,
-  onKeyDown: (e) => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e) }
-  },
-})
-
 function AddControl({ qty, onAdd, onRemove, onBulk }) {
   // bulk sheet opens on long-press of the count — a plain tap between − and +
   // must never pop a sheet (fat-finger hazard on the highest-frequency control)
@@ -206,4 +199,31 @@ function AddControl({ qty, onAdd, onRemove, onBulk }) {
   )
 }
 
-export { PageExit, SkyLayer, CartGlyph, DealTimer, SectionHead, AddControl, btnish }
+/* Sticky cart summary bar — shared across the footer and most full-screen pages */
+function CartBar({ cart }) {
+  const openCart = useContext(CartCtx)
+  const note = cart.total >= FREE_DELIVERY_AT
+    ? 'FREE delivery unlocked'
+    : `Add ₹${FREE_DELIVERY_AT - cart.total} more for FREE delivery`
+  return (
+    <div className={`cartbar ${cart.count > 0 ? 'show' : ''}`} onClick={openCart || undefined}>
+      <Flex>
+        {cart.photos.slice(-3).map(ph => (
+          <Img key={ph} className="thumb" src={img(ph, 120)} alt="" />
+        ))}
+      </Flex>
+      <Box flexGrow="1">
+        <Text key={cart.count} className="linepop" size="2" weight="bold" as="div">
+          {cart.count} item{cart.count === 1 ? '' : 's'} · ₹{cart.total.toLocaleString('en-IN')}
+        </Text>
+        <Text size="1" weight="medium" as="div" style={{ color: 'var(--green-4)' }}>{note}</Text>
+      </Box>
+      <Flex align="center" gap="1">
+        <Text size="2" weight="bold">View cart</Text>
+        <ChevronRightIcon width={16} height={16} />
+      </Flex>
+    </div>
+  )
+}
+
+export { PageExit, SkyLayer, CartGlyph, DealTimer, SectionHead, AddControl, CartBar }

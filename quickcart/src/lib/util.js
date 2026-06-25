@@ -65,4 +65,14 @@ function dealSecsLeft() {
   return 30 * 60
 }
 
-export { img, DAY, daypart, condition, sparkle, bulkNudge, scrollToId, dealSecsLeft }
+/* keyboard-operable div: role+tabIndex+Enter/Space, one spread */
+const btnish = (fn) => ({
+  role: 'button',
+  tabIndex: 0,
+  onClick: fn,
+  onKeyDown: (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e) }
+  },
+})
+
+export { img, DAY, daypart, condition, sparkle, bulkNudge, scrollToId, dealSecsLeft, btnish }
